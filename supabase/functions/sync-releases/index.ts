@@ -241,6 +241,33 @@ async function fetchRssDescriptions(channelId: string): Promise<Map<string, RssV
   return map;
 }
 
+// ── Fetch actual publish date from a video page ───────────────
+
+async function fetchVideoPublishDate(videoId: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, { headers: YT_HEADERS });
+    if (!res.ok) return null;
+    const html = await res.text();
+
+    // Try "publishDate":"2023-05-12" in ytInitialPlayerResponse or ytInitialData
+    const pubMatch = html.match(/"publishDate"\s*:\s*"(\d{4}-\d{2}-\d{2})"/);
+    if (pubMatch) return pubMatch[1];
+
+    // Try <meta itemprop="datePublished" content="2023-05-12">
+    const metaMatch = html.match(/<meta\s+itemprop="datePublished"\s+content="(\d{4}-\d{2}-\d{2})"/);
+    if (metaMatch) return metaMatch[1];
+
+    // Try "uploadDate":"2023-05-12"
+    const uploadMatch = html.match(/"uploadDate"\s*:\s*"(\d{4}-\d{2}-\d{2})"/);
+    if (uploadMatch) return uploadMatch[1];
+
+    return null;
+  } catch (e) {
+    console.error(`Error fetching publish date for ${videoId}:`, e);
+    return null;
+  }
+}
+
 // ── Enrich release from playlist page ──────────────────────────
 
 async function enrichRelease(
@@ -288,23 +315,16 @@ async function enrichRelease(
           const rssInfo = rssMap.get(vr.videoId);
           if (rssInfo?.description) {
             result.description = rssInfo.description;
-            // Extract year from description
-            const yearMatch = rssInfo.description.match(/\b(20\d{2})\b/);
-            if (yearMatch) result.year = yearMatch[1];
-            // Extract release date
+            // Extract release date from description (not year — we'll get that from video page)
             const dateMatch = rssInfo.description.match(/Released on:\s*(.+)/i)
               || rssInfo.description.match(/(\d{4}-\d{2}-\d{2})/);
             if (dateMatch) result.release_date = dateMatch[1].trim();
-          }
-          if (rssInfo?.published && !result.year) {
-            const pubYear = rssInfo.published.match(/(\d{4})/);
-            if (pubYear) result.year = pubYear[1];
           }
           break;
         }
       }
 
-      // Sidebar stats for year/description
+      // Sidebar description only (skip stats — they contain misleading "Last updated on" dates)
       const sidebar = ytData?.sidebar?.playlistSidebarRenderer?.items || [];
       for (const item of sidebar) {
         const primary = item?.playlistSidebarPrimaryInfoRenderer;
@@ -314,27 +334,12 @@ async function enrichRelease(
           if (desc.length > 5 && (!result.description || desc.length > result.description.length)) {
             result.description = desc;
           }
-          for (const stat of (primary?.stats || [])) {
-            const text = stat?.simpleText || stat?.runs?.map((r: any) => r.text).join('') || '';
-            const ym = text.match(/\b(20\d{2})\b/);
-            if (ym && !result.year) {
-              result.year = ym[1];
-              result.release_date = text;
-            }
-          }
+          // DO NOT extract year from stats — "Last updated on..." is NOT the release date
         }
-      }
-
-      // Header year
-      const header = ytData?.header?.playlistHeaderRenderer;
-      if (header && !result.year) {
-        const subtitle = header?.subtitle?.simpleText || header?.subtitle?.runs?.map((r: any) => r.text).join('') || '';
-        const ym = subtitle.match(/\b(20\d{2})\b/);
-        if (ym) result.year = ym[1];
       }
     }
 
-    // If we found a video_id but no description yet, try other videos in RSS
+    // If we found a video_id but no description yet, try RSS
     if (result.video_id && !result.description) {
       const rssInfo = rssMap.get(result.video_id);
       if (rssInfo?.description) {
@@ -342,14 +347,36 @@ async function enrichRelease(
       }
     }
 
-    // Extract year from description if still missing
+    // ── Get actual publish date from the first video page ──
+    if (result.video_id) {
+      const publishDate = await fetchVideoPublishDate(result.video_id);
+      if (publishDate) {
+        result.release_date = publishDate;
+        result.sort_date = publishDate;
+        const yearMatch = publishDate.match(/^(\d{4})/);
+        if (yearMatch) result.year = yearMatch[1];
+      }
+    }
+
+    // Fallback: extract year from RSS published date
+    if (!result.year && result.video_id) {
+      const rssInfo = rssMap.get(result.video_id);
+      if (rssInfo?.published) {
+        const pubYear = rssInfo.published.match(/(\d{4})/);
+        if (pubYear) result.year = pubYear[1];
+      }
+    }
+
+    // Fallback: extract year from description
     if (!result.year && result.description) {
       const ym = result.description.match(/\b(20\d{2})\b/);
       if (ym) result.year = ym[1];
     }
 
-    // Compute sort_date from release_date text or year
-    result.sort_date = parseSortDate(result.release_date, result.year);
+    // Compute sort_date if not set yet
+    if (!result.sort_date) {
+      result.sort_date = parseSortDate(result.release_date, result.year);
+    }
   } catch (e) {
     console.error(`Error enriching ${release.title}:`, e);
   }
