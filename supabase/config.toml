@@ -1,1 +1,7 @@
 project_id = "tfcrxvnfuagmqwkxoyei"
+
+[functions.sync-threads-posts]
+verify_jwt = false
+
+[functions.scrape-hyperfollow]
+verify_jwt = false
