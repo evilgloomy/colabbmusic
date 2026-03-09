@@ -230,6 +230,9 @@ async function enrichRelease(
       const ym = result.description.match(/\b(20\d{2})\b/);
       if (ym) result.year = ym[1];
     }
+
+    // Compute sort_date from release_date text or year
+    result.sort_date = parseSortDate(result.release_date, result.year);
   } catch (e) {
     console.error(`Error enriching ${release.title}:`, e);
   }
