@@ -25,6 +25,7 @@ interface EnrichedRelease {
   track_count: number | null;
   year: string | null;
   sort_date: string | null;
+  sort_order: number;
 }
 
 // ── Extract releases from richGridRenderer contents ───────────
