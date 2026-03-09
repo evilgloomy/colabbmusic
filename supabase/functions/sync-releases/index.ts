@@ -398,6 +398,7 @@ async function upsertReleases(releases: EnrichedRelease[]): Promise<{ inserted: 
       const updates: Record<string, any> = {
         updated_at: new Date().toISOString(),
         title: release.title,
+        sort_order: release.sort_order,
       };
       if (release.thumbnail_url) updates.thumbnail_url = release.thumbnail_url;
       if (release.description && (!existing[0].description || release.description.length > (existing[0].description?.length || 0))) {
