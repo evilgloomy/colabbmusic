@@ -290,6 +290,7 @@ async function upsertReleases(releases: EnrichedRelease[]): Promise<{ inserted: 
       if (release.release_date) updates.release_date = release.release_date;
       if (release.year) updates.year = release.year;
       if (release.track_count) updates.track_count = release.track_count;
+      if (release.sort_date) updates.sort_date = release.sort_date;
 
       await fetch(
         `${supabaseUrl}/rest/v1/releases?playlist_id=eq.${encodeURIComponent(release.playlist_id)}`,

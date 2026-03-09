@@ -57,8 +57,7 @@ export async function fetchReleases(): Promise<YouTubeRelease[]> {
   const { data, error } = await supabase
     .from("releases")
     .select("*")
-    .order("year", { ascending: false, nullsFirst: false })
-    .order("release_date", { ascending: false, nullsFirst: false });
+    .order("sort_date", { ascending: false, nullsFirst: false });
 
   if (error) {
     console.error("Releases fetch error:", error);
