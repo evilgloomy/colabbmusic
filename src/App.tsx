@@ -12,23 +12,24 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const AppContent = () => {
-  useCartSync();
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/music" element={<MusicPage />} />
-        <Route path="/story" element={<StoryPage />} />
-        <Route path="/videos" element={<VideosPage />} />
-        <Route path="/store" element={<StorePage />} />
-        <Route path="/press" element={<PressPage />} />
-        <Route path="/product/:handle" element={<ProductDetail />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
-  );
-};
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/music" element={<MusicPage />} />
+          <Route path="/story" element={<StoryPage />} />
+          <Route path="/videos" element={<VideosPage />} />
+          <Route path="/press" element={<PressPage />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

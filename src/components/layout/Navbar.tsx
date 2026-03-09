@@ -49,7 +49,7 @@ export const Navbar = () => {
           ))}
         </div>
 
-        {/* Right side: social + cart + mobile toggle */}
+        {/* Right side: social + store + mobile toggle */}
         <div className="flex items-center gap-3">
           <a
             href="#"
@@ -59,7 +59,14 @@ export const Navbar = () => {
           >
             <Instagram className="h-4 w-4" />
           </a>
-          <CartDrawer />
+          <a
+            href={SHOPIFY_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden md:flex text-xs font-medium tracking-widest uppercase text-muted-foreground hover:text-primary transition-colors"
+          >
+            Store
+          </a>
           <button
             className="md:hidden text-foreground"
             onClick={() => setMobileOpen(!mobileOpen)}
