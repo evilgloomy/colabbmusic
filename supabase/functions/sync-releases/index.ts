@@ -245,7 +245,6 @@ async function fetchRssDescriptions(channelId: string): Promise<Map<string, RssV
 
 async function fetchVideoPublishDate(videoId: string): Promise<string | null> {
   try {
-    // Use InnerTube player API — much more reliable than scraping video page HTML
     const payload = {
       context: {
         client: {
@@ -257,31 +256,69 @@ async function fetchVideoPublishDate(videoId: string): Promise<string | null> {
       },
       videoId,
     };
+    const headers: Record<string, string> = {
+      ...YT_HEADERS,
+      'Content-Type': 'application/json',
+      'Origin': 'https://www.youtube.com',
+      'Referer': 'https://www.youtube.com/',
+    };
 
-    const res = await fetch('https://www.youtube.com/youtubei/v1/player?prettyPrint=false', {
-      method: 'POST',
-      headers: {
-        ...YT_HEADERS,
-        'Content-Type': 'application/json',
-        'Origin': 'https://www.youtube.com',
-        'Referer': 'https://www.youtube.com/',
-      },
-      body: JSON.stringify(payload),
+    // Try player API first (works for regular videos)
+    const playerRes = await fetch('https://www.youtube.com/youtubei/v1/player?prettyPrint=false', {
+      method: 'POST', headers, body: JSON.stringify(payload),
     });
-
-    if (!res.ok) {
-      console.warn(`InnerTube player API failed for ${videoId}: ${res.status}`);
-      return null;
+    if (playerRes.ok) {
+      const playerData = await playerRes.json();
+      const micro = playerData?.microformat?.playerMicroformatRenderer;
+      if (micro?.publishDate) return micro.publishDate;
+      if (micro?.uploadDate) return micro.uploadDate;
     }
 
-    const data = await res.json();
-    const microformat = data?.microformat?.playerMicroformatRenderer;
+    // Fallback: next API (returns dateText for Art Tracks)
+    const nextRes = await fetch('https://www.youtube.com/youtubei/v1/next?prettyPrint=false', {
+      method: 'POST', headers, body: JSON.stringify(payload),
+    });
+    if (nextRes.ok) {
+      const nextData = await nextRes.json();
+      // dateText location in the response
+      const results = nextData?.contents?.twoColumnWatchNextResults?.results?.results?.contents || [];
+      for (const content of results) {
+        const dateText = content?.videoPrimaryInfoRenderer?.dateText?.simpleText;
+        if (dateText) {
+          console.log(`Found dateText for ${videoId}: ${dateText}`);
+          const parsed = parseDateText(dateText);
+          if (parsed) return parsed;
+        }
+        // Also check for musicVideoDetails or engagement panel
+        const runs = content?.videoPrimaryInfoRenderer?.dateText?.runs;
+        if (runs) {
+          const text = runs.map((r: any) => r.text).join('');
+          console.log(`Found dateText runs for ${videoId}: ${text}`);
+          const parsed = parseDateText(text);
+          if (parsed) return parsed;
+        }
+      }
+      // Try engagement panels for music track info
+      const panels = nextData?.engagementPanels || [];
+      for (const panel of panels) {
+        const items = panel?.engagementPanelSectionListRenderer?.content?.structuredDescriptionContentRenderer?.items || [];
+        for (const item of items) {
+          const rows = item?.videoDescriptionMusicSectionRenderer?.carouselLockups?.[0]
+            ?.carouselLockupRenderer?.infoRows || [];
+          for (const row of rows) {
+            const label = row?.infoRowRenderer?.title?.simpleText || '';
+            const value = row?.infoRowRenderer?.defaultMetadata?.simpleText || '';
+            if (label.toLowerCase().includes('release') && value) {
+              console.log(`Found music section release date for ${videoId}: ${value}`);
+              const parsed = parseDateText(value);
+              if (parsed) return parsed;
+            }
+          }
+        }
+      }
+    }
 
-    // publishDate is the most accurate
-    if (microformat?.publishDate) return microformat.publishDate;
-    if (microformat?.uploadDate) return microformat.uploadDate;
-
-    console.warn(`No publish date in InnerTube response for ${videoId}`);
+    console.warn(`No publish date found for ${videoId}`);
     return null;
   } catch (e) {
     console.error(`Error fetching publish date for ${videoId}:`, e);
