@@ -4,7 +4,7 @@ import heroImage from "@/assets/hero-cola-b.png";
 
 export const HeroSection = () => {
   return (
-    <section className="relative min-h-[100vh] flex items-end overflow-hidden">
+    <section className="relative min-h-[70vh] flex items-end overflow-hidden">
       {/* Background gradient — champagne to lavender */}
       <div
         className="absolute inset-0"
