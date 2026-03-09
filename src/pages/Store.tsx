@@ -20,19 +20,22 @@ const StorePage = () => {
   return (
     <PageLayout>
       {/* Hero */}
-      <section className="container mx-auto px-6 py-32 md:py-40">
-        <p className="text-xs font-medium tracking-[0.3em] uppercase text-primary mb-4">Official</p>
-        <h1 className="text-display-lg font-display font-bold text-foreground mb-6">Store</h1>
-        <p className="text-muted-foreground max-w-lg">
-          Premium merch and exclusive drops from Cola B's world.
-        </p>
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blush via-champagne to-warm-cream" />
+        <div className="relative container mx-auto px-6 py-32 md:py-40">
+          <p className="text-xs font-medium tracking-[0.3em] uppercase text-primary mb-4">Official</p>
+          <h1 className="text-display-lg font-display font-bold text-foreground mb-6">Store</h1>
+          <p className="text-muted-foreground max-w-lg">
+            Premium merch and exclusive drops from Cola B's world.
+          </p>
+        </div>
       </section>
 
       {/* Products */}
       <section className="container mx-auto px-6 pb-24">
         {loading ? (
           <div className="flex justify-center py-20">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         ) : products.length === 0 ? (
           <div className="text-center py-20">
@@ -76,7 +79,7 @@ const StoreProductCard = ({ product }: { product: ShopifyProduct }) => {
 
   return (
     <Link to={`/product/${node.handle}`} className="group block">
-      <div className="aspect-[3/4] overflow-hidden mb-5 bg-card relative">
+      <div className="aspect-[3/4] overflow-hidden mb-5 rounded-lg relative">
         {image ? (
           <img
             src={image.url}
@@ -85,14 +88,14 @@ const StoreProductCard = ({ product }: { product: ShopifyProduct }) => {
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground">No image</div>
+          <div className="w-full h-full bg-card flex items-center justify-center text-muted-foreground">No image</div>
         )}
         {/* Quick add overlay */}
         <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
           <button
             onClick={handleAdd}
             disabled={isLoading || !firstVariant?.availableForSale}
-            className="w-full py-3 bg-primary text-primary-foreground text-xs font-medium tracking-wider uppercase hover:bg-primary/90 transition-colors disabled:opacity-50"
+            className="w-full py-3 bg-primary text-primary-foreground text-xs font-medium tracking-wider uppercase rounded-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
             {isLoading ? "Adding..." : firstVariant?.availableForSale ? "Quick Add" : "Sold Out"}
           </button>

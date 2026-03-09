@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { CartDrawer } from "@/components/CartDrawer";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Instagram } from "lucide-react";
 
 const navItems = [
   { label: "Home", path: "/" },
@@ -17,7 +17,7 @@ export const Navbar = () => {
   const location = useLocation();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/60 backdrop-blur-xl border-b border-border/40">
+    <nav className="fixed top-0 left-0 right-0 z-50 glass-strong">
       <div className="container mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link
@@ -27,25 +27,37 @@ export const Navbar = () => {
           Cola B
         </Link>
 
-        {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-8">
-          {navItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`text-xs font-medium tracking-widest uppercase transition-colors ${
-                location.pathname === item.path
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {item.label}
-            </Link>
+        {/* Desktop nav with slash separators */}
+        <div className="hidden md:flex items-center gap-1">
+          {navItems.map((item, i) => (
+            <span key={item.path} className="flex items-center">
+              <Link
+                to={item.path}
+                className={`px-3 py-1 text-xs font-medium tracking-widest uppercase transition-colors ${
+                  location.pathname === item.path
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {item.label}
+              </Link>
+              {i < navItems.length - 1 && (
+                <span className="text-border text-xs">/</span>
+              )}
+            </span>
           ))}
         </div>
 
-        {/* Right side */}
+        {/* Right side: social + cart + mobile toggle */}
         <div className="flex items-center gap-3">
+          <a
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden md:flex text-muted-foreground hover:text-primary transition-colors"
+          >
+            <Instagram className="h-4 w-4" />
+          </a>
           <CartDrawer />
           <button
             className="md:hidden text-foreground"
@@ -59,7 +71,7 @@ export const Navbar = () => {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden bg-background/95 backdrop-blur-xl border-b border-border/40">
+        <div className="md:hidden glass-strong border-t border-border/40">
           <div className="container mx-auto px-6 py-6 flex flex-col gap-4">
             {navItems.map((item) => (
               <Link

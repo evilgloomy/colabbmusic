@@ -6,50 +6,50 @@
 
 @layer base {
   :root {
-    --background: 0 0% 6%;
-    --foreground: 40 30% 95%;
+    --background: 30 30% 96%;
+    --foreground: 350 10% 20%;
 
-    --card: 0 0% 10%;
-    --card-foreground: 40 30% 95%;
+    --card: 340 20% 95%;
+    --card-foreground: 350 10% 20%;
 
-    --popover: 0 0% 8%;
-    --popover-foreground: 40 30% 95%;
+    --popover: 30 25% 97%;
+    --popover-foreground: 350 10% 20%;
 
-    --primary: 38 55% 55%;
-    --primary-foreground: 0 0% 6%;
+    --primary: 340 30% 65%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 14%;
-    --secondary-foreground: 40 20% 80%;
+    --secondary: 340 15% 90%;
+    --secondary-foreground: 350 10% 30%;
 
-    --muted: 0 0% 16%;
-    --muted-foreground: 40 10% 55%;
+    --muted: 340 10% 90%;
+    --muted-foreground: 350 8% 45%;
 
-    --accent: 38 55% 55%;
-    --accent-foreground: 0 0% 6%;
+    --accent: 350 35% 70%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62% 50%;
-    --destructive-foreground: 40 30% 95%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 16%;
-    --input: 0 0% 16%;
-    --ring: 38 55% 55%;
+    --border: 340 15% 88%;
+    --input: 340 15% 88%;
+    --ring: 340 30% 65%;
 
-    --radius: 0.25rem;
+    --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 8%;
-    --sidebar-foreground: 40 30% 95%;
-    --sidebar-primary: 38 55% 55%;
-    --sidebar-primary-foreground: 0 0% 6%;
-    --sidebar-accent: 0 0% 14%;
-    --sidebar-accent-foreground: 40 20% 80%;
-    --sidebar-border: 0 0% 16%;
-    --sidebar-ring: 38 55% 55%;
+    --sidebar-background: 30 25% 97%;
+    --sidebar-foreground: 350 10% 20%;
+    --sidebar-primary: 340 30% 65%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 340 15% 90%;
+    --sidebar-accent-foreground: 350 10% 30%;
+    --sidebar-border: 340 15% 88%;
+    --sidebar-ring: 340 30% 65%;
 
-    --gold: 38 55% 55%;
-    --ivory: 40 30% 95%;
-    --charcoal: 0 0% 12%;
-    --deep: 0 0% 4%;
-    --warm-gray: 30 5% 35%;
+    --rose: 340 30% 65%;
+    --champagne: 30 30% 96%;
+    --blush: 340 20% 92%;
+    --deep-rose: 350 25% 40%;
+    --warm-cream: 35 40% 95%;
   }
 }
 
@@ -71,8 +71,8 @@
   }
 
   ::selection {
-    background: hsl(38 55% 55% / 0.3);
-    color: hsl(40 30% 95%);
+    background: hsl(340 30% 65% / 0.25);
+    color: hsl(350 10% 20%);
   }
 }
 
@@ -83,5 +83,19 @@
 
   .text-balance {
     text-wrap: balance;
+  }
+
+  .glass {
+    background: hsl(340 20% 95% / 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid hsl(340 15% 88% / 0.5);
+  }
+
+  .glass-strong {
+    background: hsl(340 20% 96% / 0.8);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid hsl(340 15% 90% / 0.6);
   }
 }
