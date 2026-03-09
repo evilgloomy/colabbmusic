@@ -26,7 +26,93 @@ interface EnrichedRelease {
   sort_date: string | null;
 }
 
-// ── Scrape /releases page ──────────────────────────────────────
+// ── Extract releases from richGridRenderer contents ───────────
+
+function extractReleasesFromItems(items: any[]): ScrapedRelease[] {
+  const releases: ScrapedRelease[] = [];
+  for (const item of items) {
+    const pl = item?.richItemRenderer?.content?.playlistRenderer;
+    if (pl?.playlistId) {
+      releases.push({
+        title: pl.title?.simpleText || pl.title?.runs?.[0]?.text || 'Unknown',
+        playlistId: pl.playlistId,
+        trackCount: pl.videoCount ? parseInt(pl.videoCount) : undefined,
+      });
+    }
+    for (const si of (item?.richShelfRenderer?.contents || [])) {
+      const spl = si?.richItemRenderer?.content?.playlistRenderer;
+      if (spl?.playlistId) {
+        releases.push({
+          title: spl.title?.simpleText || spl.title?.runs?.[0]?.text || 'Unknown',
+          playlistId: spl.playlistId,
+          trackCount: spl.videoCount ? parseInt(spl.videoCount) : undefined,
+        });
+      }
+    }
+  }
+  return releases;
+}
+
+// ── Extract continuation token from items array ───────────────
+
+function extractContinuationToken(items: any[]): string | null {
+  for (const item of items) {
+    const token = item?.continuationItemRenderer?.continuationEndpoint?.continuationCommand?.token;
+    if (token) return token;
+  }
+  return null;
+}
+
+// ── Fetch continuation page via InnerTube browse API ──────────
+
+async function fetchContinuation(token: string, visitorData: string | null): Promise<{ items: any[]; nextToken: string | null }> {
+  const payload = {
+    context: {
+      client: {
+        clientName: "WEB",
+        clientVersion: "2.20260101.00.00",
+        hl: "en",
+        gl: "US",
+      },
+    },
+    continuation: token,
+  };
+
+  const headers: Record<string, string> = {
+    ...YT_HEADERS,
+    'Content-Type': 'application/json',
+    'Origin': 'https://www.youtube.com',
+    'Referer': 'https://www.youtube.com/',
+  };
+  if (visitorData) {
+    headers['X-Goog-Visitor-Id'] = visitorData;
+  }
+
+  const res = await fetch('https://www.youtube.com/youtubei/v1/browse?prettyPrint=false', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    console.error(`InnerTube browse failed: ${res.status}`);
+    return { items: [], nextToken: null };
+  }
+
+  const data = await res.json();
+  const actions = data?.onResponseReceivedActions || [];
+  for (const action of actions) {
+    const continuationItems = action?.appendContinuationItemsAction?.continuationItems;
+    if (continuationItems) {
+      const nextToken = extractContinuationToken(continuationItems);
+      return { items: continuationItems, nextToken };
+    }
+  }
+
+  return { items: [], nextToken: null };
+}
+
+// ── Scrape /releases page with pagination ─────────────────────
 
 async function fetchReleasesPage(handle: string): Promise<ScrapedRelease[]> {
   const url = `https://www.youtube.com/${handle}/releases`;
@@ -38,35 +124,57 @@ async function fetchReleasesPage(handle: string): Promise<ScrapedRelease[]> {
   if (!match) return [];
 
   const data = JSON.parse(match[1]);
-  const releases: ScrapedRelease[] = [];
+  
+  // Extract visitorData for subsequent requests
+  const visitorData = data?.responseContext?.visitorData || null;
+  
+  const allReleases: ScrapedRelease[] = [];
+  const seenIds = new Set<string>();
   const tabs = data?.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
 
   for (const tab of tabs) {
     const items = tab?.tabRenderer?.content?.richGridRenderer?.contents || [];
-    for (const item of items) {
-      const pl = item?.richItemRenderer?.content?.playlistRenderer;
-      if (pl?.playlistId) {
-        releases.push({
-          title: pl.title?.simpleText || pl.title?.runs?.[0]?.text || 'Unknown',
-          playlistId: pl.playlistId,
-          trackCount: pl.videoCount ? parseInt(pl.videoCount) : undefined,
-        });
+    
+    // Extract releases from initial page
+    const initial = extractReleasesFromItems(items);
+    for (const r of initial) {
+      if (!seenIds.has(r.playlistId)) {
+        seenIds.add(r.playlistId);
+        allReleases.push(r);
       }
-      for (const si of (item?.richShelfRenderer?.contents || [])) {
-        const spl = si?.richItemRenderer?.content?.playlistRenderer;
-        if (spl?.playlistId) {
-          releases.push({
-            title: spl.title?.simpleText || spl.title?.runs?.[0]?.text || 'Unknown',
-            playlistId: spl.playlistId,
-            trackCount: spl.videoCount ? parseInt(spl.videoCount) : undefined,
-          });
+    }
+
+    // Get continuation token from initial items
+    let continuationToken = extractContinuationToken(items);
+    let page = 1;
+
+    while (continuationToken) {
+      console.log(`Fetching continuation page ${page} (${allReleases.length} releases so far)...`);
+      await new Promise(r => setTimeout(r, 800)); // Rate limit
+
+      const { items: nextItems, nextToken } = await fetchContinuation(continuationToken, visitorData);
+      const nextReleases = extractReleasesFromItems(nextItems);
+      
+      for (const r of nextReleases) {
+        if (!seenIds.has(r.playlistId)) {
+          seenIds.add(r.playlistId);
+          allReleases.push(r);
         }
+      }
+
+      console.log(`Page ${page}: found ${nextReleases.length} new releases`);
+      continuationToken = nextToken;
+      page++;
+
+      if (page > 20) { // Safety limit
+        console.warn('Hit pagination safety limit (20 pages)');
+        break;
       }
     }
   }
 
-  console.log(`Scraped ${releases.length} releases from /releases page`);
-  return releases;
+  console.log(`Scraped ${allReleases.length} total releases from /releases page (${seenIds.size} unique)`);
+  return allReleases;
 }
 
 // ── Resolve channel ID from handle ──────────────────────────────
@@ -362,8 +470,8 @@ Deno.serve(async (req) => {
     const toProcess = testMode ? scrapedReleases.slice(0, 2) : scrapedReleases;
     console.log(`Processing ${toProcess.length} releases (RSS has ${rssMap.size} videos)...`);
 
-    // Step 2: Enrich (3 at a time, 500ms delay)
-    const enriched = await processInBatches(toProcess, 3, 500, (r) => enrichRelease(r, rssMap));
+    // Step 2: Enrich (5 at a time, 500ms delay)
+    const enriched = await processInBatches(toProcess, 5, 500, (r) => enrichRelease(r, rssMap));
 
     const stats = {
       thumbnails: enriched.filter(r => r.thumbnail_url).length,
