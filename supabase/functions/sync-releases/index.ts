@@ -240,6 +240,29 @@ async function enrichRelease(
   return result;
 }
 
+// ── Parse sort_date from release_date text or year ────────────
+
+const MONTH_MAP: Record<string, string> = {
+  jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+  jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+};
+
+function parseSortDate(releaseDateText: string | null, year: string | null): string | null {
+  if (releaseDateText) {
+    // "Last updated on Feb 27, 2026" or "Feb 27, 2026"
+    const m = releaseDateText.match(/(\w{3})\s+(\d{1,2}),?\s+(\d{4})/);
+    if (m) {
+      const month = MONTH_MAP[m[1].toLowerCase()];
+      if (month) return `${m[3]}-${month}-${m[2].padStart(2, '0')}`;
+    }
+    // "2025-03-15" ISO format
+    const iso = releaseDateText.match(/(\d{4}-\d{2}-\d{2})/);
+    if (iso) return iso[1];
+  }
+  if (year) return `${year}-01-01`;
+  return null;
+}
+
 // ── Upsert to database ────────────────────────────────────────
 
 async function upsertReleases(releases: EnrichedRelease[]): Promise<{ inserted: number; updated: number }> {
