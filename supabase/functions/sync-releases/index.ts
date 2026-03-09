@@ -245,39 +245,43 @@ async function fetchRssDescriptions(channelId: string): Promise<Map<string, RssV
 
 async function fetchVideoPublishDate(videoId: string): Promise<string | null> {
   try {
-    // Use YouTube's video page with proper headers to get server-rendered data
-    const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+    // Use InnerTube player API — much more reliable than scraping video page HTML
+    const payload = {
+      context: {
+        client: {
+          clientName: "WEB",
+          clientVersion: "2.20260101.00.00",
+          hl: "en",
+          gl: "US",
+        },
+      },
+      videoId,
+    };
+
+    const res = await fetch('https://www.youtube.com/youtubei/v1/player?prettyPrint=false', {
+      method: 'POST',
       headers: {
         ...YT_HEADERS,
-        'Accept': 'text/html,application/xhtml+xml',
+        'Content-Type': 'application/json',
+        'Origin': 'https://www.youtube.com',
+        'Referer': 'https://www.youtube.com/',
       },
+      body: JSON.stringify(payload),
     });
-    if (!res.ok) return null;
-    const html = await res.text();
 
-    // Try "publishDate":"2023-05-12" in ytInitialPlayerResponse or ytInitialData
-    const pubMatch = html.match(/"publishDate"\s*:\s*"(\d{4}-\d{2}-\d{2})"/);
-    if (pubMatch) return pubMatch[1];
-
-    // Try "uploadDate":"2023-05-12"
-    const uploadMatch = html.match(/"uploadDate"\s*:\s*"(\d{4}-\d{2}-\d{2})"/);
-    if (uploadMatch) return uploadMatch[1];
-
-    // Try <meta itemprop="datePublished" content="2023-05-12">
-    const metaMatch = html.match(/<meta\s+itemprop="datePublished"\s+content="([^"]+)"/);
-    if (metaMatch) return metaMatch[1];
-
-    // Try dateText in ytInitialData (e.g., "May 12, 2023")
-    const dateTextMatch = html.match(/"dateText"\s*:\s*\{\s*"simpleText"\s*:\s*"([^"]+)"/);
-    if (dateTextMatch) {
-      const parsed = parseDateText(dateTextMatch[1]);
-      if (parsed) return parsed;
+    if (!res.ok) {
+      console.warn(`InnerTube player API failed for ${videoId}: ${res.status}`);
+      return null;
     }
 
-    // Debug: log what date-like patterns exist in first occurrence
-    const anyDate = html.match(/"(?:publish|upload|date)[^"]*"\s*:\s*"[^"]*\d{4}[^"]*"/i);
-    console.warn(`No publish date found for ${videoId}. Sample date pattern: ${anyDate?.[0]?.substring(0, 100) || 'none'}, HTML length: ${html.length}`);
+    const data = await res.json();
+    const microformat = data?.microformat?.playerMicroformatRenderer;
 
+    // publishDate is the most accurate
+    if (microformat?.publishDate) return microformat.publishDate;
+    if (microformat?.uploadDate) return microformat.uploadDate;
+
+    console.warn(`No publish date in InnerTube response for ${videoId}`);
     return null;
   } catch (e) {
     console.error(`Error fetching publish date for ${videoId}:`, e);
