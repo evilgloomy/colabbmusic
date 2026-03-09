@@ -31,14 +31,4 @@ const App = () => (
   </QueryClientProvider>
 );
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AppContent />
-    </TooltipProvider>
-  </QueryClientProvider>
-);
-
 export default App;
