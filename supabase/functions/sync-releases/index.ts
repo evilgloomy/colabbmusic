@@ -179,7 +179,7 @@ async function enrichRelease(release: ScrapedRelease): Promise<EnrichedRelease> 
       }
     }
 
-    // If we got a first video but still need description, fetch the video page
+    // Always try to fetch the first video's description if we have a video_id
     if (result.video_id && (!result.description || result.description.length < 20)) {
       try {
         const videoDesc = await fetchVideoDescription(result.video_id);
@@ -188,6 +188,20 @@ async function enrichRelease(release: ScrapedRelease): Promise<EnrichedRelease> 
         }
       } catch (e) {
         console.warn(`Failed to fetch video description for ${result.video_id}:`, e);
+      }
+    }
+
+    // If no video_id yet but we have a playlist, try fetching the playlist page for the first video
+    if (!result.video_id && result.playlist_id) {
+      try {
+        const firstVideoId = await fetchFirstVideoFromPlaylist(result.playlist_id);
+        if (firstVideoId) {
+          result.video_id = firstVideoId;
+          const videoDesc = await fetchVideoDescription(firstVideoId);
+          if (videoDesc) result.description = videoDesc;
+        }
+      } catch (e) {
+        console.warn(`Failed to fetch first video for playlist ${result.playlist_id}:`, e);
       }
     }
 
