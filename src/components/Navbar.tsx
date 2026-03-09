@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { CartDrawer } from "./CartDrawer";
 
 export const Navbar = () => {
   return (
@@ -12,11 +11,15 @@ export const Navbar = () => {
           <Link to="/" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             Home
           </Link>
-          <a href="#products" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+          <a
+            href="https://909d73.myshopify.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
             Shop
           </a>
         </div>
-        <CartDrawer />
       </div>
     </nav>
   );

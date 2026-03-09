@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { CartDrawer } from "@/components/CartDrawer";
 import { Menu, X, Instagram } from "lucide-react";
 
 const navItems = [
@@ -8,9 +7,10 @@ const navItems = [
   { label: "Music", path: "/music" },
   { label: "Story", path: "/story" },
   { label: "Videos", path: "/videos" },
-  { label: "Store", path: "/store" },
   { label: "Press", path: "/press" },
 ];
+
+const SHOPIFY_STORE_URL = "https://909d73.myshopify.com";
 
 export const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -48,7 +48,7 @@ export const Navbar = () => {
           ))}
         </div>
 
-        {/* Right side: social + cart + mobile toggle */}
+        {/* Right side: social + store + mobile toggle */}
         <div className="flex items-center gap-3">
           <a
             href="#"
@@ -58,7 +58,14 @@ export const Navbar = () => {
           >
             <Instagram className="h-4 w-4" />
           </a>
-          <CartDrawer />
+          <a
+            href={SHOPIFY_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden md:flex text-xs font-medium tracking-widest uppercase text-muted-foreground hover:text-primary transition-colors"
+          >
+            Store
+          </a>
           <button
             className="md:hidden text-foreground"
             onClick={() => setMobileOpen(!mobileOpen)}
