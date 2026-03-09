@@ -8,9 +8,10 @@ const navItems = [
   { label: "Music", path: "/music" },
   { label: "Story", path: "/story" },
   { label: "Videos", path: "/videos" },
-  { label: "Store", path: "/store" },
   { label: "Press", path: "/press" },
 ];
+
+const SHOPIFY_STORE_URL = "https://909d73.myshopify.com";
 
 export const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
