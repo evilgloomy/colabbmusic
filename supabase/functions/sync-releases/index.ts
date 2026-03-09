@@ -274,6 +274,10 @@ async function fetchVideoPublishDate(videoId: string): Promise<string | null> {
       if (parsed) return parsed;
     }
 
+    // Debug: log what date-like patterns exist in first occurrence
+    const anyDate = html.match(/"(?:publish|upload|date)[^"]*"\s*:\s*"[^"]*\d{4}[^"]*"/i);
+    console.warn(`No publish date found for ${videoId}. Sample date pattern: ${anyDate?.[0]?.substring(0, 100) || 'none'}, HTML length: ${html.length}`);
+
     return null;
   } catch (e) {
     console.error(`Error fetching publish date for ${videoId}:`, e);
