@@ -426,16 +426,17 @@ async function upsertReleases(releases: EnrichedRelease[]): Promise<{ inserted: 
         updated_at: new Date().toISOString(),
         title: release.title,
         sort_order: release.sort_order,
+        // Always overwrite date fields to fix previously incorrect data
+        release_date: release.release_date,
+        year: release.year,
+        sort_date: release.sort_date,
       };
       if (release.thumbnail_url) updates.thumbnail_url = release.thumbnail_url;
       if (release.description && (!existing[0].description || release.description.length > (existing[0].description?.length || 0))) {
         updates.description = release.description;
       }
       if (release.video_id) updates.video_id = release.video_id;
-      if (release.release_date) updates.release_date = release.release_date;
-      if (release.year) updates.year = release.year;
       if (release.track_count) updates.track_count = release.track_count;
-      if (release.sort_date) updates.sort_date = release.sort_date;
 
       await fetch(
         `${supabaseUrl}/rest/v1/releases?playlist_id=eq.${encodeURIComponent(release.playlist_id)}`,
