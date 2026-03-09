@@ -9,10 +9,20 @@ export interface YouTubeVideo {
   channelName: string;
 }
 
+export interface YouTubeRelease {
+  title: string;
+  year: string;
+  thumbnail: string;
+  videoId?: string;
+  playlistId?: string;
+  trackCount?: number;
+}
+
 interface YouTubeFeedResponse {
   success: boolean;
   channelId?: string;
   videos?: YouTubeVideo[];
+  releases?: YouTubeRelease[];
   error?: string;
 }
 
@@ -44,4 +54,27 @@ export async function fetchYouTubeFeed(
   }
 
   return data.videos;
+}
+
+export async function fetchYouTubeReleases(
+  handle: string
+): Promise<YouTubeRelease[]> {
+  const { data, error } = await supabase.functions.invoke<YouTubeFeedResponse>(
+    "fetch-youtube-feed",
+    {
+      body: { handle, mode: "releases" },
+    }
+  );
+
+  if (error) {
+    console.error("YouTube releases error:", error);
+    return [];
+  }
+
+  if (!data?.success || !data.releases) {
+    console.error("YouTube releases failed:", data?.error);
+    return [];
+  }
+
+  return data.releases;
 }
