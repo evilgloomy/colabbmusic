@@ -1,6 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
-import { storyEntries, type StoryEntry } from "@/data/content";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Story {
+  id: string;
+  ai_title: string | null;
+  ai_enhanced_text: string | null;
+  category: string | null;
+  media_url: string | null;
+  media_type: string | null;
+  permalink: string | null;
+  posted_at: string | null;
+  location: string | null;
+  featured: boolean | null;
+}
 
 const categories = [
   "all", "music", "travel", "fashion", "events", "studio", "lifestyle", "humor",
@@ -8,10 +21,27 @@ const categories = [
 
 const StoryPage = () => {
   const [filter, setFilter] = useState<string>("all");
+  const [stories, setStories] = useState<Story[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStories = async () => {
+      const { data, error } = await supabase
+        .from("stories")
+        .select("id, ai_title, ai_enhanced_text, category, media_url, media_type, permalink, posted_at, location, featured")
+        .order("posted_at", { ascending: false });
+
+      if (!error && data) {
+        setStories(data);
+      }
+      setLoading(false);
+    };
+    fetchStories();
+  }, []);
 
   const filtered = filter === "all"
-    ? storyEntries
-    : storyEntries.filter((s) => s.category === filter);
+    ? stories
+    : stories.filter((s) => s.category === filter);
 
   return (
     <PageLayout>
@@ -50,28 +80,48 @@ const StoryPage = () => {
 
       {/* Story grid */}
       <section className="container mx-auto px-6 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {filtered.map((story, i) => (
-            <StoryCard key={story.id} story={story} size={i % 5 === 0 ? "large" : "normal"} />
-          ))}
-        </div>
-        {filtered.length === 0 && (
-          <p className="text-muted-foreground text-center py-20">No stories in this category yet.</p>
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className={`${i === 0 ? "md:col-span-2 md:row-span-2" : ""}`}>
+                <div className={`rounded-lg bg-muted animate-pulse ${i === 0 ? "aspect-[4/3]" : "aspect-square"}`} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {filtered.map((story, i) => (
+              <StoryCard key={story.id} story={story} size={i % 5 === 0 ? "large" : "normal"} />
+            ))}
+          </div>
+        )}
+        {!loading && filtered.length === 0 && (
+          <p className="text-muted-foreground text-center py-20">
+            {stories.length === 0
+              ? "Stories from Threads will appear here once synced."
+              : "No stories in this category yet."}
+          </p>
         )}
       </section>
     </PageLayout>
   );
 };
 
-const StoryCard = ({ story, size }: { story: StoryEntry; size: "large" | "normal" }) => {
+const StoryCard = ({ story, size }: { story: Story; size: "large" | "normal" }) => {
   const isLarge = size === "large";
+  const fallbackImage = "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80";
 
   return (
-    <div className={`group ${isLarge ? "md:col-span-2 md:row-span-2" : ""}`}>
+    <a
+      href={story.permalink || "#"}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`group block ${isLarge ? "md:col-span-2 md:row-span-2" : ""}`}
+    >
       <div className={`relative overflow-hidden rounded-lg ${isLarge ? "aspect-[4/3]" : "aspect-square"}`}>
         <img
-          src={story.image}
-          alt={story.title}
+          src={story.media_url || fallbackImage}
+          alt={story.ai_title || "Story"}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
           loading="lazy"
         />
@@ -79,24 +129,26 @@ const StoryCard = ({ story, size }: { story: StoryEntry; size: "large" | "normal
         <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6">
           <div className="flex items-center gap-2 mb-2">
             <span className="text-[10px] font-medium tracking-[0.2em] uppercase text-primary-foreground/80">
-              {story.category}
+              {story.category || "lifestyle"}
             </span>
             {story.location && (
               <span className="text-[10px] text-primary-foreground/60">· {story.location}</span>
             )}
           </div>
           <h3 className={`font-display font-medium text-primary-foreground ${isLarge ? "text-lg md:text-xl" : "text-sm"}`}>
-            {story.title}
+            {story.ai_title || "Untitled"}
           </h3>
           <p className={`text-primary-foreground/70 mt-1 ${isLarge ? "text-sm" : "text-xs"} line-clamp-2`}>
-            {story.caption}
+            {story.ai_enhanced_text || ""}
           </p>
-          <p className="text-[10px] text-primary-foreground/40 mt-2">
-            {new Date(story.date).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-          </p>
+          {story.posted_at && (
+            <p className="text-[10px] text-primary-foreground/40 mt-2">
+              {new Date(story.posted_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+            </p>
+          )}
         </div>
       </div>
-    </div>
+    </a>
   );
 };
 
