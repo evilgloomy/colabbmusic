@@ -67,3 +67,25 @@ export async function fetchReleases(): Promise<YouTubeRelease[]> {
 
   return (data as YouTubeRelease[]) || [];
 }
+
+const PAGE_SIZE = 30;
+
+export async function fetchReleasesPaginated(
+  offset: number,
+  limit: number = PAGE_SIZE
+): Promise<{ releases: YouTubeRelease[]; hasMore: boolean }> {
+  const { data, error } = await supabase
+    .from("releases")
+    .select("*")
+    .order("sort_date", { ascending: false, nullsFirst: false })
+    .order("year", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) {
+    console.error("Releases fetch error:", error);
+    return { releases: [], hasMore: false };
+  }
+
+  const releases = (data as YouTubeRelease[]) || [];
+  return { releases, hasMore: releases.length === limit };
+}
