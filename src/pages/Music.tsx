@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { releases, getActiveCampaign, getReleasesByType, type Release } from "@/data/content";
-import { fetchYouTubeFeed, CHANNELS, type YouTubeVideo } from "@/lib/youtube";
+import { fetchYouTubeFeed, fetchYouTubeReleases, CHANNELS, type YouTubeVideo, type YouTubeRelease } from "@/lib/youtube";
 import { Music, ExternalLink, Play, Loader2 } from "lucide-react";
 
 const tabs = [
@@ -34,20 +34,29 @@ const StreamingLinks = ({ release }: { release: Release }) => (
 
 const MusicPage = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
-  const [ytReleases, setYtReleases] = useState<YouTubeVideo[]>([]);
-  const [ytLoading, setYtLoading] = useState(true);
+  const [ytReleases, setYtReleases] = useState<YouTubeRelease[]>([]);
+  const [ytVideos, setYtVideos] = useState<YouTubeVideo[]>([]);
+  const [loading, setLoading] = useState(true);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const campaign = getActiveCampaign();
 
   useEffect(() => {
-    fetchYouTubeFeed(CHANNELS.ARTIST, 15)
-      .then(setYtReleases)
-      .finally(() => setYtLoading(false));
+    // Fetch both releases and latest videos
+    Promise.all([
+      fetchYouTubeReleases(CHANNELS.ARTIST),
+      fetchYouTubeFeed(CHANNELS.ARTIST, 15),
+    ]).then(([rel, vid]) => {
+      setYtReleases(rel);
+      setYtVideos(vid);
+    }).finally(() => setLoading(false));
   }, []);
 
   const filteredReleases = activeTab === "all"
     ? releases
     : getReleasesByType(activeTab as Release["releaseType"]);
+
+  // Use YouTube releases if we got them, otherwise fall back to RSS videos
+  const hasYtReleases = ytReleases.length > 0;
 
   return (
     <PageLayout>
@@ -78,12 +87,14 @@ const MusicPage = () => {
         </div>
       </section>
 
-      {/* YouTube Releases from @Cola_BB */}
+      {/* YouTube Releases / Latest Music */}
       <section className="container mx-auto px-6 py-24">
         <div className="flex items-end justify-between mb-12">
           <div>
             <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-3">From YouTube</p>
-            <h2 className="text-display-md font-display font-bold text-foreground">Latest Releases</h2>
+            <h2 className="text-display-md font-display font-bold text-foreground">
+              {hasYtReleases ? "Discography" : "Latest Releases"}
+            </h2>
           </div>
           <a
             href="https://www.youtube.com/@Cola_BB/releases"
@@ -95,15 +106,41 @@ const MusicPage = () => {
           </a>
         </div>
 
-        {ytLoading ? (
+        {loading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        ) : ytReleases.length === 0 ? (
-          <p className="text-muted-foreground text-center py-12">No releases found from YouTube.</p>
-        ) : (
+        ) : hasYtReleases ? (
+          /* Structured releases from /releases page */
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-            {ytReleases.map((video) => (
+            {ytReleases.map((release, idx) => (
+              <div key={`${release.playlistId || release.videoId || idx}`} className="group">
+                <div className="aspect-square overflow-hidden mb-4 relative rounded-sm bg-card">
+                  {release.thumbnail ? (
+                    <img
+                      src={release.thumbnail}
+                      alt={release.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                      <Music className="h-8 w-8" />
+                    </div>
+                  )}
+                </div>
+                <h3 className="font-display text-sm font-medium text-foreground">{release.title}</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {release.year}
+                  {release.trackCount && ` · ${release.trackCount} tracks`}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : ytVideos.length > 0 ? (
+          /* Fallback: RSS feed videos */
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            {ytVideos.map((video) => (
               <div key={video.videoId} className="group">
                 <div className="aspect-square overflow-hidden mb-4 relative rounded-sm">
                   {playingId === video.videoId ? (
@@ -141,15 +178,16 @@ const MusicPage = () => {
               </div>
             ))}
           </div>
+        ) : (
+          <p className="text-muted-foreground text-center py-12">No releases found.</p>
         )}
       </section>
 
       {/* Static Discography (will be replaced by CMS later) */}
       <section className="bg-blush/30">
         <div className="container mx-auto px-6 py-24">
-          <h2 className="text-display-md font-display font-bold mb-12">Discography</h2>
+          <h2 className="text-display-md font-display font-bold mb-12">Catalog</h2>
 
-          {/* Tabs */}
           <div className="flex flex-wrap gap-2 mb-12">
             {tabs.map((tab) => (
               <button
@@ -166,7 +204,6 @@ const MusicPage = () => {
             ))}
           </div>
 
-          {/* Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
             {filteredReleases.map((release) => (
               <div key={release.id} className="group">
