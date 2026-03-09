@@ -10,7 +10,7 @@ const navItems = [
   { label: "Press", path: "/press" },
 ];
 
-const SHOPIFY_STORE_URL = "https://909d73.myshopify.com";
+const SHOPIFY_STORE_URL = "https://www.colabbshop.com";
 
 export const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -51,7 +51,7 @@ export const Navbar = () => {
         {/* Right side: social + store + mobile toggle */}
         <div className="flex items-center gap-3">
           <a
-            href="#"
+            href="https://www.instagram.com/cola_bb_official/"
             target="_blank"
             rel="noopener noreferrer"
             className="hidden md:flex text-muted-foreground hover:text-primary transition-colors"

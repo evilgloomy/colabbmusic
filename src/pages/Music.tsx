@@ -57,8 +57,8 @@ const MusicPage = () => {
           <div className="flex flex-wrap items-center gap-6">
             <span className="text-xs tracking-widest uppercase text-muted-foreground">Stream on</span>
             <a href="https://www.youtube.com/@Cola_BB" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary transition-colors">YouTube Music</a>
-            <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">Spotify</a>
-            <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">Apple Music</a>
+            <a href="https://open.spotify.com/artist/4nDss1M3MqgFwRSBCmuyST" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary transition-colors">Spotify</a>
+            <a href="https://music.apple.com/ca/artist/cola-b/1687906975" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary transition-colors">Apple Music</a>
           </div>
         </div>
       </section>
