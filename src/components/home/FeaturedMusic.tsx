@@ -1,9 +1,20 @@
 import { Link } from "react-router-dom";
-import { releases } from "@/data/content";
+import { useEffect, useState } from "react";
+import { fetchReleases, type YouTubeRelease } from "@/lib/youtube";
 import { Music } from "lucide-react";
 
 export const FeaturedMusic = () => {
-  const featured = releases.slice(0, 4);
+  const [featured, setFeatured] = useState<YouTubeRelease[]>([]);
+
+  useEffect(() => {
+    fetchReleases().then((releases) => {
+      // Show first 4 multi-track releases, or just first 4
+      const albums = releases.filter(r => (r.track_count ?? 0) > 1);
+      setFeatured((albums.length >= 4 ? albums : releases).slice(0, 4));
+    });
+  }, []);
+
+  if (featured.length === 0) return null;
 
   return (
     <section className="bg-card/30">
@@ -26,32 +37,41 @@ export const FeaturedMusic = () => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-          {featured.map((release, i) => (
-            <Link
-              key={release.id}
-              to="/music"
-              className="group block animate-fade-in opacity-0"
-              style={{ animationDelay: `${i * 0.1}s` }}
-            >
-              <div className="aspect-square overflow-hidden mb-4 relative">
-                <img
-                  src={release.coverImage}
-                  alt={release.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-background/0 group-hover:bg-background/40 transition-colors flex items-center justify-center">
-                  <Music className="h-8 w-8 text-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          {featured.map((release, i) => {
+            const decodedThumb = release.thumbnail_url?.replace(/&amp;/g, '&');
+            return (
+              <Link
+                key={release.id}
+                to="/music"
+                className="group block animate-fade-in opacity-0"
+                style={{ animationDelay: `${i * 0.1}s` }}
+              >
+                <div className="aspect-square overflow-hidden mb-4 relative">
+                  {decodedThumb ? (
+                    <img
+                      src={decodedThumb}
+                      alt={release.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-card text-muted-foreground">
+                      <Music className="h-8 w-8" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-background/0 group-hover:bg-background/40 transition-colors flex items-center justify-center">
+                    <Music className="h-8 w-8 text-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
                 </div>
-              </div>
-              <h3 className="font-display text-sm md:text-base font-medium text-foreground group-hover:text-primary transition-colors">
-                {release.title}
-              </h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                {release.year} · {release.releaseType === "ep" ? "EP" : release.releaseType.charAt(0).toUpperCase() + release.releaseType.slice(1)}
-              </p>
-            </Link>
-          ))}
+                <h3 className="font-display text-sm md:text-base font-medium text-foreground group-hover:text-primary transition-colors">
+                  {release.title}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {release.year}{release.track_count && release.track_count > 1 ? ` · ${release.track_count} tracks` : ''}
+                </p>
+              </Link>
+            );
+          })}
         </div>
 
         <Link

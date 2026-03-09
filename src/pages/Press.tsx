@@ -1,15 +1,23 @@
+import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
-import { brand, getActiveCampaign } from "@/data/content";
+import { brand } from "@/data/content";
+import { fetchReleases, type YouTubeRelease } from "@/lib/youtube";
 import { Download, Mail } from "lucide-react";
 
 const PressPage = () => {
-  const latestRelease = getActiveCampaign();
+  const [latestRelease, setLatestRelease] = useState<YouTubeRelease | null>(null);
+
+  useEffect(() => {
+    fetchReleases().then((releases) => {
+      if (releases.length > 0) setLatestRelease(releases[0]);
+    });
+  }, []);
 
   return (
     <PageLayout>
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blush via-champagne to-warm-cream" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/10" />
         <div className="relative container mx-auto px-6 py-32 md:py-40">
           <p className="text-xs font-medium tracking-[0.3em] uppercase text-primary mb-4">Media</p>
           <h1 className="text-display-lg font-display font-bold text-foreground mb-6">Press</h1>
@@ -44,19 +52,27 @@ const PressPage = () => {
       </section>
 
       {/* Latest release note */}
-      <section className="bg-blush/30">
-        <div className="container mx-auto px-6 py-24">
-          <div className="max-w-3xl">
-            <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-4">Latest Release</p>
-            <h3 className="text-display-md font-display font-bold text-foreground mb-4">{latestRelease.title}</h3>
-            <p className="text-muted-foreground leading-relaxed mb-4">{latestRelease.synopsis}</p>
-            <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-              <span className="px-3 py-1 border border-border rounded-sm">{latestRelease.releaseDate}</span>
-              {latestRelease.genre && <span className="px-3 py-1 border border-border rounded-sm">{latestRelease.genre}</span>}
+      {latestRelease && (
+        <section className="bg-card/30">
+          <div className="container mx-auto px-6 py-24">
+            <div className="max-w-3xl">
+              <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-4">Latest Release</p>
+              <h3 className="text-display-md font-display font-bold text-foreground mb-4">{latestRelease.title}</h3>
+              {latestRelease.description && (
+                <p className="text-muted-foreground leading-relaxed mb-4">{latestRelease.description}</p>
+              )}
+              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                {latestRelease.release_date && (
+                  <span className="px-3 py-1 border border-border rounded-sm">{latestRelease.release_date}</span>
+                )}
+                {latestRelease.year && (
+                  <span className="px-3 py-1 border border-border rounded-sm">{latestRelease.year}</span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Press images placeholder */}
       <section className="border-t border-border/60">

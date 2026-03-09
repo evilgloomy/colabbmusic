@@ -147,9 +147,9 @@ async function enrichRelease(
     if (!res.ok) return result;
     const html = await res.text();
 
-    // og:image → artwork
+    // og:image → artwork (decode HTML entities)
     const ogImg = html.match(/<meta property="og:image" content="([^"]+)"/);
-    if (ogImg) result.thumbnail_url = ogImg[1];
+    if (ogImg) result.thumbnail_url = ogImg[1].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
 
     // Parse ytInitialData
     const ytMatch = html.match(/var ytInitialData\s*=\s*({.*?});\s*<\/script>/s);

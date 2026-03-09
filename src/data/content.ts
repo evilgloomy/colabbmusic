@@ -60,90 +60,10 @@ export const brand = {
 };
 
 // ─── Releases ──────────────────────────────────────────────────
+// Releases are now fetched from the database via fetchReleases() in src/lib/youtube.ts
+// Static placeholder releases have been removed.
 
-export const releases: Release[] = [
-  {
-    id: "r1",
-    slug: "midnight-honey",
-    title: "Midnight Honey",
-    releaseType: "single",
-    releaseDate: "2026-02-14",
-    year: 2026,
-    isActiveCampaign: true,
-    synopsis:
-      "A velvet-smooth late-night anthem about the sweetness of solitude and the glow of city lights after dark. Midnight Honey is Cola B at her most intimate and atmospheric.",
-    coverImage: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&q=80",
-    spotifyUrl: "#",
-    appleMusicUrl: "#",
-    youtubeUrl: "#",
-    genre: "Alternative Pop",
-    mood: "Intimate, Atmospheric",
-  },
-  {
-    id: "r2",
-    slug: "golden-hour-drive",
-    title: "Golden Hour Drive",
-    releaseType: "single",
-    releaseDate: "2025-10-20",
-    year: 2025,
-    isActiveCampaign: false,
-    synopsis:
-      "Sun-drenched windows-down energy. A song about chasing the light before it disappears — and the people who make you feel infinite.",
-    coverImage: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80",
-    spotifyUrl: "#",
-    appleMusicUrl: "#",
-    youtubeUrl: "#",
-    genre: "Pop",
-    mood: "Euphoric, Warm",
-  },
-  {
-    id: "r3",
-    slug: "velvet-static",
-    title: "Velvet Static",
-    releaseType: "ep",
-    releaseDate: "2025-06-01",
-    year: 2025,
-    isActiveCampaign: false,
-    synopsis:
-      "A 5-track EP exploring the tension between digital connection and real intimacy. Lush production, sharp lyrics, cinematic scope.",
-    coverImage: "https://images.unsplash.com/photo-1598387993441-a364f854c3e1?w=800&q=80",
-    spotifyUrl: "#",
-    appleMusicUrl: "#",
-    genre: "R&B / Pop",
-    mood: "Moody, Cinematic",
-  },
-  {
-    id: "r4",
-    slug: "neon-prayers",
-    title: "Neon Prayers",
-    releaseType: "single",
-    releaseDate: "2025-03-15",
-    year: 2025,
-    isActiveCampaign: false,
-    synopsis:
-      "A late-night confessional wrapped in shimmering synths. About saying things you can only say when the city is asleep.",
-    coverImage: "https://images.unsplash.com/photo-1571266028243-d220c6a8b0e5?w=800&q=80",
-    spotifyUrl: "#",
-    appleMusicUrl: "#",
-    genre: "Synth-Pop",
-    mood: "Reflective, Luminous",
-  },
-  {
-    id: "r5",
-    slug: "soft-armor",
-    title: "Soft Armor",
-    releaseType: "single",
-    releaseDate: "2024-11-08",
-    year: 2024,
-    isActiveCampaign: false,
-    synopsis: "A power ballad about vulnerability as strength. Stripped-back production, soaring vocal.",
-    coverImage: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&q=80",
-    spotifyUrl: "#",
-    appleMusicUrl: "#",
-    genre: "Alternative",
-    mood: "Powerful, Tender",
-  },
-];
+export const releases: Release[] = [];
 
 // ─── Story Entries ─────────────────────────────────────────────
 
