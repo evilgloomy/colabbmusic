@@ -23,6 +23,7 @@ interface EnrichedRelease {
   release_date: string | null;
   track_count: number | null;
   year: string | null;
+  sort_date: string | null;
 }
 
 // ── Scrape /releases page ──────────────────────────────────────
@@ -139,6 +140,7 @@ async function enrichRelease(
     release_date: null,
     track_count: release.trackCount ?? null,
     year: null,
+    sort_date: null,
   };
 
   try {
@@ -228,11 +230,37 @@ async function enrichRelease(
       const ym = result.description.match(/\b(20\d{2})\b/);
       if (ym) result.year = ym[1];
     }
+
+    // Compute sort_date from release_date text or year
+    result.sort_date = parseSortDate(result.release_date, result.year);
   } catch (e) {
     console.error(`Error enriching ${release.title}:`, e);
   }
 
   return result;
+}
+
+// ── Parse sort_date from release_date text or year ────────────
+
+const MONTH_MAP: Record<string, string> = {
+  jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+  jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+};
+
+function parseSortDate(releaseDateText: string | null, year: string | null): string | null {
+  if (releaseDateText) {
+    // "Last updated on Feb 27, 2026" or "Feb 27, 2026"
+    const m = releaseDateText.match(/(\w{3})\s+(\d{1,2}),?\s+(\d{4})/);
+    if (m) {
+      const month = MONTH_MAP[m[1].toLowerCase()];
+      if (month) return `${m[3]}-${month}-${m[2].padStart(2, '0')}`;
+    }
+    // "2025-03-15" ISO format
+    const iso = releaseDateText.match(/(\d{4}-\d{2}-\d{2})/);
+    if (iso) return iso[1];
+  }
+  if (year) return `${year}-01-01`;
+  return null;
 }
 
 // ── Upsert to database ────────────────────────────────────────
@@ -262,6 +290,7 @@ async function upsertReleases(releases: EnrichedRelease[]): Promise<{ inserted: 
       if (release.release_date) updates.release_date = release.release_date;
       if (release.year) updates.year = release.year;
       if (release.track_count) updates.track_count = release.track_count;
+      if (release.sort_date) updates.sort_date = release.sort_date;
 
       await fetch(
         `${supabaseUrl}/rest/v1/releases?playlist_id=eq.${encodeURIComponent(release.playlist_id)}`,
