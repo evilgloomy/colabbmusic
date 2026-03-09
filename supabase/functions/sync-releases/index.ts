@@ -257,6 +257,7 @@ async function enrichRelease(
     track_count: release.trackCount ?? null,
     year: null,
     sort_date: null,
+    sort_order: release.sortOrder,
   };
 
   try {
