@@ -3,14 +3,11 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useCartSync } from "@/hooks/useCartSync";
 import Index from "./pages/Index";
 import MusicPage from "./pages/Music";
 import StoryPage from "./pages/Story";
 import VideosPage from "./pages/Videos";
-import StorePage from "./pages/Store";
 import PressPage from "./pages/Press";
-import ProductDetail from "./pages/ProductDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
