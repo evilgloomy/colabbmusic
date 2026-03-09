@@ -122,12 +122,13 @@ async function enrichRelease(release: ScrapedRelease): Promise<EnrichedRelease> 
 
         // Get first video ID from playlist
         const playlistVideos = findPlaylistVideos(ytData);
+        console.log(`Playlist ${release.playlistId}: found ${playlistVideos.length} videos`);
         if (playlistVideos.length > 0) {
           result.video_id = playlistVideos[0].videoId;
+          console.log(`First video ID: ${result.video_id}`);
 
-          // Try to get description from first video's metadata
           const firstVideoDesc = playlistVideos[0].description;
-          if (firstVideoDesc && (!result.description || result.description.length < firstVideoDesc.length)) {
+          if (firstVideoDesc && firstVideoDesc.length > 5) {
             result.description = firstVideoDesc;
           }
         }
@@ -137,18 +138,15 @@ async function enrichRelease(release: ScrapedRelease): Promise<EnrichedRelease> 
         for (const item of sidebar) {
           const primary = item?.playlistSidebarPrimaryInfoRenderer;
           if (primary) {
-            // Description
             const desc = primary?.description?.simpleText ||
               primary?.description?.runs?.map((r: any) => r.text).join('') || '';
-            if (desc && (!result.description || desc.length > result.description.length)) {
+            if (desc && desc.length > 5 && (!result.description || desc.length > result.description.length)) {
               result.description = desc;
             }
 
-            // Stats (may contain date)
             const stats = primary?.stats || [];
             for (const stat of stats) {
               const text = stat?.simpleText || stat?.runs?.map((r: any) => r.text).join('') || '';
-              // Look for year patterns
               const yearMatch = text.match(/\b(20\d{2})\b/);
               if (yearMatch) {
                 result.year = yearMatch[1];
@@ -167,7 +165,6 @@ async function enrichRelease(release: ScrapedRelease): Promise<EnrichedRelease> 
             result.year = yearMatch[1];
           }
 
-          // byline may have date
           const byline = header?.byline?.runs?.map((r: any) => r.text).join('') || '';
           const bylineYear = byline.match(/\b(20\d{2})\b/);
           if (bylineYear && !result.year) {
@@ -177,6 +174,8 @@ async function enrichRelease(release: ScrapedRelease): Promise<EnrichedRelease> 
       } catch (e) {
         console.warn(`Failed to parse ytInitialData for playlist ${release.playlistId}:`, e);
       }
+    } else {
+      console.log(`No ytInitialData found for playlist ${release.playlistId}`);
     }
 
     // Always try to fetch the first video's description if we have a video_id
