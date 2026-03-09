@@ -241,6 +241,25 @@ function findPlaylistVideos(ytData: any): Array<{ videoId: string; description?:
   return videos;
 }
 
+async function fetchFirstVideoFromPlaylist(playlistId: string): Promise<string | null> {
+  try {
+    const url = `https://www.youtube.com/playlist?list=${playlistId}`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    // Look for first videoId in the playlist
+    const match = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchVideoDescription(videoId: string): Promise<string | null> {
   const url = `https://www.youtube.com/watch?v=${videoId}`;
   const res = await fetch(url, {
@@ -253,11 +272,50 @@ async function fetchVideoDescription(videoId: string): Promise<string | null> {
   if (!res.ok) return null;
   const html = await res.text();
 
-  // Extract description from og:description or ytInitialData
+  // Try ytInitialData for full description
+  const ytMatch = html.match(/var ytInitialData\s*=\s*({.*?});\s*<\/script>/s);
+  if (ytMatch) {
+    try {
+      const data = JSON.parse(ytMatch[1]);
+      // Navigate to video description in engagement panels or two column watch
+      const panels = data?.engagementPanels || [];
+      for (const panel of panels) {
+        const content = panel?.engagementPanelSectionListRenderer?.content?.structuredDescriptionContentRenderer?.items || [];
+        for (const item of content) {
+          const descRuns = item?.videoDescriptionHeaderRenderer?.title?.runs ||
+            item?.expandableVideoDescriptionBodyRenderer?.descriptionBodyText?.runs;
+          if (descRuns) {
+            const desc = descRuns.map((r: any) => r.text).join('');
+            if (desc.length > 10) return desc;
+          }
+        }
+      }
+
+      // Try alternative path
+      const videoDetails = data?.contents?.twoColumnWatchNextResults?.results?.results?.contents;
+      if (videoDetails) {
+        for (const c of videoDetails) {
+          const desc = c?.videoSecondaryInfoRenderer?.description?.runs;
+          if (desc) {
+            return desc.map((r: any) => r.text).join('');
+          }
+          const attrDesc = c?.videoSecondaryInfoRenderer?.attributedDescription?.content;
+          if (attrDesc) return attrDesc;
+        }
+      }
+    } catch (e) {
+      console.warn(`Failed to parse ytInitialData for video ${videoId}:`, e);
+    }
+  }
+
+  // Fallback: og:description
   const ogDesc = html.match(/<meta property="og:description" content="([^"]*)"/);
   if (ogDesc) {
     return decodeHtmlEntities(ogDesc[1]);
   }
+
+  return null;
+}
 
   return null;
 }
