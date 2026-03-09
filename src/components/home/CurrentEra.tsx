@@ -16,7 +16,8 @@ export const CurrentEra = () => {
 
   useEffect(() => {
     fetchReleases().then((all) => {
-      const top5 = all.slice(0, 5);
+      const singles = all.filter((r) => (r.track_count ?? 0) <= 1);
+      const top5 = singles.slice(0, 5);
       setReleases(top5);
       // Fetch streaming links for these releases
       if (top5.length > 0) {
