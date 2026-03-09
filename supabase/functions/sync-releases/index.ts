@@ -12,6 +12,7 @@ interface ScrapedRelease {
   title: string;
   playlistId: string;
   trackCount?: number;
+  sortOrder: number;
 }
 
 interface EnrichedRelease {
