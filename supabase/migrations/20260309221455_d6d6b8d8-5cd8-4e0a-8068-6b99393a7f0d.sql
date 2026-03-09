@@ -1,0 +1,1 @@
+ALTER TABLE public.releases ADD COLUMN sort_order integer;

@@ -12,6 +12,7 @@ interface ScrapedRelease {
   title: string;
   playlistId: string;
   trackCount?: number;
+  sortOrder: number;
 }
 
 interface EnrichedRelease {
@@ -24,12 +25,14 @@ interface EnrichedRelease {
   track_count: number | null;
   year: string | null;
   sort_date: string | null;
+  sort_order: number;
 }
 
 // ── Extract releases from richGridRenderer contents ───────────
 
-function extractReleasesFromItems(items: any[]): ScrapedRelease[] {
+function extractReleasesFromItems(items: any[], startIndex: number): { releases: ScrapedRelease[]; nextIndex: number } {
   const releases: ScrapedRelease[] = [];
+  let idx = startIndex;
   for (const item of items) {
     const pl = item?.richItemRenderer?.content?.playlistRenderer;
     if (pl?.playlistId) {
@@ -37,6 +40,7 @@ function extractReleasesFromItems(items: any[]): ScrapedRelease[] {
         title: pl.title?.simpleText || pl.title?.runs?.[0]?.text || 'Unknown',
         playlistId: pl.playlistId,
         trackCount: pl.videoCount ? parseInt(pl.videoCount) : undefined,
+        sortOrder: idx++,
       });
     }
     for (const si of (item?.richShelfRenderer?.contents || [])) {
@@ -46,11 +50,12 @@ function extractReleasesFromItems(items: any[]): ScrapedRelease[] {
           title: spl.title?.simpleText || spl.title?.runs?.[0]?.text || 'Unknown',
           playlistId: spl.playlistId,
           trackCount: spl.videoCount ? parseInt(spl.videoCount) : undefined,
+          sortOrder: idx++,
         });
       }
     }
   }
-  return releases;
+  return { releases, nextIndex: idx };
 }
 
 // ── Extract continuation token from items array ───────────────
@@ -131,12 +136,14 @@ async function fetchReleasesPage(handle: string): Promise<ScrapedRelease[]> {
   const allReleases: ScrapedRelease[] = [];
   const seenIds = new Set<string>();
   const tabs = data?.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
+  let runningIndex = 0;
 
   for (const tab of tabs) {
     const items = tab?.tabRenderer?.content?.richGridRenderer?.contents || [];
     
     // Extract releases from initial page
-    const initial = extractReleasesFromItems(items);
+    const { releases: initial, nextIndex } = extractReleasesFromItems(items, runningIndex);
+    runningIndex = nextIndex;
     for (const r of initial) {
       if (!seenIds.has(r.playlistId)) {
         seenIds.add(r.playlistId);
@@ -153,7 +160,8 @@ async function fetchReleasesPage(handle: string): Promise<ScrapedRelease[]> {
       await new Promise(r => setTimeout(r, 800)); // Rate limit
 
       const { items: nextItems, nextToken } = await fetchContinuation(continuationToken, visitorData);
-      const nextReleases = extractReleasesFromItems(nextItems);
+      const { releases: nextReleases, nextIndex: ni } = extractReleasesFromItems(nextItems, runningIndex);
+      runningIndex = ni;
       
       for (const r of nextReleases) {
         if (!seenIds.has(r.playlistId)) {
@@ -249,6 +257,7 @@ async function enrichRelease(
     track_count: release.trackCount ?? null,
     year: null,
     sort_date: null,
+    sort_order: release.sortOrder,
   };
 
   try {
@@ -389,6 +398,7 @@ async function upsertReleases(releases: EnrichedRelease[]): Promise<{ inserted: 
       const updates: Record<string, any> = {
         updated_at: new Date().toISOString(),
         title: release.title,
+        sort_order: release.sort_order,
       };
       if (release.thumbnail_url) updates.thumbnail_url = release.thumbnail_url;
       if (release.description && (!existing[0].description || release.description.length > (existing[0].description?.length || 0))) {

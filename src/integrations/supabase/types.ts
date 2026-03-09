@@ -22,6 +22,7 @@ export type Database = {
           playlist_id: string | null
           release_date: string | null
           sort_date: string | null
+          sort_order: number | null
           thumbnail_url: string | null
           title: string
           track_count: number | null
@@ -36,6 +37,7 @@ export type Database = {
           playlist_id?: string | null
           release_date?: string | null
           sort_date?: string | null
+          sort_order?: number | null
           thumbnail_url?: string | null
           title: string
           track_count?: number | null
@@ -50,6 +52,7 @@ export type Database = {
           playlist_id?: string | null
           release_date?: string | null
           sort_date?: string | null
+          sort_order?: number | null
           thumbnail_url?: string | null
           title?: string
           track_count?: number | null
