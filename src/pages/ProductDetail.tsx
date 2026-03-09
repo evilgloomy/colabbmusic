@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { fetchProductByHandle } from "@/lib/shopify";
 import { useCartStore } from "@/stores/cartStore";
-import { Navbar } from "@/components/Navbar";
-import { Button } from "@/components/ui/button";
+import { PageLayout } from "@/components/layout/PageLayout";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -34,8 +33,8 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [selectedImage, setSelectedImage] = useState(0);
-  const addItem = useCartStore(state => state.addItem);
-  const isLoading = useCartStore(state => state.isLoading);
+  const addItem = useCartStore((s) => s.addItem);
+  const isLoading = useCartStore((s) => s.isLoading);
 
   useEffect(() => {
     if (!handle) return;
@@ -48,24 +47,22 @@ const ProductDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
+      <PageLayout>
         <div className="flex justify-center py-32">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="container mx-auto px-4 py-20 text-center">
-          <p className="text-xl text-muted-foreground">Product not found</p>
-          <Link to="/" className="text-primary underline mt-4 inline-block">Back to shop</Link>
+      <PageLayout>
+        <div className="container mx-auto px-6 py-32 text-center">
+          <p className="text-xl text-muted-foreground font-display">Product not found</p>
+          <Link to="/store" className="text-primary text-sm mt-4 inline-block">Back to store</Link>
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
@@ -74,20 +71,19 @@ const ProductDetail = () => {
 
   const handleAddToCart = async () => {
     if (!selectedVariant) return;
-    const shopifyProduct = {
-      node: {
-        id: product.id,
-        title: product.title,
-        description: product.description,
-        handle: product.handle,
-        priceRange: product.priceRange,
-        images: product.images,
-        variants: product.variants,
-        options: product.options,
-      }
-    };
     await addItem({
-      product: shopifyProduct,
+      product: {
+        node: {
+          id: product.id,
+          title: product.title,
+          description: product.description,
+          handle: product.handle,
+          priceRange: product.priceRange,
+          images: product.images,
+          variants: product.variants,
+          options: product.options,
+        },
+      },
       variantId: selectedVariant.id,
       variantTitle: selectedVariant.title,
       price: selectedVariant.price,
@@ -98,17 +94,19 @@ const ProductDetail = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-8">
-          <ArrowLeft className="h-4 w-4" /> Back to shop
+    <PageLayout>
+      <div className="container mx-auto px-6 py-12">
+        <Link
+          to="/store"
+          className="inline-flex items-center gap-2 text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors mb-12"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to store
         </Link>
 
-        <div className="grid md:grid-cols-2 gap-10">
+        <div className="grid md:grid-cols-2 gap-12 md:gap-20">
           {/* Images */}
           <div className="space-y-4">
-            <div className="aspect-square rounded-lg overflow-hidden bg-card">
+            <div className="aspect-square overflow-hidden bg-card">
               {images[selectedImage]?.node ? (
                 <img
                   src={images[selectedImage].node.url}
@@ -125,8 +123,8 @@ const ProductDetail = () => {
                   <button
                     key={idx}
                     onClick={() => setSelectedImage(idx)}
-                    className={`w-16 h-16 rounded-md overflow-hidden flex-shrink-0 border-2 transition-colors ${
-                      idx === selectedImage ? "border-primary" : "border-transparent"
+                    className={`w-16 h-16 overflow-hidden flex-shrink-0 border transition-colors ${
+                      idx === selectedImage ? "border-primary" : "border-border hover:border-foreground/30"
                     }`}
                   >
                     <img src={img.node.url} alt={img.node.altText || ""} className="w-full h-full object-cover" />
@@ -137,69 +135,68 @@ const ProductDetail = () => {
           </div>
 
           {/* Info */}
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div>
-              <h1 className="text-3xl md:text-4xl font-display font-bold">{product.title}</h1>
-              <p className="text-2xl font-semibold mt-3">
+              <h1 className="text-display-md font-display font-bold">{product.title}</h1>
+              <p className="text-xl text-foreground mt-3">
                 {selectedVariant?.price.currencyCode} {parseFloat(selectedVariant?.price.amount || "0").toFixed(2)}
               </p>
             </div>
 
-            {/* Variant selection */}
-            {product.options.filter(o => o.name !== "Title" || o.values.length > 1).map((option) => (
-              <div key={option.name} className="space-y-2">
-                <label className="text-sm font-medium">{option.name}</label>
-                <div className="flex flex-wrap gap-2">
-                  {option.values.map((value) => {
-                    const variantIndex = product.variants.edges.findIndex(v =>
-                      v.node.selectedOptions.some(so => so.name === option.name && so.value === value)
-                    );
-                    const isSelected = product.variants.edges[selectedVariantIndex]?.node.selectedOptions.some(
-                      so => so.name === option.name && so.value === value
-                    );
-                    return (
-                      <button
-                        key={value}
-                        onClick={() => variantIndex >= 0 && setSelectedVariantIndex(variantIndex)}
-                        className={`px-4 py-2 rounded-md border text-sm transition-colors ${
-                          isSelected
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-card border-border hover:border-primary"
-                        }`}
-                      >
-                        {value}
-                      </button>
-                    );
-                  })}
+            {/* Variants */}
+            {product.options
+              .filter((o) => o.name !== "Title" || o.values.length > 1)
+              .map((option) => (
+                <div key={option.name} className="space-y-3">
+                  <label className="text-xs font-medium tracking-widest uppercase text-muted-foreground">
+                    {option.name}
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {option.values.map((value) => {
+                      const variantIndex = product.variants.edges.findIndex((v) =>
+                        v.node.selectedOptions.some((so) => so.name === option.name && so.value === value)
+                      );
+                      const isSelected = product.variants.edges[selectedVariantIndex]?.node.selectedOptions.some(
+                        (so) => so.name === option.name && so.value === value
+                      );
+                      return (
+                        <button
+                          key={value}
+                          onClick={() => variantIndex >= 0 && setSelectedVariantIndex(variantIndex)}
+                          className={`px-5 py-2.5 text-xs font-medium tracking-wider uppercase transition-colors ${
+                            isSelected
+                              ? "bg-primary text-primary-foreground"
+                              : "border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                          }`}
+                        >
+                          {value}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
-            <Button
-              size="lg"
-              className="w-full"
+            <button
               onClick={handleAddToCart}
               disabled={isLoading || !selectedVariant?.availableForSale}
+              className="w-full py-4 bg-primary text-primary-foreground text-sm font-medium tracking-wider uppercase hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : selectedVariant?.availableForSale ? (
-                "Add to Cart"
-              ) : (
-                "Sold Out"
-              )}
-            </Button>
+              {isLoading ? "Adding..." : selectedVariant?.availableForSale ? "Add to Cart" : "Sold Out"}
+            </button>
 
             {product.description && (
-              <div className="pt-4 border-t">
-                <h3 className="font-medium mb-2">Description</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">{product.description}</p>
+              <div className="pt-6 border-t border-border/40">
+                <p className="text-xs font-medium tracking-widest uppercase text-muted-foreground mb-3">
+                  Description
+                </p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{product.description}</p>
               </div>
             )}
           </div>
         </div>
       </div>
-    </div>
+    </PageLayout>
   );
 };
 
