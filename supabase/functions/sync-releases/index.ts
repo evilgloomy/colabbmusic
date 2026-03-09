@@ -468,11 +468,13 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const body = await req.json().catch(() => ({}));
+    const testMode = body?.test === true;
     const handle = '@Cola_BB';
-    console.log(`Starting release sync for ${handle}...`);
+    console.log(`Starting release sync for ${handle}... testMode=${testMode}`);
 
     // Step 1: Get all playlist IDs from /releases page
-    const scrapedReleases = await fetchReleasesPage(handle);
+    let scrapedReleases = await fetchReleasesPage(handle);
     console.log(`Found ${scrapedReleases.length} releases to process`);
 
     if (scrapedReleases.length === 0) {
@@ -480,6 +482,11 @@ Deno.serve(async (req) => {
         JSON.stringify({ success: true, message: 'No releases found on page', inserted: 0, updated: 0 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // In test mode, only process first release
+    if (testMode) {
+      scrapedReleases = scrapedReleases.slice(0, 1);
     }
 
     // Step 2: Enrich each release (batch of 3 with 1s delay to avoid rate limiting)
