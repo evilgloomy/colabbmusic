@@ -136,12 +136,14 @@ async function fetchReleasesPage(handle: string): Promise<ScrapedRelease[]> {
   const allReleases: ScrapedRelease[] = [];
   const seenIds = new Set<string>();
   const tabs = data?.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
+  let runningIndex = 0;
 
   for (const tab of tabs) {
     const items = tab?.tabRenderer?.content?.richGridRenderer?.contents || [];
     
     // Extract releases from initial page
-    const initial = extractReleasesFromItems(items);
+    const { releases: initial, nextIndex } = extractReleasesFromItems(items, runningIndex);
+    runningIndex = nextIndex;
     for (const r of initial) {
       if (!seenIds.has(r.playlistId)) {
         seenIds.add(r.playlistId);
@@ -158,7 +160,8 @@ async function fetchReleasesPage(handle: string): Promise<ScrapedRelease[]> {
       await new Promise(r => setTimeout(r, 800)); // Rate limit
 
       const { items: nextItems, nextToken } = await fetchContinuation(continuationToken, visitorData);
-      const nextReleases = extractReleasesFromItems(nextItems);
+      const { releases: nextReleases, nextIndex: ni } = extractReleasesFromItems(nextItems, runningIndex);
+      runningIndex = ni;
       
       for (const r of nextReleases) {
         if (!seenIds.has(r.playlistId)) {
