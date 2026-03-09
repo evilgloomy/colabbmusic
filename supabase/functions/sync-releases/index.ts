@@ -317,8 +317,7 @@ async function fetchVideoDescription(videoId: string): Promise<string | null> {
   return null;
 }
 
-  return null;
-}
+
 
 function decodeHtmlEntities(str: string): string {
   return str
