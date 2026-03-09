@@ -245,7 +245,13 @@ async function fetchRssDescriptions(channelId: string): Promise<Map<string, RssV
 
 async function fetchVideoPublishDate(videoId: string): Promise<string | null> {
   try {
-    const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, { headers: YT_HEADERS });
+    // Use YouTube's video page with proper headers to get server-rendered data
+    const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+      headers: {
+        ...YT_HEADERS,
+        'Accept': 'text/html,application/xhtml+xml',
+      },
+    });
     if (!res.ok) return null;
     const html = await res.text();
 
@@ -253,19 +259,49 @@ async function fetchVideoPublishDate(videoId: string): Promise<string | null> {
     const pubMatch = html.match(/"publishDate"\s*:\s*"(\d{4}-\d{2}-\d{2})"/);
     if (pubMatch) return pubMatch[1];
 
-    // Try <meta itemprop="datePublished" content="2023-05-12">
-    const metaMatch = html.match(/<meta\s+itemprop="datePublished"\s+content="(\d{4}-\d{2}-\d{2})"/);
-    if (metaMatch) return metaMatch[1];
-
     // Try "uploadDate":"2023-05-12"
     const uploadMatch = html.match(/"uploadDate"\s*:\s*"(\d{4}-\d{2}-\d{2})"/);
     if (uploadMatch) return uploadMatch[1];
+
+    // Try <meta itemprop="datePublished" content="2023-05-12">
+    const metaMatch = html.match(/<meta\s+itemprop="datePublished"\s+content="([^"]+)"/);
+    if (metaMatch) return metaMatch[1];
+
+    // Try dateText in ytInitialData (e.g., "May 12, 2023")
+    const dateTextMatch = html.match(/"dateText"\s*:\s*\{\s*"simpleText"\s*:\s*"([^"]+)"/);
+    if (dateTextMatch) {
+      const parsed = parseDateText(dateTextMatch[1]);
+      if (parsed) return parsed;
+    }
 
     return null;
   } catch (e) {
     console.error(`Error fetching publish date for ${videoId}:`, e);
     return null;
   }
+}
+
+// Parse date text like "May 12, 2023" or "2023年5月12日" into ISO date
+function parseDateText(text: string): string | null {
+  // English: "May 12, 2023"
+  const enMatch = text.match(/(\w{3,})\s+(\d{1,2}),?\s+(\d{4})/);
+  if (enMatch) {
+    const monthNames: Record<string, string> = {
+      january: '01', february: '02', march: '03', april: '04', may: '05', june: '06',
+      july: '07', august: '08', september: '09', october: '10', november: '11', december: '12',
+      jan: '01', feb: '02', mar: '03', apr: '04', jun: '06',
+      jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+    };
+    const month = monthNames[enMatch[1].toLowerCase()];
+    if (month) return `${enMatch[3]}-${month}-${enMatch[2].padStart(2, '0')}`;
+  }
+  // ISO
+  const isoMatch = text.match(/(\d{4}-\d{2}-\d{2})/);
+  if (isoMatch) return isoMatch[1];
+  // Chinese: "2023年5月12日"
+  const cnMatch = text.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+  if (cnMatch) return `${cnMatch[1]}-${cnMatch[2].padStart(2, '0')}-${cnMatch[3].padStart(2, '0')}`;
+  return null;
 }
 
 // ── Enrich release from playlist page ──────────────────────────
