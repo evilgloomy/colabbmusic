@@ -19,6 +19,7 @@ export interface YouTubeRelease {
   release_date: string | null;
   track_count: number | null;
   year: string | null;
+  sort_date: string | null;
   created_at: string;
   updated_at: string;
 }
