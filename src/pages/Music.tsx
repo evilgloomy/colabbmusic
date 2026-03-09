@@ -53,21 +53,11 @@ const MusicPage = () => {
 
       {/* Discography */}
       <section className="container mx-auto px-6 py-24">
-        <div className="flex items-end justify-between mb-12">
-          <div>
-            <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-3">Discography</p>
-            <h2 className="text-display-md font-display font-bold text-foreground">
-              {hasDbReleases ? "Albums & EPs" : "Latest Releases"}
-            </h2>
-          </div>
-          <a
-            href="https://www.youtube.com/@Cola_BB/releases"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs font-medium tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors"
-          >
-            View All →
-          </a>
+        <div className="mb-12">
+          <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-3">Discography</p>
+          <h2 className="text-display-md font-display font-bold text-foreground">
+            {hasDbReleases ? "Albums & EPs" : "Latest Releases"}
+          </h2>
         </div>
 
         {loading ? (
