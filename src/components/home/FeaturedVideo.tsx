@@ -1,10 +1,27 @@
-import { getFeaturedVideo } from "@/data/content";
-import { Play } from "lucide-react";
-import { useState } from "react";
+import { Play, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { fetchYouTubeFeed, CHANNELS, type YouTubeVideo } from "@/lib/youtube";
 
 export const FeaturedVideo = () => {
-  const video = getFeaturedVideo();
+  const [video, setVideo] = useState<YouTubeVideo | null>(null);
+  const [loading, setLoading] = useState(true);
   const [playing, setPlaying] = useState(false);
+
+  useEffect(() => {
+    fetchYouTubeFeed(CHANNELS.VEVO, 1)
+      .then((videos) => setVideo(videos[0] || null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="bg-deep">
+        <div className="container mx-auto px-6 py-24 md:py-32 flex justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </section>
+    );
+  }
 
   if (!video) return null;
 
@@ -13,12 +30,8 @@ export const FeaturedVideo = () => {
       <div className="container mx-auto px-6 py-24 md:py-32">
         <div className="flex items-end justify-between mb-12">
           <div>
-            <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-3">
-              Watch
-            </p>
-            <h2 className="text-display-md font-display font-bold text-foreground">
-              Featured Video
-            </h2>
+            <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-3">Watch</p>
+            <h2 className="text-display-md font-display font-bold text-foreground">Featured Video</h2>
           </div>
         </div>
 
@@ -48,9 +61,7 @@ export const FeaturedVideo = () => {
                 </div>
               </div>
               <div className="absolute bottom-0 left-0 right-0 p-6">
-                <h3 className="font-display text-lg md:text-xl font-medium text-foreground">
-                  {video.title}
-                </h3>
+                <h3 className="font-display text-lg md:text-xl font-medium text-foreground">{video.title}</h3>
               </div>
             </button>
           )}
