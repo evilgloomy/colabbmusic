@@ -77,8 +77,7 @@ export async function fetchReleasesPaginated(
   const { data, error } = await supabase
     .from("releases")
     .select("*")
-    .order("sort_date", { ascending: false, nullsFirst: false })
-    .order("year", { ascending: false })
+    .order("sort_order", { ascending: true, nullsFirst: false })
     .range(offset, offset + limit - 1);
 
   if (error) {
