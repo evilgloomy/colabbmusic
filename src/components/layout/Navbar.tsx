@@ -10,7 +10,7 @@ const navItems = [
   { label: "Press", path: "/press" },
 ];
 
-const SHOPIFY_STORE_URL = "https://909d73.myshopify.com";
+const SHOPIFY_STORE_URL = "https://www.colabbshop.com";
 
 export const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
