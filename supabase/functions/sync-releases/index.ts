@@ -3,6 +3,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const YT_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept-Language': 'en-US,en;q=0.9',
+};
+
 interface ScrapedRelease {
   title: string;
   playlistId: string;
@@ -20,17 +25,12 @@ interface EnrichedRelease {
   year: string | null;
 }
 
-// ---------- Step 1: Scrape /releases page for playlist IDs ----------
+// ── Scrape /releases page ──────────────────────────────────────
 
 async function fetchReleasesPage(handle: string): Promise<ScrapedRelease[]> {
   const url = `https://www.youtube.com/${handle}/releases`;
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept-Language': 'en-US,en;q=0.9',
-    },
-  });
-  if (!res.ok) throw new Error(`Failed to fetch releases page: ${res.status}`);
+  const res = await fetch(url, { headers: YT_HEADERS });
+  if (!res.ok) throw new Error(`Releases page: ${res.status}`);
   const html = await res.text();
 
   const match = html.match(/var ytInitialData\s*=\s*({.*?});\s*<\/script>/s);
@@ -51,9 +51,7 @@ async function fetchReleasesPage(handle: string): Promise<ScrapedRelease[]> {
           trackCount: pl.videoCount ? parseInt(pl.videoCount) : undefined,
         });
       }
-      // Also check shelf renderers
-      const shelf = item?.richShelfRenderer?.contents || [];
-      for (const si of shelf) {
+      for (const si of (item?.richShelfRenderer?.contents || [])) {
         const spl = si?.richItemRenderer?.content?.playlistRenderer;
         if (spl?.playlistId) {
           releases.push({
@@ -70,9 +68,68 @@ async function fetchReleasesPage(handle: string): Promise<ScrapedRelease[]> {
   return releases;
 }
 
-// ---------- Step 2: Enrich each release with artwork + description ----------
+// ── Resolve channel ID from handle ──────────────────────────────
 
-async function enrichRelease(release: ScrapedRelease): Promise<EnrichedRelease> {
+async function resolveChannelId(handle: string): Promise<string | null> {
+  const res = await fetch(`https://www.youtube.com/${handle}`, { headers: YT_HEADERS });
+  if (!res.ok) return null;
+  const html = await res.text();
+  const patterns = [
+    /"channelId":"(UC[a-zA-Z0-9_-]{22})"/,
+    /channel_id=(UC[a-zA-Z0-9_-]{22})/,
+    /"externalId":"(UC[a-zA-Z0-9_-]{22})"/,
+  ];
+  for (const p of patterns) {
+    const m = html.match(p);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+// ── Fetch RSS feed for video descriptions ──────────────────────
+
+interface RssVideoInfo {
+  videoId: string;
+  title: string;
+  description: string;
+  published: string;
+}
+
+async function fetchRssDescriptions(channelId: string): Promise<Map<string, RssVideoInfo>> {
+  const map = new Map<string, RssVideoInfo>();
+  const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+  const res = await fetch(rssUrl);
+  if (!res.ok) return map;
+
+  const xml = await res.text();
+  const entries = xml.split('<entry>').slice(1);
+
+  for (const entry of entries) {
+    const videoIdMatch = entry.match(/<yt:videoId>([^<]+)<\/yt:videoId>/);
+    const titleMatch = entry.match(/<media:title>([^<]+)<\/media:title>/);
+    const descMatch = entry.match(/<media:description>([\s\S]*?)<\/media:description>/);
+    const pubMatch = entry.match(/<published>([^<]+)<\/published>/);
+
+    if (videoIdMatch) {
+      map.set(videoIdMatch[1], {
+        videoId: videoIdMatch[1],
+        title: titleMatch?.[1] || '',
+        description: descMatch?.[1]?.trim() || '',
+        published: pubMatch?.[1] || '',
+      });
+    }
+  }
+
+  console.log(`RSS feed: ${map.size} videos with descriptions`);
+  return map;
+}
+
+// ── Enrich release from playlist page ──────────────────────────
+
+async function enrichRelease(
+  release: ScrapedRelease,
+  rssMap: Map<string, RssVideoInfo>
+): Promise<EnrichedRelease> {
   const result: EnrichedRelease = {
     title: release.title,
     playlist_id: release.playlistId,
@@ -85,349 +142,143 @@ async function enrichRelease(release: ScrapedRelease): Promise<EnrichedRelease> 
   };
 
   try {
-    // Fetch playlist page to get artwork + first video ID + description
     const playlistUrl = `https://www.youtube.com/playlist?list=${release.playlistId}`;
-    const res = await fetch(playlistUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-    });
-
-    if (!res.ok) {
-      console.warn(`Failed to fetch playlist ${release.playlistId}: ${res.status}`);
-      return result;
-    }
-
+    const res = await fetch(playlistUrl, { headers: YT_HEADERS });
+    if (!res.ok) return result;
     const html = await res.text();
 
-    // Extract og:image for artwork
-    const ogImageMatch = html.match(/<meta property="og:image" content="([^"]+)"/);
-    if (ogImageMatch) {
-      result.thumbnail_url = ogImageMatch[1];
-    }
+    // og:image → artwork
+    const ogImg = html.match(/<meta property="og:image" content="([^"]+)"/);
+    if (ogImg) result.thumbnail_url = ogImg[1];
 
-    // Extract og:description
-    const ogDescMatch = html.match(/<meta property="og:description" content="([^"]*)"/)
-      || html.match(/<meta name="description" content="([^"]*)"/);
-    if (ogDescMatch) {
-      result.description = decodeHtmlEntities(ogDescMatch[1]);
-    }
-
-    // Try to extract ytInitialData for more details
+    // Parse ytInitialData
     const ytMatch = html.match(/var ytInitialData\s*=\s*({.*?});\s*<\/script>/s);
     if (ytMatch) {
-      try {
-        const ytData = JSON.parse(ytMatch[1]);
+      const ytData = JSON.parse(ytMatch[1]);
 
-        // Get first video ID from playlist
-        const playlistVideos = findPlaylistVideos(ytData);
-        console.log(`Playlist ${release.playlistId}: found ${playlistVideos.length} videos`);
-        if (playlistVideos.length > 0) {
-          result.video_id = playlistVideos[0].videoId;
-          console.log(`First video ID: ${result.video_id}`);
+      // Find first video ID
+      const videoContents = ytData?.contents?.twoColumnBrowseResultsRenderer?.tabs?.[0]
+        ?.tabRenderer?.content?.sectionListRenderer?.contents?.[0]
+        ?.itemSectionRenderer?.contents?.[0]?.playlistVideoListRenderer?.contents || [];
 
-          const firstVideoDesc = playlistVideos[0].description;
-          if (firstVideoDesc && firstVideoDesc.length > 5) {
-            result.description = firstVideoDesc;
+      for (const item of videoContents) {
+        const vr = item?.playlistVideoRenderer;
+        if (vr?.videoId) {
+          result.video_id = vr.videoId;
+          // Check if we have RSS description for this video
+          const rssInfo = rssMap.get(vr.videoId);
+          if (rssInfo?.description) {
+            result.description = rssInfo.description;
+            // Extract year from description
+            const yearMatch = rssInfo.description.match(/\b(20\d{2})\b/);
+            if (yearMatch) result.year = yearMatch[1];
+            // Extract release date
+            const dateMatch = rssInfo.description.match(/Released on:\s*(.+)/i)
+              || rssInfo.description.match(/(\d{4}-\d{2}-\d{2})/);
+            if (dateMatch) result.release_date = dateMatch[1].trim();
           }
+          if (rssInfo?.published && !result.year) {
+            const pubYear = rssInfo.published.match(/(\d{4})/);
+            if (pubYear) result.year = pubYear[1];
+          }
+          break;
         }
+      }
 
-        // Try to find the playlist description / release date from sidebar
-        const sidebar = ytData?.sidebar?.playlistSidebarRenderer?.items || [];
-        for (const item of sidebar) {
-          const primary = item?.playlistSidebarPrimaryInfoRenderer;
-          if (primary) {
-            const desc = primary?.description?.simpleText ||
-              primary?.description?.runs?.map((r: any) => r.text).join('') || '';
-            if (desc && desc.length > 5 && (!result.description || desc.length > result.description.length)) {
-              result.description = desc;
+      // Sidebar stats for year/description
+      const sidebar = ytData?.sidebar?.playlistSidebarRenderer?.items || [];
+      for (const item of sidebar) {
+        const primary = item?.playlistSidebarPrimaryInfoRenderer;
+        if (primary) {
+          const desc = primary?.description?.simpleText ||
+            primary?.description?.runs?.map((r: any) => r.text).join('') || '';
+          if (desc.length > 5 && (!result.description || desc.length > result.description.length)) {
+            result.description = desc;
+          }
+          for (const stat of (primary?.stats || [])) {
+            const text = stat?.simpleText || stat?.runs?.map((r: any) => r.text).join('') || '';
+            const ym = text.match(/\b(20\d{2})\b/);
+            if (ym && !result.year) {
+              result.year = ym[1];
+              result.release_date = text;
             }
-
-            const stats = primary?.stats || [];
-            for (const stat of stats) {
-              const text = stat?.simpleText || stat?.runs?.map((r: any) => r.text).join('') || '';
-              const yearMatch = text.match(/\b(20\d{2})\b/);
-              if (yearMatch) {
-                result.year = yearMatch[1];
-                result.release_date = text;
-              }
-            }
           }
         }
-
-        // Also check header for year
-        const header = ytData?.header?.playlistHeaderRenderer;
-        if (header) {
-          const subtitle = header?.subtitle?.simpleText || header?.subtitle?.runs?.map((r: any) => r.text).join('') || '';
-          const yearMatch = subtitle.match(/\b(20\d{2})\b/);
-          if (yearMatch && !result.year) {
-            result.year = yearMatch[1];
-          }
-
-          const byline = header?.byline?.runs?.map((r: any) => r.text).join('') || '';
-          const bylineYear = byline.match(/\b(20\d{2})\b/);
-          if (bylineYear && !result.year) {
-            result.year = bylineYear[1];
-          }
-        }
-      } catch (e) {
-        console.warn(`Failed to parse ytInitialData for playlist ${release.playlistId}:`, e);
       }
-    } else {
-      console.log(`No ytInitialData found for playlist ${release.playlistId}`);
-    }
 
-    // Always try to fetch the first video's description if we have a video_id
-    if (result.video_id && (!result.description || result.description.length < 20)) {
-      try {
-        const videoDesc = await fetchVideoDescription(result.video_id);
-        if (videoDesc) {
-          result.description = videoDesc;
-        }
-      } catch (e) {
-        console.warn(`Failed to fetch video description for ${result.video_id}:`, e);
+      // Header year
+      const header = ytData?.header?.playlistHeaderRenderer;
+      if (header && !result.year) {
+        const subtitle = header?.subtitle?.simpleText || header?.subtitle?.runs?.map((r: any) => r.text).join('') || '';
+        const ym = subtitle.match(/\b(20\d{2})\b/);
+        if (ym) result.year = ym[1];
       }
     }
 
-    // If no video_id yet but we have a playlist, try fetching the playlist page for the first video
-    if (!result.video_id && result.playlist_id) {
-      try {
-        const firstVideoId = await fetchFirstVideoFromPlaylist(result.playlist_id);
-        if (firstVideoId) {
-          result.video_id = firstVideoId;
-          const videoDesc = await fetchVideoDescription(firstVideoId);
-          if (videoDesc) result.description = videoDesc;
-        }
-      } catch (e) {
-        console.warn(`Failed to fetch first video for playlist ${result.playlist_id}:`, e);
+    // If we found a video_id but no description yet, try other videos in RSS
+    if (result.video_id && !result.description) {
+      const rssInfo = rssMap.get(result.video_id);
+      if (rssInfo?.description) {
+        result.description = rssInfo.description;
       }
     }
 
-    // Extract year from description if we don't have it yet
+    // Extract year from description if still missing
     if (!result.year && result.description) {
-      const descYear = result.description.match(/\b(20\d{2})\b/);
-      if (descYear) {
-        result.year = descYear[1];
-      }
+      const ym = result.description.match(/\b(20\d{2})\b/);
+      if (ym) result.year = ym[1];
     }
   } catch (e) {
-    console.error(`Error enriching release ${release.title}:`, e);
+    console.error(`Error enriching ${release.title}:`, e);
   }
 
   return result;
 }
 
-function findPlaylistVideos(ytData: any): Array<{ videoId: string; description?: string }> {
-  const videos: Array<{ videoId: string; description?: string }> = [];
-
-  try {
-    const contents = ytData?.contents?.twoColumnBrowseResultsRenderer?.tabs?.[0]
-      ?.tabRenderer?.content?.sectionListRenderer?.contents?.[0]
-      ?.itemSectionRenderer?.contents?.[0]?.playlistVideoListRenderer?.contents || [];
-
-    for (const item of contents) {
-      const vr = item?.playlistVideoRenderer;
-      if (vr?.videoId) {
-        const desc = vr?.descriptionSnippet?.runs?.map((r: any) => r.text).join('') || '';
-        videos.push({ videoId: vr.videoId, description: desc || undefined });
-      }
-    }
-  } catch (e) {
-    // Ignore
-  }
-
-  return videos;
-}
-
-async function fetchFirstVideoFromPlaylist(playlistId: string): Promise<string | null> {
-  try {
-    const url = `https://www.youtube.com/playlist?list=${playlistId}`;
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-    });
-    if (!res.ok) return null;
-    const html = await res.text();
-    // Look for first videoId in the playlist
-    const match = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
-    return match ? match[1] : null;
-  } catch {
-    return null;
-  }
-}
-
-async function fetchVideoDescription(videoId: string): Promise<string | null> {
-  const url = `https://www.youtube.com/watch?v=${videoId}`;
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept-Language': 'en-US,en;q=0.9',
-    },
-  });
-
-  if (!res.ok) {
-    console.log(`Video page returned ${res.status} for ${videoId}`);
-    return null;
-  }
-  const html = await res.text();
-  console.log(`Video page HTML length for ${videoId}: ${html.length}`);
-
-  // Try ytInitialData for full description
-  const ytMatch = html.match(/var ytInitialData\s*=\s*({.*?});\s*<\/script>/s);
-  if (ytMatch) {
-    try {
-      const data = JSON.parse(ytMatch[1]);
-
-      // Try engagement panels (structured description)
-      const panels = data?.engagementPanels || [];
-      for (const panel of panels) {
-        const content = panel?.engagementPanelSectionListRenderer?.content?.structuredDescriptionContentRenderer?.items || [];
-        for (const item of content) {
-          const bodyRenderer = item?.expandableVideoDescriptionBodyRenderer;
-          if (bodyRenderer) {
-            const descRuns = bodyRenderer?.descriptionBodyText?.runs;
-            if (descRuns) {
-              const desc = descRuns.map((r: any) => r.text).join('');
-              if (desc.length > 5) {
-                console.log(`Found description via engagement panel for ${videoId}: ${desc.substring(0, 80)}`);
-                return desc;
-              }
-            }
-            // Try attributedDescriptionBodyText
-            const attrDesc = bodyRenderer?.attributedDescriptionBodyText?.content;
-            if (attrDesc && attrDesc.length > 5) {
-              console.log(`Found description via attributed body for ${videoId}`);
-              return attrDesc;
-            }
-          }
-        }
-      }
-
-      // Try videoSecondaryInfoRenderer
-      const videoDetails = data?.contents?.twoColumnWatchNextResults?.results?.results?.contents;
-      if (videoDetails) {
-        for (const c of videoDetails) {
-          const sec = c?.videoSecondaryInfoRenderer;
-          if (sec) {
-            const desc = sec?.description?.runs;
-            if (desc) return desc.map((r: any) => r.text).join('');
-            const attrDesc = sec?.attributedDescription?.content;
-            if (attrDesc) return attrDesc;
-          }
-        }
-      }
-
-      console.log(`ytInitialData found but no description extracted for ${videoId}`);
-    } catch (e) {
-      console.warn(`Failed to parse ytInitialData for video ${videoId}:`, e);
-    }
-  } else {
-    console.log(`No ytInitialData in video page for ${videoId}`);
-  }
-
-  // Fallback: og:description
-  const ogDesc = html.match(/<meta property="og:description" content="([^"]*)"/);
-  if (ogDesc && ogDesc[1].length > 5) {
-    console.log(`Using og:description for ${videoId}`);
-    return decodeHtmlEntities(ogDesc[1]);
-  }
-
-  console.log(`No description found at all for ${videoId}`);
-  return null;
-}
-
-
-
-function decodeHtmlEntities(str: string): string {
-  return str
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#x2F;/g, '/');
-}
-
-// ---------- Step 3: Upsert to database ----------
+// ── Upsert to database ────────────────────────────────────────
 
 async function upsertReleases(releases: EnrichedRelease[]): Promise<{ inserted: number; updated: number }> {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-  let inserted = 0;
-  let updated = 0;
+  let inserted = 0, updated = 0;
 
   for (const release of releases) {
-    // Check if exists
     const checkRes = await fetch(
       `${supabaseUrl}/rest/v1/releases?playlist_id=eq.${encodeURIComponent(release.playlist_id)}&select=id,thumbnail_url,description`,
-      {
-        headers: {
-          'apikey': serviceRoleKey,
-          'Authorization': `Bearer ${serviceRoleKey}`,
-        },
-      }
+      { headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}` } }
     );
-
     const existing = await checkRes.json();
 
     if (existing.length > 0) {
-      // Update only if we have new data
-      const updates: Record<string, any> = { updated_at: new Date().toISOString() };
-      let hasChanges = false;
-
-      if (release.thumbnail_url && !existing[0].thumbnail_url) {
-        updates.thumbnail_url = release.thumbnail_url;
-        hasChanges = true;
-      }
-      if (release.description && (!existing[0].description || release.description.length > existing[0].description.length)) {
+      const updates: Record<string, any> = {
+        updated_at: new Date().toISOString(),
+        title: release.title,
+      };
+      if (release.thumbnail_url) updates.thumbnail_url = release.thumbnail_url;
+      if (release.description && (!existing[0].description || release.description.length > (existing[0].description?.length || 0))) {
         updates.description = release.description;
-        hasChanges = true;
       }
-      // Always update these fields
       if (release.video_id) updates.video_id = release.video_id;
       if (release.release_date) updates.release_date = release.release_date;
       if (release.year) updates.year = release.year;
       if (release.track_count) updates.track_count = release.track_count;
-      updates.title = release.title;
 
-      if (hasChanges || release.video_id || release.year) {
-        await fetch(
-          `${supabaseUrl}/rest/v1/releases?playlist_id=eq.${encodeURIComponent(release.playlist_id)}`,
-          {
-            method: 'PATCH',
-            headers: {
-              'apikey': serviceRoleKey,
-              'Authorization': `Bearer ${serviceRoleKey}`,
-              'Content-Type': 'application/json',
-              'Prefer': 'return=minimal',
-            },
-            body: JSON.stringify(updates),
-          }
-        );
-        updated++;
-      }
+      await fetch(
+        `${supabaseUrl}/rest/v1/releases?playlist_id=eq.${encodeURIComponent(release.playlist_id)}`,
+        {
+          method: 'PATCH',
+          headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify(updates),
+        }
+      );
+      updated++;
     } else {
-      // Insert new release
       await fetch(
         `${supabaseUrl}/rest/v1/releases`,
         {
           method: 'POST',
-          headers: {
-            'apikey': serviceRoleKey,
-            'Authorization': `Bearer ${serviceRoleKey}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal',
-          },
-          body: JSON.stringify({
-            ...release,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }),
+          headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ ...release, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }),
         }
       );
       inserted++;
@@ -437,30 +288,19 @@ async function upsertReleases(releases: EnrichedRelease[]): Promise<{ inserted: 
   return { inserted, updated };
 }
 
-// ---------- Step 4: Batch processing with rate limiting ----------
+// ── Batch processing ──────────────────────────────────────────
 
-async function processInBatches<T, R>(
-  items: T[],
-  batchSize: number,
-  delayMs: number,
-  processor: (item: T) => Promise<R>
-): Promise<R[]> {
+async function processInBatches<T, R>(items: T[], batchSize: number, delayMs: number, fn: (item: T) => Promise<R>): Promise<R[]> {
   const results: R[] = [];
-
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
-    const batchResults = await Promise.all(batch.map(processor));
-    results.push(...batchResults);
-
-    if (i + batchSize < items.length) {
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-    }
+    results.push(...await Promise.all(batch.map(fn)));
+    if (i + batchSize < items.length) await new Promise(r => setTimeout(r, delayMs));
   }
-
   return results;
 }
 
-// ---------- Main handler ----------
+// ── Main handler ──────────────────────────────────────────────
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -471,54 +311,46 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const testMode = body?.test === true;
     const handle = '@Cola_BB';
-    console.log(`Starting release sync for ${handle}... testMode=${testMode}`);
 
-    // Step 1: Get all playlist IDs from /releases page
-    let scrapedReleases = await fetchReleasesPage(handle);
-    console.log(`Found ${scrapedReleases.length} releases to process`);
+    console.log(`Starting sync for ${handle} (test=${testMode})...`);
+
+    // Step 1: Scrape /releases page + resolve channel ID + fetch RSS in parallel
+    const [scrapedReleases, channelId] = await Promise.all([
+      fetchReleasesPage(handle),
+      resolveChannelId(handle),
+    ]);
 
     if (scrapedReleases.length === 0) {
       return new Response(
-        JSON.stringify({ success: true, message: 'No releases found on page', inserted: 0, updated: 0 }),
+        JSON.stringify({ success: true, message: 'No releases found', inserted: 0, updated: 0 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // In test mode, only process first release
-    if (testMode) {
-      scrapedReleases = scrapedReleases.slice(0, 1);
-    }
+    // Fetch RSS feed for video descriptions (if we got channel ID)
+    const rssMap = channelId ? await fetchRssDescriptions(channelId) : new Map();
 
-    // Step 2: Enrich each release (batch of 3 with 1s delay to avoid rate limiting)
-    console.log('Enriching releases with artwork and descriptions...');
-    const enrichedReleases = await processInBatches(scrapedReleases, 3, 1000, enrichRelease);
+    const toProcess = testMode ? scrapedReleases.slice(0, 2) : scrapedReleases;
+    console.log(`Processing ${toProcess.length} releases (RSS has ${rssMap.size} videos)...`);
 
-    const withThumbnails = enrichedReleases.filter(r => r.thumbnail_url).length;
-    const withDescriptions = enrichedReleases.filter(r => r.description).length;
-    const withYears = enrichedReleases.filter(r => r.year).length;
-    console.log(`Enriched: ${withThumbnails} thumbnails, ${withDescriptions} descriptions, ${withYears} years`);
+    // Step 2: Enrich (3 at a time, 500ms delay)
+    const enriched = await processInBatches(toProcess, 3, 500, (r) => enrichRelease(r, rssMap));
 
-    // Step 3: Upsert to database
-    console.log('Upserting to database...');
-    const { inserted, updated } = await upsertReleases(enrichedReleases);
-
-    const summary = {
-      success: true,
-      total: scrapedReleases.length,
-      inserted,
-      updated,
-      withThumbnails,
-      withDescriptions,
-      withYears,
-      timestamp: new Date().toISOString(),
+    const stats = {
+      thumbnails: enriched.filter(r => r.thumbnail_url).length,
+      descriptions: enriched.filter(r => r.description).length,
+      years: enriched.filter(r => r.year).length,
+      videoIds: enriched.filter(r => r.video_id).length,
     };
+    console.log(`Enriched:`, JSON.stringify(stats));
 
+    // Step 3: Upsert
+    const { inserted, updated } = await upsertReleases(enriched);
+
+    const summary = { success: true, total: toProcess.length, inserted, updated, ...stats, timestamp: new Date().toISOString() };
     console.log('Sync complete:', JSON.stringify(summary));
 
-    return new Response(
-      JSON.stringify(summary),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify(summary), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (error) {
     console.error('Sync error:', error);
     return new Response(
