@@ -1,27 +1,39 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
-import { fetchYouTubeFeed, fetchReleases, CHANNELS, type YouTubeVideo, type YouTubeRelease } from "@/lib/youtube";
-import { Music, ExternalLink, Play, Loader2 } from "lucide-react";
+import { fetchYouTubeFeed, fetchReleasesPaginated, CHANNELS, type YouTubeVideo, type YouTubeRelease } from "@/lib/youtube";
+import { Music, Play, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+const PAGE_SIZE = 30;
 
 const MusicPage = () => {
   const [dbReleases, setDbReleases] = useState<YouTubeRelease[]>([]);
   const [ytVideos, setYtVideos] = useState<YouTubeVideo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
-      fetchReleases(),
+      fetchReleasesPaginated(0, PAGE_SIZE),
       fetchYouTubeFeed(CHANNELS.ARTIST, 15),
-    ]).then(([rel, vid]) => {
-      setDbReleases(rel);
+    ]).then(([{ releases, hasMore: more }, vid]) => {
+      setDbReleases(releases);
+      setHasMore(more);
       setYtVideos(vid);
     }).finally(() => setLoading(false));
   }, []);
 
-  const hasDbReleases = dbReleases.length > 0;
+  const loadMore = useCallback(async () => {
+    setLoadingMore(true);
+    const { releases, hasMore: more } = await fetchReleasesPaginated(dbReleases.length, PAGE_SIZE);
+    setDbReleases(prev => [...prev, ...releases]);
+    setHasMore(more);
+    setLoadingMore(false);
+  }, [dbReleases.length]);
 
-  // Separate albums/EPs (multi-track) from singles
+  const hasDbReleases = dbReleases.length > 0;
   const albums = dbReleases.filter(r => (r.track_count ?? 0) > 1);
   const singles = dbReleases.filter(r => (r.track_count ?? 0) <= 1);
 
@@ -66,7 +78,6 @@ const MusicPage = () => {
           </div>
         ) : hasDbReleases ? (
           <>
-            {/* Albums & EPs */}
             {albums.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 mb-16">
                 {albums.map((release) => (
@@ -75,7 +86,6 @@ const MusicPage = () => {
               </div>
             )}
 
-            {/* Singles */}
             {singles.length > 0 && (
               <>
                 <h3 className="text-display-sm font-display font-bold text-foreground mb-8">Singles</h3>
@@ -85,6 +95,23 @@ const MusicPage = () => {
                   ))}
                 </div>
               </>
+            )}
+
+            {hasMore && (
+              <div className="flex justify-center mt-16">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Loading…</>
+                  ) : (
+                    "Show More"
+                  )}
+                </Button>
+              </div>
             )}
           </>
         ) : ytVideos.length > 0 ? (
