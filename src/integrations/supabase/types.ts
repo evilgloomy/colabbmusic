@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          hyperfollow_url: string | null
           id: string
           playlist_id: string | null
           release_date: string | null
@@ -33,6 +34,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          hyperfollow_url?: string | null
           id?: string
           playlist_id?: string | null
           release_date?: string | null
@@ -48,6 +50,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          hyperfollow_url?: string | null
           id?: string
           playlist_id?: string | null
           release_date?: string | null
@@ -61,6 +64,38 @@ export type Database = {
           year?: string | null
         }
         Relationships: []
+      }
+      streaming_links: {
+        Row: {
+          created_at: string
+          id: string
+          platform: string
+          release_id: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform: string
+          release_id: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform?: string
+          release_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "streaming_links_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
