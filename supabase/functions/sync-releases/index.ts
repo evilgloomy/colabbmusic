@@ -23,6 +23,7 @@ interface EnrichedRelease {
   release_date: string | null;
   track_count: number | null;
   year: string | null;
+  sort_date: string | null;
 }
 
 // ── Scrape /releases page ──────────────────────────────────────
