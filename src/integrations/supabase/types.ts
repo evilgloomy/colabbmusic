@@ -65,6 +65,54 @@ export type Database = {
         }
         Relationships: []
       }
+      stories: {
+        Row: {
+          ai_enhanced_text: string | null
+          ai_title: string | null
+          category: string | null
+          created_at: string
+          featured: boolean | null
+          id: string
+          location: string | null
+          media_type: string | null
+          media_url: string | null
+          original_text: string | null
+          permalink: string | null
+          posted_at: string | null
+          threads_post_id: string
+        }
+        Insert: {
+          ai_enhanced_text?: string | null
+          ai_title?: string | null
+          category?: string | null
+          created_at?: string
+          featured?: boolean | null
+          id?: string
+          location?: string | null
+          media_type?: string | null
+          media_url?: string | null
+          original_text?: string | null
+          permalink?: string | null
+          posted_at?: string | null
+          threads_post_id: string
+        }
+        Update: {
+          ai_enhanced_text?: string | null
+          ai_title?: string | null
+          category?: string | null
+          created_at?: string
+          featured?: boolean | null
+          id?: string
+          location?: string | null
+          media_type?: string | null
+          media_url?: string | null
+          original_text?: string | null
+          permalink?: string | null
+          posted_at?: string | null
+          threads_post_id?: string
+        }
+        Relationships: []
+      }
       streaming_links: {
         Row: {
           created_at: string

@@ -1,11 +1,36 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Play, ChevronRight } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { getFeaturedVideo } from "@/data/content";
 
 const SHOPIFY_STORE_URL = "https://www.colabbshop.com";
 
+interface Story {
+  id: string;
+  ai_title: string | null;
+  ai_enhanced_text: string | null;
+  category: string | null;
+  media_url: string | null;
+  posted_at: string | null;
+}
+
 export const StoryPreview = () => {
   const video = getFeaturedVideo();
+  const [stories, setStories] = useState<Story[]>([]);
+
+  useEffect(() => {
+    const fetchStories = async () => {
+      const { data } = await supabase
+        .from("stories")
+        .select("id, ai_title, ai_enhanced_text, category, media_url, posted_at")
+        .order("posted_at", { ascending: false })
+        .limit(3);
+
+      if (data) setStories(data);
+    };
+    fetchStories();
+  }, []);
 
   return (
     <section className="bg-background">
@@ -16,39 +41,48 @@ export const StoryPreview = () => {
 
         {/* Two-column grid */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
-          {/* STYLE & MERCH */}
+          {/* LATEST STORIES from Threads */}
           <div className="rounded-xl overflow-hidden bg-card border border-border/50">
-            <div className="p-5 pb-3">
+            <div className="p-5 pb-3 flex items-center justify-between">
               <p className="text-xs font-bold tracking-[0.2em] uppercase text-muted-foreground">
-                Style & Merch
+                From Her World
               </p>
+              <Link to="/story" className="text-xs text-primary hover:underline">
+                View All
+              </Link>
             </div>
-            <div className="px-5 pb-5 grid grid-cols-2 gap-4">
-              {/* Tile 1 */}
-              <div className="group">
-                <div className="aspect-[3/4] rounded-lg overflow-hidden mb-2 bg-muted">
-                  <img
-                    src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=500&q=80"
-                    alt="Aurora Hoodie"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    loading="lazy"
-                  />
+            <div className="px-5 pb-5 space-y-4">
+              {stories.length > 0 ? (
+                stories.map((story) => (
+                  <div key={story.id} className="group flex gap-3">
+                    {story.media_url && (
+                      <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
+                        <img
+                          src={story.media_url}
+                          alt={story.ai_title || "Story"}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          loading="lazy"
+                        />
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-medium tracking-[0.15em] uppercase text-muted-foreground mb-0.5">
+                        {story.category || "lifestyle"}
+                      </p>
+                      <p className="text-sm font-semibold text-foreground truncate">
+                        {story.ai_title || "Untitled"}
+                      </p>
+                      <p className="text-xs text-muted-foreground line-clamp-1">
+                        {story.ai_enhanced_text || ""}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-8 text-center">
+                  <p className="text-xs text-muted-foreground">Stories coming soon</p>
                 </div>
-                <p className="text-xs font-semibold text-foreground">Aurora Hoodie</p>
-                <p className="text-[10px] text-muted-foreground">(with signature heart embroidery)</p>
-              </div>
-              {/* Tile 2 */}
-              <div className="group">
-                <div className="aspect-[3/4] rounded-lg overflow-hidden mb-2 bg-muted">
-                  <img
-                    src="https://images.unsplash.com/photo-1556306535-0f09a537f0a3?w=500&q=80"
-                    alt="Heartbreaker Cap"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    loading="lazy"
-                  />
-                </div>
-                <p className="text-xs font-semibold text-foreground">Heartbreaker Cap</p>
-              </div>
+              )}
             </div>
           </div>
 
