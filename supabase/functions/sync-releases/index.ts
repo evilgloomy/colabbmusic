@@ -241,6 +241,114 @@ async function fetchRssDescriptions(channelId: string): Promise<Map<string, RssV
   return map;
 }
 
+// ── Fetch actual publish date from a video page ───────────────
+
+async function fetchVideoPublishDate(videoId: string): Promise<string | null> {
+  try {
+    const payload = {
+      context: {
+        client: {
+          clientName: "WEB",
+          clientVersion: "2.20260101.00.00",
+          hl: "en",
+          gl: "US",
+        },
+      },
+      videoId,
+    };
+    const headers: Record<string, string> = {
+      ...YT_HEADERS,
+      'Content-Type': 'application/json',
+      'Origin': 'https://www.youtube.com',
+      'Referer': 'https://www.youtube.com/',
+    };
+
+    // Try player API first (works for regular videos)
+    const playerRes = await fetch('https://www.youtube.com/youtubei/v1/player?prettyPrint=false', {
+      method: 'POST', headers, body: JSON.stringify(payload),
+    });
+    if (playerRes.ok) {
+      const playerData = await playerRes.json();
+      const micro = playerData?.microformat?.playerMicroformatRenderer;
+      if (micro?.publishDate) return micro.publishDate;
+      if (micro?.uploadDate) return micro.uploadDate;
+    }
+
+    // Fallback: next API (returns dateText for Art Tracks)
+    const nextRes = await fetch('https://www.youtube.com/youtubei/v1/next?prettyPrint=false', {
+      method: 'POST', headers, body: JSON.stringify(payload),
+    });
+    if (nextRes.ok) {
+      const nextData = await nextRes.json();
+      // dateText location in the response
+      const results = nextData?.contents?.twoColumnWatchNextResults?.results?.results?.contents || [];
+      for (const content of results) {
+        const dateText = content?.videoPrimaryInfoRenderer?.dateText?.simpleText;
+        if (dateText) {
+          console.log(`Found dateText for ${videoId}: ${dateText}`);
+          const parsed = parseDateText(dateText);
+          if (parsed) return parsed;
+        }
+        // Also check for musicVideoDetails or engagement panel
+        const runs = content?.videoPrimaryInfoRenderer?.dateText?.runs;
+        if (runs) {
+          const text = runs.map((r: any) => r.text).join('');
+          console.log(`Found dateText runs for ${videoId}: ${text}`);
+          const parsed = parseDateText(text);
+          if (parsed) return parsed;
+        }
+      }
+      // Try engagement panels for music track info
+      const panels = nextData?.engagementPanels || [];
+      for (const panel of panels) {
+        const items = panel?.engagementPanelSectionListRenderer?.content?.structuredDescriptionContentRenderer?.items || [];
+        for (const item of items) {
+          const rows = item?.videoDescriptionMusicSectionRenderer?.carouselLockups?.[0]
+            ?.carouselLockupRenderer?.infoRows || [];
+          for (const row of rows) {
+            const label = row?.infoRowRenderer?.title?.simpleText || '';
+            const value = row?.infoRowRenderer?.defaultMetadata?.simpleText || '';
+            if (label.toLowerCase().includes('release') && value) {
+              console.log(`Found music section release date for ${videoId}: ${value}`);
+              const parsed = parseDateText(value);
+              if (parsed) return parsed;
+            }
+          }
+        }
+      }
+    }
+
+    console.warn(`No publish date found for ${videoId}`);
+    return null;
+  } catch (e) {
+    console.error(`Error fetching publish date for ${videoId}:`, e);
+    return null;
+  }
+}
+
+// Parse date text like "May 12, 2023" or "2023年5月12日" into ISO date
+function parseDateText(text: string): string | null {
+  // English: "May 12, 2023"
+  const enMatch = text.match(/(\w{3,})\s+(\d{1,2}),?\s+(\d{4})/);
+  if (enMatch) {
+    const monthNames: Record<string, string> = {
+      january: '01', february: '02', march: '03', april: '04', may: '05', june: '06',
+      july: '07', august: '08', september: '09', october: '10', november: '11', december: '12',
+      jan: '01', feb: '02', mar: '03', apr: '04', jun: '06',
+      jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+    };
+    const month = monthNames[enMatch[1].toLowerCase()];
+    if (month) return `${enMatch[3]}-${month}-${enMatch[2].padStart(2, '0')}`;
+  }
+  // ISO
+  const isoMatch = text.match(/(\d{4}-\d{2}-\d{2})/);
+  if (isoMatch) return isoMatch[1];
+  // Chinese: "2023年5月12日"
+  const cnMatch = text.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+  if (cnMatch) return `${cnMatch[1]}-${cnMatch[2].padStart(2, '0')}-${cnMatch[3].padStart(2, '0')}`;
+  return null;
+}
+
 // ── Enrich release from playlist page ──────────────────────────
 
 async function enrichRelease(
@@ -288,23 +396,16 @@ async function enrichRelease(
           const rssInfo = rssMap.get(vr.videoId);
           if (rssInfo?.description) {
             result.description = rssInfo.description;
-            // Extract year from description
-            const yearMatch = rssInfo.description.match(/\b(20\d{2})\b/);
-            if (yearMatch) result.year = yearMatch[1];
-            // Extract release date
+            // Extract release date from description (not year — we'll get that from video page)
             const dateMatch = rssInfo.description.match(/Released on:\s*(.+)/i)
               || rssInfo.description.match(/(\d{4}-\d{2}-\d{2})/);
             if (dateMatch) result.release_date = dateMatch[1].trim();
-          }
-          if (rssInfo?.published && !result.year) {
-            const pubYear = rssInfo.published.match(/(\d{4})/);
-            if (pubYear) result.year = pubYear[1];
           }
           break;
         }
       }
 
-      // Sidebar stats for year/description
+      // Sidebar description only (skip stats — they contain misleading "Last updated on" dates)
       const sidebar = ytData?.sidebar?.playlistSidebarRenderer?.items || [];
       for (const item of sidebar) {
         const primary = item?.playlistSidebarPrimaryInfoRenderer;
@@ -314,27 +415,12 @@ async function enrichRelease(
           if (desc.length > 5 && (!result.description || desc.length > result.description.length)) {
             result.description = desc;
           }
-          for (const stat of (primary?.stats || [])) {
-            const text = stat?.simpleText || stat?.runs?.map((r: any) => r.text).join('') || '';
-            const ym = text.match(/\b(20\d{2})\b/);
-            if (ym && !result.year) {
-              result.year = ym[1];
-              result.release_date = text;
-            }
-          }
+          // DO NOT extract year from stats — "Last updated on..." is NOT the release date
         }
-      }
-
-      // Header year
-      const header = ytData?.header?.playlistHeaderRenderer;
-      if (header && !result.year) {
-        const subtitle = header?.subtitle?.simpleText || header?.subtitle?.runs?.map((r: any) => r.text).join('') || '';
-        const ym = subtitle.match(/\b(20\d{2})\b/);
-        if (ym) result.year = ym[1];
       }
     }
 
-    // If we found a video_id but no description yet, try other videos in RSS
+    // If we found a video_id but no description yet, try RSS
     if (result.video_id && !result.description) {
       const rssInfo = rssMap.get(result.video_id);
       if (rssInfo?.description) {
@@ -342,14 +428,36 @@ async function enrichRelease(
       }
     }
 
-    // Extract year from description if still missing
+    // ── Get actual publish date from the first video page ──
+    if (result.video_id) {
+      const publishDate = await fetchVideoPublishDate(result.video_id);
+      if (publishDate) {
+        result.release_date = publishDate;
+        result.sort_date = publishDate;
+        const yearMatch = publishDate.match(/^(\d{4})/);
+        if (yearMatch) result.year = yearMatch[1];
+      }
+    }
+
+    // Fallback: extract year from RSS published date
+    if (!result.year && result.video_id) {
+      const rssInfo = rssMap.get(result.video_id);
+      if (rssInfo?.published) {
+        const pubYear = rssInfo.published.match(/(\d{4})/);
+        if (pubYear) result.year = pubYear[1];
+      }
+    }
+
+    // Fallback: extract year from description
     if (!result.year && result.description) {
       const ym = result.description.match(/\b(20\d{2})\b/);
       if (ym) result.year = ym[1];
     }
 
-    // Compute sort_date from release_date text or year
-    result.sort_date = parseSortDate(result.release_date, result.year);
+    // Compute sort_date if not set yet
+    if (!result.sort_date) {
+      result.sort_date = parseSortDate(result.release_date, result.year);
+    }
   } catch (e) {
     console.error(`Error enriching ${release.title}:`, e);
   }
@@ -399,16 +507,17 @@ async function upsertReleases(releases: EnrichedRelease[]): Promise<{ inserted: 
         updated_at: new Date().toISOString(),
         title: release.title,
         sort_order: release.sort_order,
+        // Always overwrite date fields to fix previously incorrect data
+        release_date: release.release_date,
+        year: release.year,
+        sort_date: release.sort_date,
       };
       if (release.thumbnail_url) updates.thumbnail_url = release.thumbnail_url;
       if (release.description && (!existing[0].description || release.description.length > (existing[0].description?.length || 0))) {
         updates.description = release.description;
       }
       if (release.video_id) updates.video_id = release.video_id;
-      if (release.release_date) updates.release_date = release.release_date;
-      if (release.year) updates.year = release.year;
       if (release.track_count) updates.track_count = release.track_count;
-      if (release.sort_date) updates.sort_date = release.sort_date;
 
       await fetch(
         `${supabaseUrl}/rest/v1/releases?playlist_id=eq.${encodeURIComponent(release.playlist_id)}`,
