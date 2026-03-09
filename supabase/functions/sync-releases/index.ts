@@ -470,8 +470,8 @@ Deno.serve(async (req) => {
     const toProcess = testMode ? scrapedReleases.slice(0, 2) : scrapedReleases;
     console.log(`Processing ${toProcess.length} releases (RSS has ${rssMap.size} videos)...`);
 
-    // Step 2: Enrich (3 at a time, 500ms delay)
-    const enriched = await processInBatches(toProcess, 3, 500, (r) => enrichRelease(r, rssMap));
+    // Step 2: Enrich (5 at a time, 500ms delay)
+    const enriched = await processInBatches(toProcess, 5, 500, (r) => enrichRelease(r, rssMap));
 
     const stats = {
       thumbnails: enriched.filter(r => r.thumbnail_url).length,
