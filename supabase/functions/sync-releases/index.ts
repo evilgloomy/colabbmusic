@@ -268,51 +268,74 @@ async function fetchVideoDescription(videoId: string): Promise<string | null> {
     },
   });
 
-  if (!res.ok) return null;
+  if (!res.ok) {
+    console.log(`Video page returned ${res.status} for ${videoId}`);
+    return null;
+  }
   const html = await res.text();
+  console.log(`Video page HTML length for ${videoId}: ${html.length}`);
 
   // Try ytInitialData for full description
   const ytMatch = html.match(/var ytInitialData\s*=\s*({.*?});\s*<\/script>/s);
   if (ytMatch) {
     try {
       const data = JSON.parse(ytMatch[1]);
-      // Navigate to video description in engagement panels or two column watch
+
+      // Try engagement panels (structured description)
       const panels = data?.engagementPanels || [];
       for (const panel of panels) {
         const content = panel?.engagementPanelSectionListRenderer?.content?.structuredDescriptionContentRenderer?.items || [];
         for (const item of content) {
-          const descRuns = item?.videoDescriptionHeaderRenderer?.title?.runs ||
-            item?.expandableVideoDescriptionBodyRenderer?.descriptionBodyText?.runs;
-          if (descRuns) {
-            const desc = descRuns.map((r: any) => r.text).join('');
-            if (desc.length > 10) return desc;
+          const bodyRenderer = item?.expandableVideoDescriptionBodyRenderer;
+          if (bodyRenderer) {
+            const descRuns = bodyRenderer?.descriptionBodyText?.runs;
+            if (descRuns) {
+              const desc = descRuns.map((r: any) => r.text).join('');
+              if (desc.length > 5) {
+                console.log(`Found description via engagement panel for ${videoId}: ${desc.substring(0, 80)}`);
+                return desc;
+              }
+            }
+            // Try attributedDescriptionBodyText
+            const attrDesc = bodyRenderer?.attributedDescriptionBodyText?.content;
+            if (attrDesc && attrDesc.length > 5) {
+              console.log(`Found description via attributed body for ${videoId}`);
+              return attrDesc;
+            }
           }
         }
       }
 
-      // Try alternative path
+      // Try videoSecondaryInfoRenderer
       const videoDetails = data?.contents?.twoColumnWatchNextResults?.results?.results?.contents;
       if (videoDetails) {
         for (const c of videoDetails) {
-          const desc = c?.videoSecondaryInfoRenderer?.description?.runs;
-          if (desc) {
-            return desc.map((r: any) => r.text).join('');
+          const sec = c?.videoSecondaryInfoRenderer;
+          if (sec) {
+            const desc = sec?.description?.runs;
+            if (desc) return desc.map((r: any) => r.text).join('');
+            const attrDesc = sec?.attributedDescription?.content;
+            if (attrDesc) return attrDesc;
           }
-          const attrDesc = c?.videoSecondaryInfoRenderer?.attributedDescription?.content;
-          if (attrDesc) return attrDesc;
         }
       }
+
+      console.log(`ytInitialData found but no description extracted for ${videoId}`);
     } catch (e) {
       console.warn(`Failed to parse ytInitialData for video ${videoId}:`, e);
     }
+  } else {
+    console.log(`No ytInitialData in video page for ${videoId}`);
   }
 
   // Fallback: og:description
   const ogDesc = html.match(/<meta property="og:description" content="([^"]*)"/);
-  if (ogDesc) {
+  if (ogDesc && ogDesc[1].length > 5) {
+    console.log(`Using og:description for ${videoId}`);
     return decodeHtmlEntities(ogDesc[1]);
   }
 
+  console.log(`No description found at all for ${videoId}`);
   return null;
 }
 
