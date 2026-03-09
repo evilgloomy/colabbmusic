@@ -14,13 +14,13 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["DM Sans", "sans-serif"],
-        display: ["Playfair Display", "serif"],
+        sans: ["Sora", "sans-serif"],
+        display: ["Sora", "sans-serif"],
       },
       fontSize: {
-        "hero": ["clamp(3.5rem, 8vw, 8rem)", { lineHeight: "0.95", letterSpacing: "-0.02em" }],
-        "display-lg": ["clamp(2.5rem, 5vw, 4.5rem)", { lineHeight: "1.05", letterSpacing: "-0.01em" }],
-        "display-md": ["clamp(2rem, 3.5vw, 3rem)", { lineHeight: "1.1" }],
+        "hero": ["clamp(3.5rem, 8vw, 7rem)", { lineHeight: "0.95", letterSpacing: "0.08em" }],
+        "display-lg": ["clamp(2.5rem, 5vw, 4.5rem)", { lineHeight: "1.05", letterSpacing: "0.02em" }],
+        "display-md": ["clamp(1.75rem, 3.5vw, 2.5rem)", { lineHeight: "1.15" }],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -56,8 +56,10 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        rose: "hsl(var(--rose))",
         champagne: "hsl(var(--champagne))",
+        lavender: "hsl(var(--lavender))",
+        "cyan-glow": "hsl(var(--cyan-glow))",
+        rose: "hsl(var(--rose))",
         blush: "hsl(var(--blush))",
         "deep-rose": "hsl(var(--deep-rose))",
         "warm-cream": "hsl(var(--warm-cream))",
@@ -102,6 +104,10 @@ export default {
           from: { backgroundPosition: "200% 0" },
           to: { backgroundPosition: "-200% 0" },
         },
+        "pulse-glow": {
+          "0%, 100%": { opacity: "0.6" },
+          "50%": { opacity: "1" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -110,6 +116,7 @@ export default {
         "fade-in-slow": "fade-in-slow 1.2s ease-out forwards",
         "slide-up": "slide-up 0.8s ease-out forwards",
         "shimmer": "shimmer 8s ease-in-out infinite",
+        "pulse-glow": "pulse-glow 3s ease-in-out infinite",
       },
     },
   },
