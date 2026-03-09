@@ -51,7 +51,7 @@ export const Navbar = () => {
         {/* Right side: social + store + mobile toggle */}
         <div className="flex items-center gap-3">
           <a
-            href="#"
+            href="https://www.instagram.com/cola_bb_official/"
             target="_blank"
             rel="noopener noreferrer"
             className="hidden md:flex text-muted-foreground hover:text-primary transition-colors"
