@@ -30,8 +30,9 @@ interface EnrichedRelease {
 
 // ── Extract releases from richGridRenderer contents ───────────
 
-function extractReleasesFromItems(items: any[]): ScrapedRelease[] {
+function extractReleasesFromItems(items: any[], startIndex: number): { releases: ScrapedRelease[]; nextIndex: number } {
   const releases: ScrapedRelease[] = [];
+  let idx = startIndex;
   for (const item of items) {
     const pl = item?.richItemRenderer?.content?.playlistRenderer;
     if (pl?.playlistId) {
@@ -39,6 +40,7 @@ function extractReleasesFromItems(items: any[]): ScrapedRelease[] {
         title: pl.title?.simpleText || pl.title?.runs?.[0]?.text || 'Unknown',
         playlistId: pl.playlistId,
         trackCount: pl.videoCount ? parseInt(pl.videoCount) : undefined,
+        sortOrder: idx++,
       });
     }
     for (const si of (item?.richShelfRenderer?.contents || [])) {
@@ -48,11 +50,12 @@ function extractReleasesFromItems(items: any[]): ScrapedRelease[] {
           title: spl.title?.simpleText || spl.title?.runs?.[0]?.text || 'Unknown',
           playlistId: spl.playlistId,
           trackCount: spl.videoCount ? parseInt(spl.videoCount) : undefined,
+          sortOrder: idx++,
         });
       }
     }
   }
-  return releases;
+  return { releases, nextIndex: idx };
 }
 
 // ── Extract continuation token from items array ───────────────
