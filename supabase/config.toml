@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.scrape-hyperfollow]
 verify_jwt = false
+
+[functions.cache-album-art]
+verify_jwt = false
