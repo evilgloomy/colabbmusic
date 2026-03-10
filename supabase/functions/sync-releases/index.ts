@@ -281,7 +281,7 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
 
   const BASE_URL = 'https://distrokid.com/hyperfollow/colab2/';
 
-  for (const release of needsScraping) {
+  for (const release of toProcess) {
     // If already has a hyperfollow_url, use it directly
     if (release.hyperfollow_url) {
       console.log(`Scraping known URL for \"${release.title}\": ${release.hyperfollow_url}`);
