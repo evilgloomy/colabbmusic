@@ -39,12 +39,18 @@ export const CHANNELS = {
 } as const;
 
 export async function fetchYouTubeFeed(
-  handle: string,
+  handleOrChannelId: string,
   maxResults?: number
 ): Promise<YouTubeVideo[]> {
+  // If it starts with "UC", treat as channelId; otherwise as handle
+  const isChannelId = handleOrChannelId.startsWith("UC");
+  const body = isChannelId
+    ? { channelId: handleOrChannelId, maxResults }
+    : { handle: handleOrChannelId, maxResults };
+
   const { data, error } = await supabase.functions.invoke<YouTubeFeedResponse>(
     "fetch-youtube-feed",
-    { body: { handle, maxResults } }
+    { body }
   );
 
   if (error || !data?.success || !data.videos) {
