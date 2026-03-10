@@ -13,6 +13,7 @@ import ReleasePage from "./pages/ReleasePage";
 import StoryDetailPage from "./pages/StoryDetail";
 import StorePage from "./pages/Store";
 import ProductDetailPage from "./pages/ProductDetail";
+import PoliciesPage from "./pages/Policies";
 import { useCartSync } from "./hooks/useCartSync";
 
 const queryClient = new QueryClient();
