@@ -75,33 +75,20 @@ export const Navbar = () => {
       {mobileOpen && (
         <div className="md:hidden glass-strong border-t border-border/40">
           <div className="container mx-auto px-6 py-6 flex flex-col gap-4">
-            {navItems.map((item) =>
-              item.external ? (
-                <a
-                  key={item.path}
-                  href={item.external}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setMobileOpen(false)}
-                  className="text-sm font-semibold tracking-[0.15em] uppercase text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {item.label}
-                </a>
-              ) : (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setMobileOpen(false)}
-                  className={`text-sm font-semibold tracking-[0.15em] uppercase transition-colors ${
-                    location.pathname === item.path
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              )
-            )}
+            {navItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setMobileOpen(false)}
+                className={`text-sm font-semibold tracking-[0.15em] uppercase transition-colors ${
+                  location.pathname === item.path
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
           </div>
         </div>
       )}
