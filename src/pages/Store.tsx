@@ -25,15 +25,17 @@ const StorePage = () => {
 
   return (
     <PageLayout>
-      <section className="container mx-auto px-6 pt-24 pb-16">
-        <div className="mb-12">
-          <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-3">
-            Shop
-          </p>
-          <h1 className="text-display-md font-display font-bold text-foreground">
-            Store
-          </h1>
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        <img src={bannerStore} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-background/40" />
+        <div className="relative container mx-auto px-6 py-32 md:py-40">
+          <p className="text-xs font-medium tracking-[0.3em] uppercase text-primary mb-4">Shop</p>
+          <h1 className="text-display-lg font-display font-bold text-foreground mb-6">Store</h1>
         </div>
+      </section>
+
+      <section className="container mx-auto px-6 pt-12 pb-16">
 
         {/* Collection tabs */}
         <div className="flex flex-wrap gap-2 mb-10">
