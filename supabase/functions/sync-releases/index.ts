@@ -512,6 +512,16 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+    // Map & match mode: use Firecrawl Map to discover URLs, then match by page title
+    if (body?.map_and_match) {
+      const batchSize = body?.batch_size || 15;
+      console.log(`Running map_and_match mode (batch_size=${batchSize})...`);
+      const result = await mapAndMatchHyperFollow(supabaseUrl, serviceRoleKey, batchSize);
+      const summary = { success: true, mode: 'map_and_match', ...result, timestamp: new Date().toISOString() };
+      console.log('Map & match complete:', JSON.stringify(summary));
+      return new Response(JSON.stringify(summary), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     // HyperFollow-only mode: skip YouTube scraping, just scrape streaming links per-release
     if (hyperfollowOnly) {
       const batchSize = body?.batch_size || 10;
