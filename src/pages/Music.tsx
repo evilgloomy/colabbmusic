@@ -10,7 +10,11 @@ import bannerMusic from "@/assets/banner-music.jpg";
 const PAGE_SIZE = 30;
 
 const MusicPage = () => {
-  const [dbReleases, setDbReleases] = useState<YouTubeRelease[]>([]);
+  useSEO({
+    title: "Music — Cola B | Latest Releases & Singles",
+    description: "Explore Cola B's full discography — albums, singles, and EPs. Stream on Spotify, Apple Music, and YouTube.",
+  });
+
   const [ytVideos, setYtVideos] = useState<YouTubeVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);

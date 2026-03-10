@@ -9,6 +9,11 @@ import { useSEO } from "@/hooks/useSEO";
 import bannerStore from "@/assets/banner-store.jpg";
 
 const StorePage = () => {
+  useSEO({
+    title: "Store — Cola B | Official Merchandise",
+    description: "Shop official Cola B merchandise — apparel, accessories, and limited-edition drops.",
+  });
+
   const [activeCollection, setActiveCollection] = useState("all");
 
   const { data: products = [], isLoading } = useQuery({

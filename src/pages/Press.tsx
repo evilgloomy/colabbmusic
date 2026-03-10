@@ -18,6 +18,11 @@ const pressImages = [
 ];
 
 const PressPage = () => {
+  useSEO({
+    title: "Press — Cola B | Press Kit & Media",
+    description: "Official press materials, bios, high-res images, and media assets for Cola B.",
+  });
+
   const [latestRelease, setLatestRelease] = useState<YouTubeRelease | null>(null);
 
   useEffect(() => {

@@ -6,6 +6,11 @@ import { useSEO } from "@/hooks/useSEO";
 import bannerVideos from "@/assets/banner-videos.jpg";
 
 const VideosPage = () => {
+  useSEO({
+    title: "Videos — Cola B | Official Music Videos",
+    description: "Watch official music videos from Cola B's VEVO channel. Visual storytelling at its finest.",
+  });
+
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [featuredIndex, setFeaturedIndex] = useState(0);

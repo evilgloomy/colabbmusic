@@ -24,6 +24,11 @@ const categories = [
 ] as const;
 
 const StoryPage = () => {
+  useSEO({
+    title: "Story — Cola B | Life, Music & Moments",
+    description: "Music, cities, moments, and everything in between. A living archive of Cola B's world.",
+  });
+
   const [filter, setFilter] = useState<string>("all");
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
