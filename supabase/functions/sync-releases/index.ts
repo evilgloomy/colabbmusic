@@ -556,6 +556,129 @@ async function processInBatches<T, R>(items: T[], batchSize: number, delayMs: nu
   return results;
 }
 
+// ── HyperFollow discovery & scraping ──────────────────────────
+
+function titleToSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/['']/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function extractStreamingLinks(html: string): { platform: string; url: string }[] {
+  const links: { platform: string; url: string }[] = [];
+  const linkRegex =
+    /<a[^>]+target="_blank"[^>]+href="([^"]+)"[^>]*>[\s\S]*?<div[^>]*style="flex:\s*1[^"]*"[^>]*>\s*([\w\s]+?)\s*<\/div>/gi;
+
+  let match;
+  while ((match = linkRegex.exec(html)) !== null) {
+    let url = match[1].replace(/&amp;/g, "&");
+    const platform = match[2].trim();
+    if (!platform || !url) continue;
+    if (url.includes("prf.hn/click")) {
+      const destMatch = url.match(/destination:(https?[^\s&]+)/);
+      if (destMatch) url = decodeURIComponent(destMatch[1]);
+    }
+    links.push({ platform: platform.toLowerCase().replace(/\s+/g, "_"), url });
+  }
+  return links;
+}
+
+async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey: string): Promise<{ discovered: number; scraped: number }> {
+  let discovered = 0, scraped = 0;
+
+  // Get all releases
+  const relRes = await fetch(
+    `${supabaseUrl}/rest/v1/releases?select=id,title,hyperfollow_url&order=sort_order.asc`,
+    { headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}` } }
+  );
+  const releases = await relRes.json();
+
+  // Get releases that already have streaming links
+  const linksRes = await fetch(
+    `${supabaseUrl}/rest/v1/streaming_links?select=release_id`,
+    { headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}` } }
+  );
+  const existingLinks = await linksRes.json();
+  const hasLinks = new Set((existingLinks || []).map((l: any) => l.release_id));
+
+  for (const release of releases) {
+    // Skip if already has streaming links
+    if (hasLinks.has(release.id)) continue;
+
+    let hyperfollowUrl = release.hyperfollow_url;
+
+    // Try to discover HyperFollow URL if not set
+    if (!hyperfollowUrl) {
+      const slug = titleToSlug(release.title);
+      const candidateUrl = `https://distrokid.com/hyperfollow/colab/${slug}`;
+      try {
+        const checkRes = await fetch(candidateUrl, {
+          method: 'HEAD',
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+          redirect: 'follow',
+        });
+        if (checkRes.ok) {
+          hyperfollowUrl = candidateUrl;
+          // Store the discovered URL
+          await fetch(
+            `${supabaseUrl}/rest/v1/releases?id=eq.${release.id}`,
+            {
+              method: 'PATCH',
+              headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+              body: JSON.stringify({ hyperfollow_url: hyperfollowUrl }),
+            }
+          );
+          discovered++;
+          console.log(`Discovered HyperFollow for "${release.title}": ${candidateUrl}`);
+        }
+      } catch (e) {
+        console.warn(`HyperFollow check failed for "${release.title}":`, e);
+      }
+      await new Promise(r => setTimeout(r, 300)); // Rate limit
+    }
+
+    // Scrape streaming links if we have a URL
+    if (hyperfollowUrl) {
+      try {
+        const pageRes = await fetch(hyperfollowUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+        });
+        if (pageRes.ok) {
+          const html = await pageRes.text();
+          const links = extractStreamingLinks(html);
+          if (links.length > 0) {
+            // Upsert streaming links
+            const upsertRes = await fetch(
+              `${supabaseUrl}/rest/v1/streaming_links`,
+              {
+                method: 'POST',
+                headers: {
+                  'apikey': serviceRoleKey,
+                  'Authorization': `Bearer ${serviceRoleKey}`,
+                  'Content-Type': 'application/json',
+                  'Prefer': 'resolution=merge-duplicates,return=minimal',
+                },
+                body: JSON.stringify(links.map(l => ({ release_id: release.id, platform: l.platform, url: l.url }))),
+              }
+            );
+            if (upsertRes.ok) {
+              scraped++;
+              console.log(`Scraped ${links.length} streaming links for "${release.title}"`);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn(`HyperFollow scrape failed for "${release.title}":`, e);
+      }
+      await new Promise(r => setTimeout(r, 500)); // Rate limit
+    }
+  }
+
+  return { discovered, scraped };
+}
+
 // ── Main handler ──────────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -603,7 +726,16 @@ Deno.serve(async (req) => {
     // Step 3: Upsert
     const { inserted, updated } = await upsertReleases(enriched);
 
-    const summary = { success: true, total: toProcess.length, inserted, updated, ...stats, timestamp: new Date().toISOString() };
+    // Step 4: Auto-discover HyperFollow URLs and scrape streaming links
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const { discovered, scraped } = await discoverAndScrapeHyperFollow(supabaseUrl, serviceRoleKey);
+
+    const summary = {
+      success: true, total: toProcess.length, inserted, updated, ...stats,
+      hyperfollow_discovered: discovered, streaming_links_scraped: scraped,
+      timestamp: new Date().toISOString(),
+    };
     console.log('Sync complete:', JSON.stringify(summary));
 
     return new Response(JSON.stringify(summary), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
