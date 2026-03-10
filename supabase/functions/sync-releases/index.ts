@@ -799,17 +799,6 @@ Deno.serve(async (req) => {
     );
   }
 });
-
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  try {
-    const body = await req.json().catch(() => ({}));
-    const testMode = body?.test === true;
-    const hyperfollowOnly = body?.hyperfollow_only === true;
-    const debugHyperfollow = body?.debug_hyperfollow === true;
     const handle = '@Cola_BB';
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
