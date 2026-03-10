@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Play, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { getFeaturedVideo } from "@/data/content";
+import { fetchYouTubeFeed, CHANNELS, type YouTubeVideo } from "@/lib/youtube";
 
 const SHOPIFY_STORE_URL = "https://www.colabbshop.com";
 
@@ -17,7 +17,7 @@ interface Story {
 }
 
 export const StoryPreview = () => {
-  const video = getFeaturedVideo();
+  const [latestVideo, setLatestVideo] = useState<YouTubeVideo | null>(null);
   const [stories, setStories] = useState<Story[]>([]);
 
   useEffect(() => {
