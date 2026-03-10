@@ -701,6 +701,7 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
         const html = fcData?.data?.html || fcData?.html || '';
         const pageTitle = extractPageTitle(html);
         const streamingLinks = extractStreamingLinks(html);
+        console.log(`Scraped ${url}: title="${pageTitle}", links=${streamingLinks.length}, htmlLen=${html.length}`);
         return { url, pageTitle, streamingLinks };
       } catch (e) {
         console.warn(`Error scraping ${url}:`, e);
@@ -709,7 +710,15 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
     }));
 
     for (const result of results) {
-      if (!result || !result.pageTitle || result.streamingLinks.length === 0) continue;
+      if (!result) continue;
+      if (!result.pageTitle) {
+        console.log(`Skipping ${result.url}: no page title found`);
+        continue;
+      }
+      if (result.streamingLinks.length === 0) {
+        console.log(`Skipping ${result.url}: title="${result.pageTitle}" but 0 streaming links`);
+        continue;
+      }
 
       // Match page title to a release
       const normalizedPageTitle = normalizeTitle(result.pageTitle);
