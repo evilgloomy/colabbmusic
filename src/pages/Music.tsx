@@ -166,27 +166,18 @@ const MusicPage = () => {
 };
 
 const ReleaseCard = ({ release }: { release: YouTubeRelease }) => {
-  const decodedThumb = release.thumbnail_url?.replace(/&amp;/g, '&');
-  // Fallback to video-based thumbnail which doesn't require signed params
-  const fallbackThumb = release.video_id
-    ? `https://img.youtube.com/vi/${release.video_id}/mqdefault.jpg`
-    : null;
-  const [imgSrc, setImgSrc] = useState(decodedThumb || fallbackThumb);
+  const thumbSrc = release.thumbnail_url
+    || (release.video_id ? `https://img.youtube.com/vi/${release.video_id}/mqdefault.jpg` : null);
 
-  const content = (
-    <>
+  return (
+    <Link to={`/release/${release.id}`} className="group block">
       <div className="aspect-square overflow-hidden mb-4 relative rounded-sm bg-card">
-        {imgSrc ? (
+        {thumbSrc ? (
           <img
-            src={imgSrc}
+            src={thumbSrc}
             alt={release.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
             loading="lazy"
-            onError={() => {
-              if (imgSrc !== fallbackThumb && fallbackThumb) {
-                setImgSrc(fallbackThumb);
-              }
-            }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground">
@@ -200,12 +191,6 @@ const ReleaseCard = ({ release }: { release: YouTubeRelease }) => {
         {release.year}
         {release.track_count && release.track_count > 1 && ` · ${release.track_count} tracks`}
       </p>
-    </>
-  );
-
-  return (
-    <Link to={`/release/${release.id}`} className="group block">
-      {content}
     </Link>
   );
 };

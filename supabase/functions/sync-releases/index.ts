@@ -602,10 +602,68 @@ Deno.serve(async (req) => {
     // Step 3: Upsert
     const { inserted, updated } = await upsertReleases(enriched);
 
-    // Step 4: HyperFollow scraping should be triggered separately with { hyperfollow_only: true }
+    // Step 4: Cache album art thumbnails to storage
+    let artCached = 0;
+    try {
+      const storageBase = `${supabaseUrl}/storage/v1`;
+      const publicBase = `${supabaseUrl}/storage/v1/object/public/album-art`;
+
+      // Re-fetch releases to get their IDs after upsert
+      const freshRes = await fetch(
+        `${supabaseUrl}/rest/v1/releases?select=id,title,video_id,thumbnail_url&order=sort_order.asc&limit=1000`,
+        { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } }
+      );
+      const freshReleases = await freshRes.json();
+
+      for (const rel of freshReleases) {
+        // Skip already cached
+        if (rel.thumbnail_url?.includes(supabaseUrl)) continue;
+
+        const sources = [
+          rel.thumbnail_url?.replace(/&amp;/g, '&'),
+          rel.video_id ? `https://i.ytimg.com/vi/${rel.video_id}/maxresdefault.jpg` : null,
+          rel.video_id ? `https://img.youtube.com/vi/${rel.video_id}/mqdefault.jpg` : null,
+        ].filter(Boolean) as string[];
+
+        let imageData: ArrayBuffer | null = null;
+        let contentType = 'image/jpeg';
+        for (const src of sources) {
+          try {
+            const r = await fetch(src);
+            if (r.ok && r.headers.get('content-type')?.startsWith('image/')) {
+              imageData = await r.arrayBuffer();
+              contentType = r.headers.get('content-type') || 'image/jpeg';
+              if (imageData.byteLength < 1000) { imageData = null; continue; }
+              break;
+            }
+          } catch { /* next */ }
+        }
+        if (!imageData) continue;
+
+        const uploadRes = await fetch(`${storageBase}/object/album-art/${rel.id}.jpg`, {
+          method: 'PUT',
+          headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}`, 'Content-Type': contentType, 'x-upsert': 'true' },
+          body: imageData,
+        });
+        if (!uploadRes.ok) continue;
+
+        await fetch(`${supabaseUrl}/rest/v1/releases?id=eq.${rel.id}`, {
+          method: 'PATCH',
+          headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({ thumbnail_url: `${publicBase}/${rel.id}.jpg` }),
+        });
+        artCached++;
+        await new Promise(r => setTimeout(r, 200));
+      }
+      console.log(`Cached ${artCached} album art thumbnails`);
+    } catch (e) {
+      console.warn('Album art caching error (non-fatal):', e);
+    }
+
+    // Step 5: HyperFollow scraping should be triggered separately with { hyperfollow_only: true }
 
     const summary = {
-      success: true, total: toProcess.length, inserted, updated, ...stats,
+      success: true, total: toProcess.length, inserted, updated, artCached, ...stats,
       timestamp: new Date().toISOString(),
     };
     console.log('Sync complete:', JSON.stringify(summary));
