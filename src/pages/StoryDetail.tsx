@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, ExternalLink, MapPin, Calendar } from "lucide-react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { useSEO, SITE_URL } from "@/hooks/useSEO";
 
 interface Story {
   id: string;
@@ -15,62 +16,6 @@ interface Story {
   permalink: string | null;
   posted_at: string | null;
   location: string | null;
-}
-
-const DEFAULT_TITLE = "Cola B — Official Site";
-const DEFAULT_DESCRIPTION = "Music, cities, moments, and everything in between.";
-
-function useSEO(story: Story | null) {
-  useEffect(() => {
-    if (!story) return;
-
-    const title = `${story.ai_title || "Story"} — Cola B`;
-    const description = story.ai_enhanced_text || DEFAULT_DESCRIPTION;
-    const image = story.media_url || "";
-    const url = window.location.href;
-
-    document.title = title;
-
-    const metas: Record<string, string> = {
-      "og:title": title,
-      "og:description": description,
-      "og:image": image,
-      "og:url": url,
-      "og:type": "article",
-      "twitter:card": "summary_large_image",
-      "twitter:title": title,
-      "twitter:description": description,
-      "twitter:image": image,
-    };
-
-    const cleanup: (() => void)[] = [];
-
-    Object.entries(metas).forEach(([property, content]) => {
-      if (!content) return;
-      const attr = property.startsWith("twitter:") ? "name" : "property";
-      let el = document.querySelector(`meta[${attr}="${property}"]`) as HTMLMetaElement | null;
-      const existed = !!el;
-      if (!el) {
-        el = document.createElement("meta");
-        el.setAttribute(attr, property);
-        document.head.appendChild(el);
-      }
-      const prev = el.getAttribute("content");
-      el.setAttribute("content", content);
-      cleanup.push(() => {
-        if (!existed) {
-          el!.remove();
-        } else if (prev) {
-          el!.setAttribute("content", prev);
-        }
-      });
-    });
-
-    return () => {
-      document.title = DEFAULT_TITLE;
-      cleanup.forEach((fn) => fn());
-    };
-  }, [story]);
 }
 
 const StoryDetailPage = () => {
