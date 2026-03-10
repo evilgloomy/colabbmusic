@@ -49,13 +49,15 @@ const ChatPage = () => {
         body: {},
       });
 
-      if (subErr) {
+      // The edge function may return 500 but still include valid subscription data
+      const subData = data || {};
+      if (subErr && !subData.subscription_tier) {
         console.error('Subscription check error:', subErr);
         setSubscriptionStatus({ subscribed: false });
       } else {
         setSubscriptionStatus({
-          subscribed: data?.subscribed === true,
-          subscription_tier: data?.subscription_tier,
+          subscribed: subData.subscribed === true,
+          subscription_tier: subData.subscription_tier,
         });
       }
     } catch (err) {
