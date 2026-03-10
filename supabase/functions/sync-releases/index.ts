@@ -713,7 +713,7 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
 
       // Match page title to a release
       const normalizedPageTitle = normalizeTitle(result.pageTitle);
-      const matchedRelease = titleMap.get(normalizedPageTitle);
+      const matchedRelease = findMatchingRelease(normalizedPageTitle, titleMap);
 
       if (!matchedRelease) {
         console.log(`No release match for page title "${result.pageTitle}" (normalized: "${normalizedPageTitle}")`);
