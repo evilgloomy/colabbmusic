@@ -329,7 +329,7 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
     await new Promise(r => setTimeout(r, 1000));
   }
 
-  return { discovered, scraped, skipped, failed };
+  return { discovered, scraped, skipped, remaining: totalNeeded - toProcess.length, failed };
 }
 
 // ── Main handler ──────────────────────────────────────────────
