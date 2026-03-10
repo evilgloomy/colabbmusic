@@ -300,23 +300,35 @@ Deno.serve(async (req) => {
       if (attempt < 2) await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
     }
 
-    if (!rssResponse || !rssResponse.ok) {
+    // If RSS feed works, use it
+    if (rssResponse && rssResponse.ok) {
+      const xml = await rssResponse.text();
+      let videos = parseRssFeed(xml);
+
+      if (maxResults && maxResults > 0) {
+        videos = videos.slice(0, maxResults);
+      }
+
       return new Response(
-        JSON.stringify({ success: false, error: `RSS feed returned ${rssResponse?.status ?? 'unknown'}` }),
-        { status: rssResponse?.status ?? 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: true, channelId: resolvedChannelId, videos }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const xml = await rssResponse.text();
-    let videos = parseRssFeed(xml);
+    // RSS feed failed (common for VEVO channels) — fall back to scraping channel page
+    console.log('RSS feed failed, falling back to channel page scrape for:', resolvedChannelId);
+    const videos = await scrapeChannelVideos(resolvedChannelId, maxResults);
 
-    if (maxResults && maxResults > 0) {
-      videos = videos.slice(0, maxResults);
+    if (videos.length > 0) {
+      return new Response(
+        JSON.stringify({ success: true, channelId: resolvedChannelId, videos }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     return new Response(
-      JSON.stringify({ success: true, channelId: resolvedChannelId, videos }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ success: false, error: `No videos found for channel ${resolvedChannelId}` }),
+      { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('Error:', error);
