@@ -612,7 +612,7 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
     // Try to discover HyperFollow URL if not set
     if (!hyperfollowUrl) {
       const slug = titleToSlug(release.title);
-      const candidateUrl = `https://distrokid.com/hyperfollow/colab/${slug}`;
+      const candidateUrl = `https://distrokid.com/hyperfollow/colab2/${slug}`;
       try {
         const checkRes = await fetch(candidateUrl, {
           method: 'HEAD',
