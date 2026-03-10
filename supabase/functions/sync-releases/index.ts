@@ -167,9 +167,11 @@ async function processInBatches<T, U>(items: T[], batchSize: number, delay: numb
 
 function extractStreamingLinks(html: string): { platform: string; url: string }[] {
   const links: { platform: string; url: string }[] = [];
+  const seen = new Set<string>();
+
+  // Method 1: Match rendered anchor tags with platform names
   const linkRegex =
     /<a[^>]+target="_blank"[^>]+href="([^"]+)"[^>]*>[\s\S]*?<div[^>]*style="flex:\s*1[^"]*"[^>]*>\s*([\w\s]+?)\s*<\/div>/gi;
-
   let match;
   while ((match = linkRegex.exec(html)) !== null) {
     let url = match[1].replace(/&amp;/g, "&");
@@ -179,8 +181,26 @@ function extractStreamingLinks(html: string): { platform: string; url: string }[
       const destMatch = url.match(/destination:(https?[^\s&]+)/);
       if (destMatch) url = decodeURIComponent(destMatch[1]);
     }
-    links.push({ platform: platform.toLowerCase().replace(/\s+/g, "_"), url });
+    const key = platform.toLowerCase().replace(/\s+/g, "_");
+    if (!seen.has(key)) { seen.add(key); links.push({ platform: key, url }); }
   }
+
+  // Method 2: Extract from embedded JSON/props in script tags
+  // DistroKid pages often embed link data as JSON
+  const jsonRegex = /"url"\s*:\s*"(https?:\/\/[^"]+)"[^}]*"name"\s*:\s*"([^"]+)"/gi;
+  while ((match = jsonRegex.exec(html)) !== null) {
+    const url = match[1].replace(/\\u002F/g, '/').replace(/&amp;/g, "&");
+    const platform = match[2].trim().toLowerCase().replace(/\s+/g, "_");
+    if (!seen.has(platform)) { seen.add(platform); links.push({ platform, url }); }
+  }
+  // Also try reversed order (name before url)
+  const jsonRegex2 = /"name"\s*:\s*"([^"]+)"[^}]*"url"\s*:\s*"(https?:\/\/[^"]+)"/gi;
+  while ((match = jsonRegex2.exec(html)) !== null) {
+    const platform = match[1].trim().toLowerCase().replace(/\s+/g, "_");
+    const url = match[2].replace(/\\u002F/g, '/').replace(/&amp;/g, "&");
+    if (!seen.has(platform)) { seen.add(platform); links.push({ platform, url }); }
+  }
+
   return links;
 }
 
