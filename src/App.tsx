@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ArtistAgentAuthProvider } from "@/contexts/ArtistAgentAuth";
 import Index from "./pages/Index";
 import MusicPage from "./pages/Music";
 import StoryPage from "./pages/Story";
@@ -44,9 +45,11 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <AppInner />
-      </BrowserRouter>
+      <ArtistAgentAuthProvider>
+        <BrowserRouter>
+          <AppInner />
+        </BrowserRouter>
+      </ArtistAgentAuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
