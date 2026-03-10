@@ -748,7 +748,20 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const testMode = body?.test === true;
+    const hyperfollowOnly = body?.hyperfollow_only === true;
     const handle = '@Cola_BB';
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    // HyperFollow-only mode: skip YouTube scraping, just discover & scrape streaming links
+    if (hyperfollowOnly) {
+      console.log('Running HyperFollow-only mode...');
+      const { discovered, scraped } = await discoverAndScrapeHyperFollow(supabaseUrl, serviceRoleKey);
+      const summary = { success: true, mode: 'hyperfollow_only', hyperfollow_discovered: discovered, streaming_links_scraped: scraped, timestamp: new Date().toISOString() };
+      console.log('HyperFollow sync complete:', JSON.stringify(summary));
+      return new Response(JSON.stringify(summary), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
 
     console.log(`Starting sync for ${handle} (test=${testMode})...`);
 
@@ -785,14 +798,11 @@ Deno.serve(async (req) => {
     // Step 3: Upsert
     const { inserted, updated } = await upsertReleases(enriched);
 
-    // Step 4: Auto-discover HyperFollow URLs and scrape streaming links
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const { discovered, scraped } = await discoverAndScrapeHyperFollow(supabaseUrl, serviceRoleKey);
+    // Step 4: Skip HyperFollow in full sync (run separately to avoid timeout)
+    // HyperFollow scraping should be triggered separately with { hyperfollow_only: true }
 
     const summary = {
       success: true, total: toProcess.length, inserted, updated, ...stats,
-      hyperfollow_discovered: discovered, streaming_links_scraped: scraped,
       timestamp: new Date().toISOString(),
     };
     console.log('Sync complete:', JSON.stringify(summary));
