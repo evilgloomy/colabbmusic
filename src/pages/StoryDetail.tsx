@@ -200,12 +200,6 @@ const StoryDetailPage = () => {
             </p>
           )}
 
-          {/* Original text */}
-          {story.original_text && story.original_text !== story.ai_enhanced_text && (
-            <blockquote className="border-l-2 border-primary/40 pl-5 py-1 text-muted-foreground italic text-sm leading-relaxed mb-10">
-              {story.original_text}
-            </blockquote>
-          )}
 
           {/* Threads link */}
           {story.permalink && (
