@@ -186,21 +186,42 @@ function extractStreamingLinks(html: string): { platform: string; url: string }[
 
 // Convert title to candidate DistroKid slug(s)
 function titleToSlugs(title: string): string[] {
-  const base = title
+  const candidates: string[] = [];
+  const seen = new Set<string>();
+
+  const addSlug = (s: string) => {
+    if (s && !seen.has(s)) { seen.add(s); candidates.push(s); }
+  };
+
+  // Try with parentheticals removed first
+  const withoutParens = title
     .toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s*\(.*?\)\s*/g, '') // Remove parentheticals
+    .replace(/\s*\(.*?\)\s*/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .replace(/-+/g, '-');
 
-  if (!base) return []; // Chinese-only titles produce empty slugs
+  // Also try with parentheticals kept (e.g. "排在最後 (Cola Version)" -> "-cola-version")
+  const withParens = title
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-+/g, '-');
 
-  // Try base slug, then numbered variants (DistroKid appends -2, -3, etc.)
-  const candidates = [base];
-  for (let i = 2; i <= 4; i++) {
-    candidates.push(`${base}-${i}`);
+  // Add base slugs
+  addSlug(withoutParens);
+  addSlug(withParens);
+
+  // Add numbered variants for the primary slug
+  const primary = withoutParens || withParens;
+  if (!primary) return [];
+
+  for (let i = 2; i <= 5; i++) {
+    addSlug(`${primary}-${i}`);
   }
+
   return candidates;
 }
 
