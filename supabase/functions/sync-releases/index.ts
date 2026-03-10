@@ -8,555 +8,162 @@ const YT_HEADERS = {
   'Accept-Language': 'en-US,en;q=0.9',
 };
 
-interface ScrapedRelease {
-  title: string;
-  playlistId: string;
-  trackCount?: number;
-  sortOrder: number;
-}
+// ── YouTube scraping ───────────────────────────────────────────
 
-interface EnrichedRelease {
-  title: string;
-  playlist_id: string;
-  video_id: string | null;
-  thumbnail_url: string | null;
-  description: string | null;
-  release_date: string | null;
-  track_count: number | null;
-  year: string | null;
-  sort_date: string | null;
-  sort_order: number;
-}
+async function fetchReleasesPage(handle: string): Promise<any[]> {
+  const url = `https://youtube.com/@${handle}/releases`;
+  console.log(`Fetching releases page: ${url}`);
 
-// ── Extract releases from richGridRenderer contents ───────────
+  const res = await fetch(url, { headers: YT_HEADERS });
+  if (!res.ok) throw new Error(`HTTP error ${res.status} at ${url}`);
 
-function extractReleasesFromItems(items: any[], startIndex: number): { releases: ScrapedRelease[]; nextIndex: number } {
-  const releases: ScrapedRelease[] = [];
-  let idx = startIndex;
-  for (const item of items) {
-    const pl = item?.richItemRenderer?.content?.playlistRenderer;
-    if (pl?.playlistId) {
-      releases.push({
-        title: pl.title?.simpleText || pl.title?.runs?.[0]?.text || 'Unknown',
-        playlistId: pl.playlistId,
-        trackCount: pl.videoCount ? parseInt(pl.videoCount) : undefined,
-        sortOrder: idx++,
-      });
+  const text = await res.text();
+  const jsonMatch = text.match(/var ytInitialData = ({.*?});/);
+  if (!jsonMatch) throw new Error('No ytInitialData found');
+
+  const data = JSON.parse(jsonMatch[1]);
+
+  const contents =
+    data?.contents?.twoColumnBrowseResultsRenderer?.tabs?.[1]?.tabRenderer?.content?.sectionListRenderer?.contents;
+
+  if (!contents) {
+    console.warn('No releases found in ytInitialData');
+    return [];
+  }
+
+  const videos = contents.flatMap((c: any) => {
+    const playlist = c?.musicShelfRenderer?.contents?.[0]?.musicResponsiveListItemRenderer;
+    if (playlist) {
+      return {
+        title: playlist?.flexColumns?.[0]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.[0]?.text,
+        artist: playlist?.flexColumns?.[1]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.[0]?.text,
+        videoId: playlist?.playlistId,
+      };
     }
-    for (const si of (item?.richShelfRenderer?.contents || [])) {
-      const spl = si?.richItemRenderer?.content?.playlistRenderer;
-      if (spl?.playlistId) {
-        releases.push({
-          title: spl.title?.simpleText || spl.title?.runs?.[0]?.text || 'Unknown',
-          playlistId: spl.playlistId,
-          trackCount: spl.videoCount ? parseInt(spl.videoCount) : undefined,
-          sortOrder: idx++,
-        });
-      }
+    return [];
+  });
+
+  console.log(`Found ${videos.length} releases`);
+  return videos;
+}
+
+async function resolveChannelId(handle: string): Promise<string | null> {
+  const url = `https://www.youtube.com/@${handle}`;
+  console.log(`Resolving channel ID from: ${url}`);
+
+  const res = await fetch(url, { headers: YT_HEADERS, redirect: 'manual' });
+
+  // Check for a redirect to a /channel/ page
+  if (res.status === 302) {
+    const redirectUrl = res.headers.get('location');
+    const channelIdMatch = redirectUrl?.match(/\/channel\/([A-Za-z0-9_-]+)$/);
+    if (channelIdMatch) {
+      const channelId = channelIdMatch[1];
+      console.log(`Resolved channel ID: ${channelId}`);
+      return channelId;
     }
   }
-  return { releases, nextIndex: idx };
-}
 
-// ── Extract continuation token from items array ───────────────
-
-function extractContinuationToken(items: any[]): string | null {
-  for (const item of items) {
-    const token = item?.continuationItemRenderer?.continuationEndpoint?.continuationCommand?.token;
-    if (token) return token;
-  }
+  console.warn('Could not resolve channel ID (no redirect)');
   return null;
 }
 
-// ── Fetch continuation page via InnerTube browse API ──────────
+async function fetchRssDescriptions(channelId: string): Promise<Map<string, string>> {
+  const url = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+  console.log(`Fetching RSS feed: ${url}`);
 
-async function fetchContinuation(token: string, visitorData: string | null): Promise<{ items: any[]; nextToken: string | null }> {
-  const payload = {
-    context: {
-      client: {
-        clientName: "WEB",
-        clientVersion: "2.20260101.00.00",
-        hl: "en",
-        gl: "US",
-      },
-    },
-    continuation: token,
-  };
+  const res = await fetch(url, { headers: YT_HEADERS });
+  if (!res.ok) throw new Error(`HTTP error ${res.status} at ${url}`);
 
-  const headers: Record<string, string> = {
-    ...YT_HEADERS,
-    'Content-Type': 'application/json',
-    'Origin': 'https://www.youtube.com',
-    'Referer': 'https://www.youtube.com/',
-  };
-  if (visitorData) {
-    headers['X-Goog-Visitor-Id'] = visitorData;
+  const xml = await res.text();
+  const videoIdRegex = /<yt:videoId>(.*?)<\/yt:videoId>/g;
+  const descriptionRegex = /<media:description>(.*?)<\/media:description>/g;
+
+  const videoMap = new Map<string, string>();
+  let videoIdMatch, descriptionMatch;
+
+  while ((videoIdMatch = videoIdRegex.exec(xml)) !== null && (descriptionMatch = descriptionRegex.exec(xml)) !== null) {
+    const videoId = videoIdMatch[1];
+    const description = descriptionMatch[1];
+    videoMap.set(videoId, description);
   }
 
-  const res = await fetch('https://www.youtube.com/youtubei/v1/browse?prettyPrint=false', {
+  console.log(`Found ${videoMap.size} video descriptions in RSS feed`);
+  return videoMap;
+}
+
+// ── Enrichment + DB upsert ──────────────────────────────────────
+
+async function enrichRelease(release: any, rssMap: Map<string, string>): Promise<any> {
+  const description = rssMap.get(release.videoId);
+  const thumbnail_url = `https://i.ytimg.com/vi/${release.videoId}/maxresdefault.jpg`;
+
+  const enriched = {
+    ...release,
+    description: description || null,
+    thumbnail_url: thumbnail_url || null,
+    year: null,
+  };
+
+  // Extract year from title (e.g. "TITLE (2021)")
+  const yearMatch = release.title?.match(/\((\d{4})\)$/);
+  if (yearMatch) enriched.year = parseInt(yearMatch[1]);
+
+  return enriched;
+}
+
+async function upsertReleases(releases: any[]): Promise<{ inserted: number; updated: number }> {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+  const payload = releases.map((r: any) => ({
+    video_id: r.videoId,
+    title: r.title,
+    artist: r.artist,
+    description: r.description,
+    thumbnail_url: r.thumbnail_url,
+    year: r.year,
+  }));
+
+  const res = await fetch(`${supabaseUrl}/rest/v1/releases`, {
     method: 'POST',
-    headers,
+    headers: {
+      'apikey': serviceRoleKey,
+      'Authorization': `Bearer ${serviceRoleKey}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates,return=representation',
+    },
     body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
-    console.error(`InnerTube browse failed: ${res.status}`);
-    return { items: [], nextToken: null };
+    console.error('Upsert error:', res.status, await res.text());
+    throw new Error(`HTTP error ${res.status} at upsert`);
   }
 
   const data = await res.json();
-  const actions = data?.onResponseReceivedActions || [];
-  for (const action of actions) {
-    const continuationItems = action?.appendContinuationItemsAction?.continuationItems;
-    if (continuationItems) {
-      const nextToken = extractContinuationToken(continuationItems);
-      return { items: continuationItems, nextToken };
-    }
-  }
+  const inserted = data.filter((r: any) => r.created_at === r.updated_at).length;
+  const updated = data.length - inserted;
 
-  return { items: [], nextToken: null };
-}
-
-// ── Scrape /releases page with pagination ─────────────────────
-
-async function fetchReleasesPage(handle: string): Promise<ScrapedRelease[]> {
-  const url = `https://www.youtube.com/${handle}/releases`;
-  const res = await fetch(url, { headers: YT_HEADERS });
-  if (!res.ok) throw new Error(`Releases page: ${res.status}`);
-  const html = await res.text();
-
-  const match = html.match(/var ytInitialData\s*=\s*({.*?});\s*<\/script>/s);
-  if (!match) return [];
-
-  const data = JSON.parse(match[1]);
-  
-  // Extract visitorData for subsequent requests
-  const visitorData = data?.responseContext?.visitorData || null;
-  
-  const allReleases: ScrapedRelease[] = [];
-  const seenIds = new Set<string>();
-  const tabs = data?.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
-  let runningIndex = 0;
-
-  for (const tab of tabs) {
-    const items = tab?.tabRenderer?.content?.richGridRenderer?.contents || [];
-    
-    // Extract releases from initial page
-    const { releases: initial, nextIndex } = extractReleasesFromItems(items, runningIndex);
-    runningIndex = nextIndex;
-    for (const r of initial) {
-      if (!seenIds.has(r.playlistId)) {
-        seenIds.add(r.playlistId);
-        allReleases.push(r);
-      }
-    }
-
-    // Get continuation token from initial items
-    let continuationToken = extractContinuationToken(items);
-    let page = 1;
-
-    while (continuationToken) {
-      console.log(`Fetching continuation page ${page} (${allReleases.length} releases so far)...`);
-      await new Promise(r => setTimeout(r, 800)); // Rate limit
-
-      const { items: nextItems, nextToken } = await fetchContinuation(continuationToken, visitorData);
-      const { releases: nextReleases, nextIndex: ni } = extractReleasesFromItems(nextItems, runningIndex);
-      runningIndex = ni;
-      
-      for (const r of nextReleases) {
-        if (!seenIds.has(r.playlistId)) {
-          seenIds.add(r.playlistId);
-          allReleases.push(r);
-        }
-      }
-
-      console.log(`Page ${page}: found ${nextReleases.length} new releases`);
-      continuationToken = nextToken;
-      page++;
-
-      if (page > 20) { // Safety limit
-        console.warn('Hit pagination safety limit (20 pages)');
-        break;
-      }
-    }
-  }
-
-  console.log(`Scraped ${allReleases.length} total releases from /releases page (${seenIds.size} unique)`);
-  return allReleases;
-}
-
-// ── Resolve channel ID from handle ──────────────────────────────
-
-async function resolveChannelId(handle: string): Promise<string | null> {
-  const res = await fetch(`https://www.youtube.com/${handle}`, { headers: YT_HEADERS });
-  if (!res.ok) return null;
-  const html = await res.text();
-  const patterns = [
-    /"channelId":"(UC[a-zA-Z0-9_-]{22})"/,
-    /channel_id=(UC[a-zA-Z0-9_-]{22})/,
-    /"externalId":"(UC[a-zA-Z0-9_-]{22})"/,
-  ];
-  for (const p of patterns) {
-    const m = html.match(p);
-    if (m) return m[1];
-  }
-  return null;
-}
-
-// ── Fetch RSS feed for video descriptions ──────────────────────
-
-interface RssVideoInfo {
-  videoId: string;
-  title: string;
-  description: string;
-  published: string;
-}
-
-async function fetchRssDescriptions(channelId: string): Promise<Map<string, RssVideoInfo>> {
-  const map = new Map<string, RssVideoInfo>();
-  const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-  const res = await fetch(rssUrl);
-  if (!res.ok) return map;
-
-  const xml = await res.text();
-  const entries = xml.split('<entry>').slice(1);
-
-  for (const entry of entries) {
-    const videoIdMatch = entry.match(/<yt:videoId>([^<]+)<\/yt:videoId>/);
-    const titleMatch = entry.match(/<media:title>([^<]+)<\/media:title>/);
-    const descMatch = entry.match(/<media:description>([\s\S]*?)<\/media:description>/);
-    const pubMatch = entry.match(/<published>([^<]+)<\/published>/);
-
-    if (videoIdMatch) {
-      map.set(videoIdMatch[1], {
-        videoId: videoIdMatch[1],
-        title: titleMatch?.[1] || '',
-        description: descMatch?.[1]?.trim() || '',
-        published: pubMatch?.[1] || '',
-      });
-    }
-  }
-
-  console.log(`RSS feed: ${map.size} videos with descriptions`);
-  return map;
-}
-
-// ── Fetch actual publish date from a video page ───────────────
-
-async function fetchVideoPublishDate(videoId: string): Promise<string | null> {
-  try {
-    const payload = {
-      context: {
-        client: {
-          clientName: "WEB",
-          clientVersion: "2.20260101.00.00",
-          hl: "en",
-          gl: "US",
-        },
-      },
-      videoId,
-    };
-    const headers: Record<string, string> = {
-      ...YT_HEADERS,
-      'Content-Type': 'application/json',
-      'Origin': 'https://www.youtube.com',
-      'Referer': 'https://www.youtube.com/',
-    };
-
-    // Try player API first (works for regular videos)
-    const playerRes = await fetch('https://www.youtube.com/youtubei/v1/player?prettyPrint=false', {
-      method: 'POST', headers, body: JSON.stringify(payload),
-    });
-    if (playerRes.ok) {
-      const playerData = await playerRes.json();
-      const micro = playerData?.microformat?.playerMicroformatRenderer;
-      if (micro?.publishDate) return micro.publishDate;
-      if (micro?.uploadDate) return micro.uploadDate;
-    }
-
-    // Fallback: next API (returns dateText for Art Tracks)
-    const nextRes = await fetch('https://www.youtube.com/youtubei/v1/next?prettyPrint=false', {
-      method: 'POST', headers, body: JSON.stringify(payload),
-    });
-    if (nextRes.ok) {
-      const nextData = await nextRes.json();
-      // dateText location in the response
-      const results = nextData?.contents?.twoColumnWatchNextResults?.results?.results?.contents || [];
-      for (const content of results) {
-        const dateText = content?.videoPrimaryInfoRenderer?.dateText?.simpleText;
-        if (dateText) {
-          console.log(`Found dateText for ${videoId}: ${dateText}`);
-          const parsed = parseDateText(dateText);
-          if (parsed) return parsed;
-        }
-        // Also check for musicVideoDetails or engagement panel
-        const runs = content?.videoPrimaryInfoRenderer?.dateText?.runs;
-        if (runs) {
-          const text = runs.map((r: any) => r.text).join('');
-          console.log(`Found dateText runs for ${videoId}: ${text}`);
-          const parsed = parseDateText(text);
-          if (parsed) return parsed;
-        }
-      }
-      // Try engagement panels for music track info
-      const panels = nextData?.engagementPanels || [];
-      for (const panel of panels) {
-        const items = panel?.engagementPanelSectionListRenderer?.content?.structuredDescriptionContentRenderer?.items || [];
-        for (const item of items) {
-          const rows = item?.videoDescriptionMusicSectionRenderer?.carouselLockups?.[0]
-            ?.carouselLockupRenderer?.infoRows || [];
-          for (const row of rows) {
-            const label = row?.infoRowRenderer?.title?.simpleText || '';
-            const value = row?.infoRowRenderer?.defaultMetadata?.simpleText || '';
-            if (label.toLowerCase().includes('release') && value) {
-              console.log(`Found music section release date for ${videoId}: ${value}`);
-              const parsed = parseDateText(value);
-              if (parsed) return parsed;
-            }
-          }
-        }
-      }
-    }
-
-    console.warn(`No publish date found for ${videoId}`);
-    return null;
-  } catch (e) {
-    console.error(`Error fetching publish date for ${videoId}:`, e);
-    return null;
-  }
-}
-
-// Parse date text like "May 12, 2023" or "2023年5月12日" into ISO date
-function parseDateText(text: string): string | null {
-  // English: "May 12, 2023"
-  const enMatch = text.match(/(\w{3,})\s+(\d{1,2}),?\s+(\d{4})/);
-  if (enMatch) {
-    const monthNames: Record<string, string> = {
-      january: '01', february: '02', march: '03', april: '04', may: '05', june: '06',
-      july: '07', august: '08', september: '09', october: '10', november: '11', december: '12',
-      jan: '01', feb: '02', mar: '03', apr: '04', jun: '06',
-      jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
-    };
-    const month = monthNames[enMatch[1].toLowerCase()];
-    if (month) return `${enMatch[3]}-${month}-${enMatch[2].padStart(2, '0')}`;
-  }
-  // ISO
-  const isoMatch = text.match(/(\d{4}-\d{2}-\d{2})/);
-  if (isoMatch) return isoMatch[1];
-  // Chinese: "2023年5月12日"
-  const cnMatch = text.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
-  if (cnMatch) return `${cnMatch[1]}-${cnMatch[2].padStart(2, '0')}-${cnMatch[3].padStart(2, '0')}`;
-  return null;
-}
-
-// ── Enrich release from playlist page ──────────────────────────
-
-async function enrichRelease(
-  release: ScrapedRelease,
-  rssMap: Map<string, RssVideoInfo>
-): Promise<EnrichedRelease> {
-  const result: EnrichedRelease = {
-    title: release.title,
-    playlist_id: release.playlistId,
-    video_id: null,
-    thumbnail_url: null,
-    description: null,
-    release_date: null,
-    track_count: release.trackCount ?? null,
-    year: null,
-    sort_date: null,
-    sort_order: release.sortOrder,
-  };
-
-  try {
-    const playlistUrl = `https://www.youtube.com/playlist?list=${release.playlistId}`;
-    const res = await fetch(playlistUrl, { headers: YT_HEADERS });
-    if (!res.ok) return result;
-    const html = await res.text();
-
-    // og:image → artwork (decode HTML entities)
-    const ogImg = html.match(/<meta property="og:image" content="([^"]+)"/);
-    if (ogImg) result.thumbnail_url = ogImg[1].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
-
-    // Parse ytInitialData
-    const ytMatch = html.match(/var ytInitialData\s*=\s*({.*?});\s*<\/script>/s);
-    if (ytMatch) {
-      const ytData = JSON.parse(ytMatch[1]);
-
-      // Find first video ID
-      const videoContents = ytData?.contents?.twoColumnBrowseResultsRenderer?.tabs?.[0]
-        ?.tabRenderer?.content?.sectionListRenderer?.contents?.[0]
-        ?.itemSectionRenderer?.contents?.[0]?.playlistVideoListRenderer?.contents || [];
-
-      for (const item of videoContents) {
-        const vr = item?.playlistVideoRenderer;
-        if (vr?.videoId) {
-          result.video_id = vr.videoId;
-          // Check if we have RSS description for this video
-          const rssInfo = rssMap.get(vr.videoId);
-          if (rssInfo?.description) {
-            result.description = rssInfo.description;
-            // Extract release date from description (not year — we'll get that from video page)
-            const dateMatch = rssInfo.description.match(/Released on:\s*(.+)/i)
-              || rssInfo.description.match(/(\d{4}-\d{2}-\d{2})/);
-            if (dateMatch) result.release_date = dateMatch[1].trim();
-          }
-          break;
-        }
-      }
-
-      // Sidebar description only (skip stats — they contain misleading "Last updated on" dates)
-      const sidebar = ytData?.sidebar?.playlistSidebarRenderer?.items || [];
-      for (const item of sidebar) {
-        const primary = item?.playlistSidebarPrimaryInfoRenderer;
-        if (primary) {
-          const desc = primary?.description?.simpleText ||
-            primary?.description?.runs?.map((r: any) => r.text).join('') || '';
-          if (desc.length > 5 && (!result.description || desc.length > result.description.length)) {
-            result.description = desc;
-          }
-          // DO NOT extract year from stats — "Last updated on..." is NOT the release date
-        }
-      }
-    }
-
-    // If we found a video_id but no description yet, try RSS
-    if (result.video_id && !result.description) {
-      const rssInfo = rssMap.get(result.video_id);
-      if (rssInfo?.description) {
-        result.description = rssInfo.description;
-      }
-    }
-
-    // ── Get actual publish date from the first video page ──
-    if (result.video_id) {
-      const publishDate = await fetchVideoPublishDate(result.video_id);
-      if (publishDate) {
-        result.release_date = publishDate;
-        result.sort_date = publishDate;
-        const yearMatch = publishDate.match(/^(\d{4})/);
-        if (yearMatch) result.year = yearMatch[1];
-      }
-    }
-
-    // Fallback: extract year from RSS published date
-    if (!result.year && result.video_id) {
-      const rssInfo = rssMap.get(result.video_id);
-      if (rssInfo?.published) {
-        const pubYear = rssInfo.published.match(/(\d{4})/);
-        if (pubYear) result.year = pubYear[1];
-      }
-    }
-
-    // Fallback: extract year from description
-    if (!result.year && result.description) {
-      const ym = result.description.match(/\b(20\d{2})\b/);
-      if (ym) result.year = ym[1];
-    }
-
-    // Compute sort_date if not set yet
-    if (!result.sort_date) {
-      result.sort_date = parseSortDate(result.release_date, result.year);
-    }
-  } catch (e) {
-    console.error(`Error enriching ${release.title}:`, e);
-  }
-
-  return result;
-}
-
-// ── Parse sort_date from release_date text or year ────────────
-
-const MONTH_MAP: Record<string, string> = {
-  jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
-  jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
-};
-
-function parseSortDate(releaseDateText: string | null, year: string | null): string | null {
-  if (releaseDateText) {
-    // "Last updated on Feb 27, 2026" or "Feb 27, 2026"
-    const m = releaseDateText.match(/(\w{3})\s+(\d{1,2}),?\s+(\d{4})/);
-    if (m) {
-      const month = MONTH_MAP[m[1].toLowerCase()];
-      if (month) return `${m[3]}-${month}-${m[2].padStart(2, '0')}`;
-    }
-    // "2025-03-15" ISO format
-    const iso = releaseDateText.match(/(\d{4}-\d{2}-\d{2})/);
-    if (iso) return iso[1];
-  }
-  if (year) return `${year}-01-01`;
-  return null;
-}
-
-// ── Upsert to database ────────────────────────────────────────
-
-async function upsertReleases(releases: EnrichedRelease[]): Promise<{ inserted: number; updated: number }> {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  let inserted = 0, updated = 0;
-
-  for (const release of releases) {
-    const checkRes = await fetch(
-      `${supabaseUrl}/rest/v1/releases?playlist_id=eq.${encodeURIComponent(release.playlist_id)}&select=id,thumbnail_url,description`,
-      { headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}` } }
-    );
-    const existing = await checkRes.json();
-
-    if (existing.length > 0) {
-      const updates: Record<string, any> = {
-        updated_at: new Date().toISOString(),
-        title: release.title,
-        sort_order: release.sort_order,
-        // Always overwrite date fields to fix previously incorrect data
-        release_date: release.release_date,
-        year: release.year,
-        sort_date: release.sort_date,
-      };
-      if (release.thumbnail_url) updates.thumbnail_url = release.thumbnail_url;
-      if (release.description && (!existing[0].description || release.description.length > (existing[0].description?.length || 0))) {
-        updates.description = release.description;
-      }
-      if (release.video_id) updates.video_id = release.video_id;
-      if (release.track_count) updates.track_count = release.track_count;
-
-      await fetch(
-        `${supabaseUrl}/rest/v1/releases?playlist_id=eq.${encodeURIComponent(release.playlist_id)}`,
-        {
-          method: 'PATCH',
-          headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-          body: JSON.stringify(updates),
-        }
-      );
-      updated++;
-    } else {
-      await fetch(
-        `${supabaseUrl}/rest/v1/releases`,
-        {
-          method: 'POST',
-          headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ ...release, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }),
-        }
-      );
-      inserted++;
-    }
-  }
-
+  console.log(`Upserted ${releases.length} releases: ${inserted} inserted, ${updated} updated`);
   return { inserted, updated };
 }
 
-// ── Batch processing ──────────────────────────────────────────
+// ── Utils ───────────────────────────────────────────────────────
 
-async function processInBatches<T, R>(items: T[], batchSize: number, delayMs: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-  const results: R[] = [];
+async function processInBatches<T, U>(items: T[], batchSize: number, delay: number, fn: (item: T) => Promise<U>): Promise<U[]> {
+  const results: U[] = [];
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
-    results.push(...await Promise.all(batch.map(fn)));
-    if (i + batchSize < items.length) await new Promise(r => setTimeout(r, delayMs));
+    const batchPromises = batch.map(item => fn(item));
+    const batchResults = await Promise.all(batchPromises);
+    results.push(...batchResults);
+    await new Promise(resolve => setTimeout(resolve, delay));
   }
   return results;
 }
 
-// ── HyperFollow discovery & scraping (Firecrawl Map approach) ──
+// ── HyperFollow per-release scraping ──
 
 function extractStreamingLinks(html: string): { platform: string; url: string }[] {
   const links: { platform: string; url: string }[] = [];
@@ -577,93 +184,82 @@ function extractStreamingLinks(html: string): { platform: string; url: string }[
   return links;
 }
 
-function normalizeTitle(title: string): string {
-  return title
-    .toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, '') // Remove accents
-    .replace(/\s*\(.*?\)\s*/g, '') // Remove parentheticals like "(Cola Ver)"
-    .replace(/[^a-z0-9\u4e00-\u9fff\u3400-\u4dbf]+/g, '') // Keep alphanumeric + CJK chars
-    .trim();
-}
-
-// Multi-tier matching: exact → startsWith → contains
-function findMatchingRelease(normalizedPageTitle: string, titleMap: Map<string, any>): any | null {
-  // Tier 1: Exact match
-  if (titleMap.has(normalizedPageTitle)) return titleMap.get(normalizedPageTitle);
-
-  // Tier 2: startsWith (either direction)
-  for (const [normTitle, release] of titleMap) {
-    if (normalizedPageTitle.startsWith(normTitle) || normTitle.startsWith(normalizedPageTitle)) {
-      if (normTitle.length > 0 && normalizedPageTitle.length > 0) return release;
-    }
-  }
-
-  // Tier 3: contains (either direction, but require minimum length to avoid false matches)
-  for (const [normTitle, release] of titleMap) {
-    if (normTitle.length < 2 && normalizedPageTitle.length < 2) continue; // Skip single-char unless exact
-    if (normTitle.length >= 2 && normalizedPageTitle.includes(normTitle)) return release;
-    if (normalizedPageTitle.length >= 2 && normTitle.includes(normalizedPageTitle)) return release;
-  }
-
-  return null;
-}
-
-function extractPageTitle(html: string): string | null {
-  // Match <title>SONG by ARTIST</title>
-  const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-  if (!titleMatch) return null;
-  const raw = titleMatch[1].trim();
-  // Remove " by Artist" suffix
-  const byMatch = raw.match(/^(.+?)\s+by\s+/i);
-  return byMatch ? byMatch[1].trim() : raw;
-}
-
-// Convert a title to a slug for matching against URL slugs
-function titleToSlug(title: string): string {
-  return title
+// Convert title to candidate DistroKid slug(s)
+function titleToSlugs(title: string): string[] {
+  const base = title
     .toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, '')
     .replace(/\s*\(.*?\)\s*/g, '') // Remove parentheticals
-    .replace(/[^a-z0-9]+/g, '-')   // Replace non-alphanumeric with hyphens
-    .replace(/^-+|-+$/g, '')        // Trim hyphens
-    .replace(/-+/g, '-');           // Collapse multiple hyphens
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-+/g, '-');
+
+  if (!base) return []; // Chinese-only titles produce empty slugs
+
+  // Try base slug, then numbered variants (DistroKid appends -2, -3, etc.)
+  const candidates = [base];
+  for (let i = 2; i <= 4; i++) {
+    candidates.push(`${base}-${i}`);
+  }
+  return candidates;
 }
 
-async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey: string): Promise<{ discovered: number; scraped: number; debugInfo?: any }> {
-  let discovered = 0, scraped = 0;
-  const debugLog: string[] = [];
+async function scrapeOneHyperFollow(
+  url: string,
+  releaseId: string,
+  firecrawlKey: string,
+  supabaseUrl: string,
+  serviceRoleKey: string,
+): Promise<{ found: boolean; linkCount: number }> {
+  try {
+    const fcRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, formats: ['html'], waitFor: 5000 }),
+    });
+    if (!fcRes.ok) return { found: false, linkCount: 0 };
+    const fcData = await fcRes.json();
+    const html = fcData?.data?.html || fcData?.html || '';
+    if (!html || html.length < 100) return { found: false, linkCount: 0 };
+
+    const links = extractStreamingLinks(html);
+    if (links.length === 0) return { found: false, linkCount: 0 };
+
+    // Upsert streaming links
+    await fetch(`${supabaseUrl}/rest/v1/streaming_links`, {
+      method: 'POST',
+      headers: {
+        'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}`,
+        'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify(links.map(l => ({ release_id: releaseId, platform: l.platform, url: l.url }))),
+    });
+
+    // Save hyperfollow_url on the release
+    await fetch(`${supabaseUrl}/rest/v1/releases?id=eq.${releaseId}`, {
+      method: 'PATCH',
+      headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ hyperfollow_url: url }),
+    });
+
+    return { found: true, linkCount: links.length };
+  } catch (e) {
+    console.warn(`Error scraping ${url}:`, e);
+    return { found: false, linkCount: 0 };
+  }
+}
+
+async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey: string, batchSize: number = 10): Promise<{ discovered: number; scraped: number; skipped: number; remaining: number; failed: string[] }> {
+  let discovered = 0, scraped = 0, skipped = 0;
+  const failed: string[] = [];
 
   const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
   if (!firecrawlKey) {
     console.warn('FIRECRAWL_API_KEY not configured, skipping HyperFollow');
-    return { discovered, scraped };
+    return { discovered, scraped, skipped, failed };
   }
 
-  // Step 1: Use Firecrawl Map to discover all HyperFollow URLs
-  console.log('Calling Firecrawl Map...');
-  const mapRes = await fetch('https://api.firecrawl.dev/v1/map', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url: 'https://distrokid.com/hyperfollow/colab2/', limit: 5000, includeSubdomains: false }),
-  });
-
-  if (!mapRes.ok) {
-    console.error(`Firecrawl Map failed: ${mapRes.status}`);
-    return { discovered, scraped };
-  }
-
-  const mapData = await mapRes.json();
-  const allUrls: string[] = mapData?.links || mapData?.data || [];
-  const hyperfollowUrls = allUrls.filter((u: string) =>
-    u.startsWith('https://distrokid.com/hyperfollow/colab2/') &&
-    u !== 'https://distrokid.com/hyperfollow/colab2/' &&
-    u !== 'https://distrokid.com/hyperfollow/colab2'
-  );
-  console.log(`Found ${hyperfollowUrls.length} HyperFollow URLs`);
-
-  if (hyperfollowUrls.length === 0) return { discovered, scraped };
-
-  // Step 2: Get all releases and existing streaming links
+  // Get all releases + check which already have streaming links
   const [relRes, linksRes] = await Promise.all([
     fetch(`${supabaseUrl}/rest/v1/releases?select=id,title,hyperfollow_url&order=sort_order.asc&limit=1000`, {
       headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}` },
@@ -677,119 +273,63 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
   const existingLinks = await linksRes.json();
   const hasLinks = new Set((existingLinks || []).map((l: any) => l.release_id));
 
-  // Build multiple lookup maps for matching
-  const normalizedTitleMap = new Map<string, any>(); // normalizedTitle -> release
-  const slugMap = new Map<string, any>();             // slug -> release
-  for (const r of releases) {
-    normalizedTitleMap.set(normalizeTitle(r.title), r);
-    const slug = titleToSlug(r.title);
-    if (slug) slugMap.set(slug, r);
-  }
+  // Filter to releases that need scraping
+  const needsScraping = (releases || []).filter((r: any) => !hasLinks.has(r.id));
+  const totalNeeded = needsScraping.length;
+  console.log(`${totalNeeded} of ${releases.length} releases need streaming links (processing up to ${batchSize})`);
+  const toProcess = needsScraping.slice(0, batchSize);
 
-  // Step 3: Match URLs to releases using slug-based matching first
-  const urlsNeedingScrape: { url: string; release: any }[] = [];
-  const unmatchedUrls: string[] = [];
+  const BASE_URL = 'https://distrokid.com/hyperfollow/colab2/';
 
-  for (const url of hyperfollowUrls) {
-    // Extract slug from URL
-    const slug = url.replace('https://distrokid.com/hyperfollow/colab2/', '').replace(/\/$/, '');
-    if (!slug) continue;
-
-    // Check if release already has this URL assigned
-    const alreadyAssigned = releases.find((r: any) => r.hyperfollow_url === url);
-    if (alreadyAssigned) {
-      // Already assigned, just check if it needs streaming links
-      if (!hasLinks.has(alreadyAssigned.id)) {
-        urlsNeedingScrape.push({ url, release: alreadyAssigned });
+  for (const release of toProcess) {
+    // If already has a hyperfollow_url, use it directly
+    if (release.hyperfollow_url) {
+      console.log(`Scraping known URL for \"${release.title}\": ${release.hyperfollow_url}`);
+      const result = await scrapeOneHyperFollow(release.hyperfollow_url, release.id, firecrawlKey, supabaseUrl, serviceRoleKey);
+      if (result.found) {
+        scraped++;
+        console.log(`  ✓ Found ${result.linkCount} links`);
+      } else {
+        failed.push(release.title);
+        console.log(`  ✗ No links found`);
       }
+      await new Promise(r => setTimeout(r, 500));
       continue;
     }
 
-    // Try slug-based matching: exact slug match
-    let matched = slugMap.get(slug);
-
-    // Try slug contains/startsWith matching
-    if (!matched) {
-      for (const [relSlug, rel] of slugMap) {
-        if (slug.startsWith(relSlug) || relSlug.startsWith(slug)) {
-          matched = rel;
-          break;
-        }
-      }
+    // Generate candidate slugs from title
+    const candidates = titleToSlugs(release.title);
+    if (candidates.length === 0) {
+      skipped++;
+      console.log(`Skipped \"${release.title}\" (no valid slug)`);
+      continue;
     }
 
-    // Try normalized title matching against slug (slug as normalized)
-    if (!matched) {
-      const normalizedSlug = slug.replace(/-/g, '');
-      matched = findMatchingRelease(normalizedSlug, normalizedTitleMap);
-    }
-
-    if (matched) {
-      // Set hyperfollow_url on the release
-      if (!matched.hyperfollow_url) {
-        await fetch(`${supabaseUrl}/rest/v1/releases?id=eq.${matched.id}`, {
-          method: 'PATCH',
-          headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ hyperfollow_url: url }),
-        });
+    let found = false;
+    for (const slug of candidates) {
+      const url = `${BASE_URL}${slug}`;
+      const result = await scrapeOneHyperFollow(url, release.id, firecrawlKey, supabaseUrl, serviceRoleKey);
+      if (result.found) {
         discovered++;
-        console.log(`Matched "${matched.title}" -> ${slug}`);
-      }
-      if (!hasLinks.has(matched.id)) {
-        urlsNeedingScrape.push({ url, release: matched });
-      }
-    } else {
-      unmatchedUrls.push(url);
-      debugLog.push(`Unmatched: ${slug}`);
-    }
-  }
-
-  console.log(`Matched ${discovered} new URLs, ${urlsNeedingScrape.length} need scraping, ${unmatchedUrls.length} unmatched`);
-
-  // Step 4: Scrape streaming links for matched URLs (batch of 3)
-  for (let i = 0; i < urlsNeedingScrape.length; i += 3) {
-    const batch = urlsNeedingScrape.slice(i, i + 3);
-    const results = await Promise.all(batch.map(async ({ url, release }) => {
-      try {
-        const fcRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, formats: ['html'], waitFor: 5000 }),
-        });
-        if (!fcRes.ok) return null;
-        const fcData = await fcRes.json();
-        const html = fcData?.data?.html || fcData?.html || '';
-        const streamingLinks = extractStreamingLinks(html);
-        return { release, streamingLinks };
-      } catch (e) {
-        console.warn(`Error scraping ${url}:`, e);
-        return null;
-      }
-    }));
-
-    for (const result of results) {
-      if (!result || result.streamingLinks.length === 0) continue;
-      const upsertRes = await fetch(`${supabaseUrl}/rest/v1/streaming_links`, {
-        method: 'POST',
-        headers: {
-          'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}`,
-          'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal',
-        },
-        body: JSON.stringify(result.streamingLinks.map(l => ({
-          release_id: result.release.id, platform: l.platform, url: l.url,
-        }))),
-      });
-      if (upsertRes.ok) {
         scraped++;
-        hasLinks.add(result.release.id);
-        console.log(`Scraped ${result.streamingLinks.length} links for "${result.release.title}"`);
+        found = true;
+        console.log(`✓ \"${release.title}\" -> ${slug} (${result.linkCount} links)`);
+        break;
       }
+      // Small delay between slug attempts
+      await new Promise(r => setTimeout(r, 300));
     }
 
-    if (i + 3 < urlsNeedingScrape.length) await new Promise(r => setTimeout(r, 1500));
+    if (!found) {
+      failed.push(release.title);
+      console.log(`✗ \"${release.title}\" - no valid HyperFollow page found`);
+    }
+
+    // Rate limit between releases
+    await new Promise(r => setTimeout(r, 500));
   }
 
-  return { discovered, scraped, debugInfo: { unmatched: unmatchedUrls, debugLog } };
+  return { discovered, scraped, skipped, remaining: totalNeeded - toProcess.length, failed };
 }
 
 // ── Main handler ──────────────────────────────────────────────
@@ -803,54 +343,17 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const testMode = body?.test === true;
     const hyperfollowOnly = body?.hyperfollow_only === true;
-    const debugHyperfollow = body?.debug_hyperfollow === true;
     const handle = '@Cola_BB';
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    // Debug mode: test scraping a few URLs and return detailed results
-    if (debugHyperfollow) {
-      const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
-      const mapRes = await fetch('https://api.firecrawl.dev/v1/map', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: 'https://distrokid.com/hyperfollow/colab2/', limit: 5000 }),
-      });
-      const mapData = await mapRes.json();
-      const allUrls: string[] = mapData?.links || mapData?.data || [];
-      const hfUrls = allUrls.filter((u: string) =>
-        u.startsWith('https://distrokid.com/hyperfollow/colab2/') &&
-        u !== 'https://distrokid.com/hyperfollow/colab2/' &&
-        u !== 'https://distrokid.com/hyperfollow/colab2'
-      );
-
-      const debugResults: any[] = [];
-      for (const url of hfUrls.slice(0, 2)) {
-        const fcRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, formats: ['html'], waitFor: 5000 }),
-        });
-        const fcData = await fcRes.json();
-        const html = fcData?.data?.html || fcData?.html || '';
-        const pageTitle = extractPageTitle(html);
-        const streamingLinks = extractStreamingLinks(html);
-        debugResults.push({ url, htmlLen: html.length, pageTitle, linksCount: streamingLinks.length, htmlSnippet: html.substring(0, 500) });
-      }
-
-      return new Response(JSON.stringify({
-        totalUrls: hfUrls.length,
-        sampleUrls: hfUrls.slice(0, 10),
-        debugResults,
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-
-    // HyperFollow-only mode: skip YouTube scraping, just discover & scrape streaming links
+    // HyperFollow-only mode: skip YouTube scraping, just scrape streaming links per-release
     if (hyperfollowOnly) {
-      console.log('Running HyperFollow-only mode...');
-      const { discovered, scraped } = await discoverAndScrapeHyperFollow(supabaseUrl, serviceRoleKey);
-      const summary = { success: true, mode: 'hyperfollow_only', hyperfollow_discovered: discovered, streaming_links_scraped: scraped, timestamp: new Date().toISOString() };
+      const batchSize = body?.batch_size || 10;
+      console.log(`Running HyperFollow-only mode (batch_size=${batchSize})...`);
+      const result = await discoverAndScrapeHyperFollow(supabaseUrl, serviceRoleKey, batchSize);
+      const summary = { success: true, mode: 'hyperfollow_only', ...result, timestamp: new Date().toISOString() };
       console.log('HyperFollow sync complete:', JSON.stringify(summary));
       return new Response(JSON.stringify(summary), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
@@ -890,8 +393,7 @@ Deno.serve(async (req) => {
     // Step 3: Upsert
     const { inserted, updated } = await upsertReleases(enriched);
 
-    // Step 4: Skip HyperFollow in full sync (run separately to avoid timeout)
-    // HyperFollow scraping should be triggered separately with { hyperfollow_only: true }
+    // Step 4: HyperFollow scraping should be triggered separately with { hyperfollow_only: true }
 
     const summary = {
       success: true, total: toProcess.length, inserted, updated, ...stats,
