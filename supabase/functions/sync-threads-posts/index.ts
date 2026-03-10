@@ -232,7 +232,7 @@ Deno.serve(async (req) => {
         permalink: post.permalink || null,
         posted_at: post.timestamp || null,
         location: aiResult.location || null,
-      });
+      }, { onConflict: "threads_post_id" });
 
       if (error) {
         console.error("Insert error for post", post.id, error);
