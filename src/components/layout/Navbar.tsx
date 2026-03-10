@@ -8,7 +8,7 @@ const navItems = [
   { label: "Music", path: "/music" },
   { label: "Story", path: "/story" },
   { label: "Videos", path: "/videos" },
-  { label: "Store", path: "/store", external: "https://www.colabbshop.com" },
+  { label: "Store", path: "/store" },
   { label: "Press", path: "/press" },
 ];
 
