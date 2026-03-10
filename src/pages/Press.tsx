@@ -7,6 +7,7 @@ import pressImg1 from "@/assets/press-1.jpg";
 import pressImg2 from "@/assets/press-2.jpg";
 import pressImg3 from "@/assets/press-3.jpg";
 import pressImg4 from "@/assets/press-4.jpg";
+import bannerPress from "@/assets/banner-press.jpg";
 
 const pressImages = [
   { src: pressImg1, alt: "Cola B — Portrait 1" },
