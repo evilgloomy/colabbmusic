@@ -279,6 +279,140 @@ async function scrapeOneHyperFollow(
   }
 }
 
+// Use Firecrawl Map to discover all URLs, then match unlinked releases by scraping page titles
+async function mapAndMatchHyperFollow(supabaseUrl: string, serviceRoleKey: string, batchSize: number = 10): Promise<{ matched: number; scraped: number; failed: string[]; remaining: number }> {
+  let matched = 0, scraped = 0;
+  const failed: string[] = [];
+
+  const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
+  if (!firecrawlKey) return { matched, scraped, failed, remaining: 0 };
+
+  // 1. Get all URLs under the artist page via Firecrawl Map
+  console.log('Mapping all URLs under colab2...');
+  const mapRes = await fetch('https://api.firecrawl.dev/v1/map', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: 'https://distrokid.com/hyperfollow/colab2/', limit: 5000, includeSubdomains: false }),
+  });
+  if (!mapRes.ok) {
+    console.error('Firecrawl Map failed:', mapRes.status);
+    return { matched, scraped, failed, remaining: 0 };
+  }
+  const mapData = await mapRes.json();
+  const allUrls: string[] = (mapData?.links || mapData?.data || []).filter((u: string) =>
+    u.startsWith('https://distrokid.com/hyperfollow/colab2/')
+  );
+  console.log(`Map returned ${allUrls.length} URLs`);
+
+  // 2. Get releases that still need links + already-known hyperfollow URLs
+  const [relRes, linksRes] = await Promise.all([
+    fetch(`${supabaseUrl}/rest/v1/releases?select=id,title,hyperfollow_url&order=sort_order.asc&limit=1000`, {
+      headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}` },
+    }),
+    fetch(`${supabaseUrl}/rest/v1/streaming_links?select=release_id`, {
+      headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}` },
+    }),
+  ]);
+  const releases = await relRes.json();
+  const existingLinks = await linksRes.json();
+  const hasLinks = new Set((existingLinks || []).map((l: any) => l.release_id));
+
+  const needsScraping = (releases || []).filter((r: any) => !hasLinks.has(r.id));
+  console.log(`${needsScraping.length} releases need streaming links`);
+
+  // 3. Filter out URLs we've already matched
+  const knownUrls = new Set((releases || []).filter((r: any) => r.hyperfollow_url).map((r: any) => r.hyperfollow_url));
+  const unknownUrls = allUrls.filter(u => !knownUrls.has(u));
+  console.log(`${unknownUrls.length} URLs not yet matched to any release`);
+
+  // 4. Normalize titles for matching
+  function normalizeForMatch(s: string): string {
+    return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\u4e00-\u9fff]+/g, '').trim();
+  }
+
+  const unmatchedReleases = needsScraping.map((r: any) => ({ ...r, normalized: normalizeForMatch(r.title) }));
+  const toScrape = unknownUrls.slice(0, batchSize);
+
+  // 5. For each unknown URL, scrape it to find the title and try to match
+  for (const url of toScrape) {
+    try {
+      // Quick fetch to get page title
+      const checkRes = await fetch(url, { redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (!checkRes.ok) continue;
+      const html = await checkRes.text();
+      if (html.length < 500) continue;
+
+      // Extract title from page
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      const ogTitleMatch = html.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i);
+      const pageTitle = ogTitleMatch?.[1] || titleMatch?.[1] || '';
+      const normalizedPageTitle = normalizeForMatch(pageTitle);
+
+      if (!normalizedPageTitle) continue;
+      console.log(`  URL ${url} -> page title: "${pageTitle}"`);
+
+      // Try to match against unmatched releases
+      let matchedRelease = null;
+      for (const r of unmatchedReleases) {
+        if (!r.normalized) continue;
+        if (normalizedPageTitle.includes(r.normalized) || r.normalized.includes(normalizedPageTitle)) {
+          matchedRelease = r;
+          break;
+        }
+      }
+
+      if (!matchedRelease) {
+        console.log(`  No release match for "${pageTitle}"`);
+        continue;
+      }
+
+      console.log(`  Matched "${matchedRelease.title}" -> "${pageTitle}"`);
+
+      // Now scrape with Firecrawl for JS-rendered streaming links
+      const fcRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, formats: ['html'], waitFor: 5000 }),
+      });
+      if (!fcRes.ok) continue;
+      const fcData = await fcRes.json();
+      const renderedHtml = fcData?.data?.html || fcData?.html || '';
+      const links = extractStreamingLinks(renderedHtml);
+
+      if (links.length === 0) {
+        console.log(`  No streaming links after Firecrawl render`);
+        continue;
+      }
+
+      // Save links + hyperfollow_url
+      await fetch(`${supabaseUrl}/rest/v1/streaming_links`, {
+        method: 'POST',
+        headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify(links.map(l => ({ release_id: matchedRelease.id, platform: l.platform, url: l.url }))),
+      });
+      await fetch(`${supabaseUrl}/rest/v1/releases?id=eq.${matchedRelease.id}`, {
+        method: 'PATCH',
+        headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ hyperfollow_url: url }),
+      });
+
+      matched++;
+      scraped++;
+      console.log(`  ✓ Saved ${links.length} streaming links`);
+
+      // Remove from unmatched list
+      const idx = unmatchedReleases.findIndex(r => r.id === matchedRelease.id);
+      if (idx >= 0) unmatchedReleases.splice(idx, 1);
+
+      await new Promise(r => setTimeout(r, 500));
+    } catch (e) {
+      console.warn(`Error processing ${url}:`, e);
+    }
+  }
+
+  return { matched, scraped, failed: unmatchedReleases.map(r => r.title), remaining: unknownUrls.length - toScrape.length };
+}
+
 async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey: string, batchSize: number = 20): Promise<{ discovered: number; scraped: number; skipped: number; remaining: number; failed: string[] }> {
   let discovered = 0, scraped = 0, skipped = 0;
   const failed: string[] = [];
