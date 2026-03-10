@@ -37,7 +37,27 @@ const StoryDetailPage = () => {
     fetch();
   }, [id]);
 
-  useSEO(story);
+  const jsonLd = useMemo(() => {
+    if (!story) return undefined;
+    return {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      headline: story.ai_title || "Story",
+      description: story.ai_enhanced_text || "",
+      image: story.media_url || undefined,
+      datePublished: story.posted_at || undefined,
+      author: { "@type": "Person", name: "Cola B" },
+      url: `${SITE_URL}/story/${story.id}`,
+    };
+  }, [story]);
+
+  useSEO({
+    title: story ? `${story.ai_title || "Story"} — Cola B` : undefined,
+    description: story?.ai_enhanced_text || undefined,
+    image: story?.media_url,
+    type: "article",
+    jsonLd,
+  });
 
   if (loading) {
     return (

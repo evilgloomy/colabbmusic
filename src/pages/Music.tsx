@@ -15,6 +15,7 @@ const MusicPage = () => {
     description: "Explore Cola B's full discography — albums, singles, and EPs. Stream on Spotify, Apple Music, and YouTube.",
   });
 
+  const [dbReleases, setDbReleases] = useState<YouTubeRelease[]>([]);
   const [ytVideos, setYtVideos] = useState<YouTubeVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);

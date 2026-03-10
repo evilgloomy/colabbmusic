@@ -24,6 +24,31 @@ const ProductDetailPage = () => {
     enabled: !!handle,
   });
 
+  const jsonLd = useMemo(() => {
+    if (!product) return undefined;
+    return {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: product.title,
+      description: product.description,
+      image: product.images?.edges?.[0]?.node?.url,
+      url: `${SITE_URL}/product/${product.handle}`,
+      offers: {
+        "@type": "Offer",
+        price: product.priceRange?.minVariantPrice?.amount,
+        priceCurrency: product.priceRange?.minVariantPrice?.currencyCode,
+        availability: "https://schema.org/InStock",
+      },
+    };
+  }, [product]);
+
+  useSEO({
+    title: product ? `${product.title} — Cola B Store` : "Product — Cola B Store",
+    description: product?.description || "Official Cola B merchandise.",
+    image: product?.images?.edges?.[0]?.node?.url,
+    jsonLd,
+  });
+
   if (isLoading) {
     return (
       <PageLayout>
