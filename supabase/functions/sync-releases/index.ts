@@ -350,8 +350,9 @@ Deno.serve(async (req) => {
 
     // HyperFollow-only mode: skip YouTube scraping, just scrape streaming links per-release
     if (hyperfollowOnly) {
-      console.log('Running HyperFollow-only mode...');
-      const result = await discoverAndScrapeHyperFollow(supabaseUrl, serviceRoleKey);
+      const batchSize = body?.batch_size || 10;
+      console.log(`Running HyperFollow-only mode (batch_size=${batchSize})...`);
+      const result = await discoverAndScrapeHyperFollow(supabaseUrl, serviceRoleKey, batchSize);
       const summary = { success: true, mode: 'hyperfollow_only', ...result, timestamp: new Date().toISOString() };
       console.log('HyperFollow sync complete:', JSON.stringify(summary));
       return new Response(JSON.stringify(summary), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
