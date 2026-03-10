@@ -799,10 +799,6 @@ Deno.serve(async (req) => {
     );
   }
 });
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-    // Debug mode: test scraping a few URLs and return detailed results
-    if (debugHyperfollow) {
       const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
       const mapRes = await fetch('https://api.firecrawl.dev/v1/map', {
         method: 'POST',
