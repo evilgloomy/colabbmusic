@@ -2,6 +2,7 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { Play, Loader2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { fetchYouTubeFeed, CHANNELS, type YouTubeVideo } from "@/lib/youtube";
+import bannerVideos from "@/assets/banner-videos.jpg";
 
 const VideosPage = () => {
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
@@ -30,7 +31,8 @@ const VideosPage = () => {
     <PageLayout>
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blush via-champagne to-warm-cream" />
+        <img src={bannerVideos} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-background/40" />
         <div className="relative container mx-auto px-6 py-32 md:py-40">
           <p className="text-xs font-medium tracking-[0.3em] uppercase text-primary mb-4">Visual</p>
           <h1 className="text-display-lg font-display font-bold text-foreground mb-6">Videos</h1>
