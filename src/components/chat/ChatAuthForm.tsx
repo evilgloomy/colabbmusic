@@ -64,7 +64,9 @@ export const ChatAuthForm = () => {
           </div>
           <h2 className="text-xl font-semibold text-foreground font-sora">Chat with Cola B</h2>
           <p className="text-sm text-muted-foreground">
-            {isSignUp ? 'Create an account to start chatting' : 'Sign in to continue your conversation'}
+            {isSignUp
+              ? 'Create an account to get started. An Ultimate subscription ($30/mo) is required to chat.'
+              : 'Sign in to continue your conversation'}
           </p>
         </div>
 
