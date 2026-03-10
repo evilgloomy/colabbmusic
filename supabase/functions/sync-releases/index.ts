@@ -212,6 +212,15 @@ async function scrapeOneHyperFollow(
   serviceRoleKey: string,
 ): Promise<{ found: boolean; linkCount: number }> {
   try {
+    // Quick existence check with plain fetch (avoids expensive Firecrawl call for 404s)
+    const checkRes = await fetch(url, { redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const checkHtml = await checkRes.text();
+    // DistroKid pages that don't exist redirect to distrokid.com or show minimal content
+    if (!checkRes.ok || checkHtml.length < 500 || checkHtml.includes('Page Not Found') || !checkHtml.includes('hyperDspLink')) {
+      return { found: false, linkCount: 0 };
+    }
+
+    // Page exists — now use Firecrawl for JS-rendered content
     const fcRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
