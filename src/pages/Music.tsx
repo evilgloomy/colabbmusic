@@ -4,6 +4,7 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { fetchYouTubeFeed, fetchReleasesPaginated, CHANNELS, type YouTubeVideo, type YouTubeRelease } from "@/lib/youtube";
 import { Music, Play, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSEO } from "@/hooks/useSEO";
 import bannerMusic from "@/assets/banner-music.jpg";
 
 const PAGE_SIZE = 30;

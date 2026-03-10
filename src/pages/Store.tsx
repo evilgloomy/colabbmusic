@@ -5,6 +5,7 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { ProductCard } from "@/components/store/ProductCard";
 import { fetchProducts } from "@/lib/shopify";
 import { collections, isCoffeeProduct } from "@/lib/collections";
+import { useSEO } from "@/hooks/useSEO";
 import bannerStore from "@/assets/banner-store.jpg";
 
 const StorePage = () => {

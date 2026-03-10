@@ -2,6 +2,7 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { Play, Loader2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { fetchYouTubeFeed, CHANNELS, type YouTubeVideo } from "@/lib/youtube";
+import { useSEO } from "@/hooks/useSEO";
 import bannerVideos from "@/assets/banner-videos.jpg";
 
 const VideosPage = () => {

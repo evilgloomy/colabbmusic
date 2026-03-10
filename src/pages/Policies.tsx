@@ -1,6 +1,12 @@
 import { PageLayout } from "@/components/layout/PageLayout";
+import { useSEO } from "@/hooks/useSEO";
 
 const PoliciesPage = () => {
+  useSEO({
+    title: "Return Policy — Cola B Store",
+    description: "Returns, refunds, and exchange policy for the Cola B official store.",
+  });
+
   return (
     <PageLayout>
       {/* Hero */}
