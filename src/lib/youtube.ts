@@ -33,8 +33,7 @@ interface YouTubeFeedResponse {
 
 // Cola B's YouTube channels
 export const CHANNELS = {
-  // "Cola B - Topic" auto-generated channel — has a reliable RSS feed
-  VEVO: "UC7jMO9tpW64FhccGUH5n3kg",
+  VEVO: "UCCoEVSxdgOn_gcFI2jEFUEQ", // @ColaBVEVO — official music videos
   ARTIST: "@Cola_BB",
 } as const;
 
