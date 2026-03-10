@@ -175,9 +175,12 @@ const StoryDetailPage = () => {
                 <video
                   src={story.media_url}
                   controls
+                  muted
+                  autoPlay
                   playsInline
+                  loop
+                  preload="auto"
                   className="w-full rounded-xl"
-                  poster={story.media_url}
                 />
               ) : (
                 <img
