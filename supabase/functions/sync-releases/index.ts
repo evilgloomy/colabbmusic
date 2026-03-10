@@ -580,9 +580,32 @@ function extractStreamingLinks(html: string): { platform: string; url: string }[
 function normalizeTitle(title: string): string {
   return title
     .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, '') // Remove accents
     .replace(/\s*\(.*?\)\s*/g, '') // Remove parentheticals like "(Cola Ver)"
     .replace(/[^a-z0-9\u4e00-\u9fff\u3400-\u4dbf]+/g, '') // Keep alphanumeric + CJK chars
     .trim();
+}
+
+// Multi-tier matching: exact → startsWith → contains
+function findMatchingRelease(normalizedPageTitle: string, titleMap: Map<string, any>): any | null {
+  // Tier 1: Exact match
+  if (titleMap.has(normalizedPageTitle)) return titleMap.get(normalizedPageTitle);
+
+  // Tier 2: startsWith (either direction)
+  for (const [normTitle, release] of titleMap) {
+    if (normalizedPageTitle.startsWith(normTitle) || normTitle.startsWith(normalizedPageTitle)) {
+      if (normTitle.length > 0 && normalizedPageTitle.length > 0) return release;
+    }
+  }
+
+  // Tier 3: contains (either direction, but require minimum length to avoid false matches)
+  for (const [normTitle, release] of titleMap) {
+    if (normTitle.length < 2 && normalizedPageTitle.length < 2) continue; // Skip single-char unless exact
+    if (normTitle.length >= 2 && normalizedPageTitle.includes(normTitle)) return release;
+    if (normalizedPageTitle.length >= 2 && normTitle.includes(normalizedPageTitle)) return release;
+  }
+
+  return null;
 }
 
 function extractPageTitle(html: string): string | null {
