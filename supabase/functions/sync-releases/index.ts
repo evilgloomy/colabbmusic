@@ -293,7 +293,7 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
         failed.push(release.title);
         console.log(`  ✗ No links found`);
       }
-      await new Promise(r => setTimeout(r, 1500));
+      await new Promise(r => setTimeout(r, 500));
       continue;
     }
 
