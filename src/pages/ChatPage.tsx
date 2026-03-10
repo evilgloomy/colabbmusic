@@ -303,7 +303,7 @@ const ChatPage = () => {
             )}
             <div>
               <h1 className="text-sm font-semibold text-foreground font-sora">{character?.name || 'Cola B'}</h1>
-              <p className="text-xs text-muted-foreground">AI Chat · Grok Mode</p>
+              <p className="text-xs text-muted-foreground">AI Chat · Powered by ArtistAgent.AI</p>
             </div>
           </div>
           <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
