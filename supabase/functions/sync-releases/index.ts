@@ -556,9 +556,172 @@ async function processInBatches<T, R>(items: T[], batchSize: number, delayMs: nu
   return results;
 }
 
-// ── HyperFollow discovery & scraping (Firecrawl Map approach) ──
+// ── HyperFollow per-release scraping ──
 
 function extractStreamingLinks(html: string): { platform: string; url: string }[] {
+  const links: { platform: string; url: string }[] = [];
+  const linkRegex =
+    /<a[^>]+target="_blank"[^>]+href="([^"]+)"[^>]*>[\s\S]*?<div[^>]*style="flex:\s*1[^"]*"[^>]*>\s*([\w\s]+?)\s*<\/div>/gi;
+
+  let match;
+  while ((match = linkRegex.exec(html)) !== null) {
+    let url = match[1].replace(/&amp;/g, "&");
+    const platform = match[2].trim();
+    if (!platform || !url) continue;
+    if (url.includes("prf.hn/click")) {
+      const destMatch = url.match(/destination:(https?[^\s&]+)/);
+      if (destMatch) url = decodeURIComponent(destMatch[1]);
+    }
+    links.push({ platform: platform.toLowerCase().replace(/\s+/g, "_"), url });
+  }
+  return links;
+}
+
+// Convert title to candidate DistroKid slug(s)
+function titleToSlugs(title: string): string[] {
+  const base = title
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s*\(.*?\)\s*/g, '') // Remove parentheticals
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-+/g, '-');
+
+  if (!base) return []; // Chinese-only titles produce empty slugs
+
+  // Try base slug, then numbered variants (DistroKid appends -2, -3, etc. for duplicates)
+  const candidates = [base];
+  for (let i = 2; i <= 6; i++) {
+    candidates.push(`${base}-${i}`);
+  }
+  return candidates;
+}
+
+async function scrapeOneHyperFollow(
+  url: string,
+  releaseId: string,
+  firecrawlKey: string,
+  supabaseUrl: string,
+  serviceRoleKey: string,
+): Promise<{ found: boolean; linkCount: number }> {
+  try {
+    const fcRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, formats: ['html'], waitFor: 5000 }),
+    });
+    if (!fcRes.ok) return { found: false, linkCount: 0 };
+    const fcData = await fcRes.json();
+    const html = fcData?.data?.html || fcData?.html || '';
+    if (!html || html.length < 100) return { found: false, linkCount: 0 };
+
+    const links = extractStreamingLinks(html);
+    if (links.length === 0) return { found: false, linkCount: 0 };
+
+    // Upsert streaming links
+    await fetch(`${supabaseUrl}/rest/v1/streaming_links`, {
+      method: 'POST',
+      headers: {
+        'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}`,
+        'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify(links.map(l => ({ release_id: releaseId, platform: l.platform, url: l.url }))),
+    });
+
+    // Save hyperfollow_url on the release
+    await fetch(`${supabaseUrl}/rest/v1/releases?id=eq.${releaseId}`, {
+      method: 'PATCH',
+      headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ hyperfollow_url: url }),
+    });
+
+    return { found: true, linkCount: links.length };
+  } catch (e) {
+    console.warn(`Error scraping ${url}:`, e);
+    return { found: false, linkCount: 0 };
+  }
+}
+
+async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey: string): Promise<{ discovered: number; scraped: number; skipped: number; failed: string[] }> {
+  let discovered = 0, scraped = 0, skipped = 0;
+  const failed: string[] = [];
+
+  const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
+  if (!firecrawlKey) {
+    console.warn('FIRECRAWL_API_KEY not configured, skipping HyperFollow');
+    return { discovered, scraped, skipped, failed };
+  }
+
+  // Get all releases + check which already have streaming links
+  const [relRes, linksRes] = await Promise.all([
+    fetch(`${supabaseUrl}/rest/v1/releases?select=id,title,hyperfollow_url&order=sort_order.asc&limit=1000`, {
+      headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}` },
+    }),
+    fetch(`${supabaseUrl}/rest/v1/streaming_links?select=release_id`, {
+      headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}` },
+    }),
+  ]);
+
+  const releases = await relRes.json();
+  const existingLinks = await linksRes.json();
+  const hasLinks = new Set((existingLinks || []).map((l: any) => l.release_id));
+
+  // Filter to releases that need scraping
+  const needsScraping = (releases || []).filter((r: any) => !hasLinks.has(r.id));
+  console.log(`${needsScraping.length} of ${releases.length} releases need streaming links`);
+
+  const BASE_URL = 'https://distrokid.com/hyperfollow/colab2/';
+
+  for (const release of needsScraping) {
+    // If already has a hyperfollow_url, use it directly
+    if (release.hyperfollow_url) {
+      console.log(`Scraping known URL for "${release.title}": ${release.hyperfollow_url}`);
+      const result = await scrapeOneHyperFollow(release.hyperfollow_url, release.id, firecrawlKey, supabaseUrl, serviceRoleKey);
+      if (result.found) {
+        scraped++;
+        console.log(`  ✓ Found ${result.linkCount} links`);
+      } else {
+        failed.push(release.title);
+        console.log(`  ✗ No links found`);
+      }
+      await new Promise(r => setTimeout(r, 1500));
+      continue;
+    }
+
+    // Generate candidate slugs from title
+    const candidates = titleToSlugs(release.title);
+    if (candidates.length === 0) {
+      skipped++;
+      console.log(`Skipped "${release.title}" (no valid slug)`);
+      continue;
+    }
+
+    let found = false;
+    for (const slug of candidates) {
+      const url = `${BASE_URL}${slug}`;
+      const result = await scrapeOneHyperFollow(url, release.id, firecrawlKey, supabaseUrl, serviceRoleKey);
+      if (result.found) {
+        discovered++;
+        scraped++;
+        found = true;
+        console.log(`✓ "${release.title}" -> ${slug} (${result.linkCount} links)`);
+        break;
+      }
+      // Small delay between slug attempts
+      await new Promise(r => setTimeout(r, 800));
+    }
+
+    if (!found) {
+      failed.push(release.title);
+      console.log(`✗ "${release.title}" - no valid HyperFollow page found`);
+    }
+
+    // Rate limit between releases
+    await new Promise(r => setTimeout(r, 1000));
+  }
+
+  return { discovered, scraped, skipped, failed };
+}
   const links: { platform: string; url: string }[] = [];
   const linkRegex =
     /<a[^>]+target="_blank"[^>]+href="([^"]+)"[^>]*>[\s\S]*?<div[^>]*style="flex:\s*1[^"]*"[^>]*>\s*([\w\s]+?)\s*<\/div>/gi;
