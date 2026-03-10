@@ -326,7 +326,7 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
     }
 
     // Rate limit between releases
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 500));
   }
 
   return { discovered, scraped, skipped, remaining: totalNeeded - toProcess.length, failed };
