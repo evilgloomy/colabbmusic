@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Instagram } from "lucide-react";
+import { CartDrawer } from "@/components/store/CartDrawer";
 
 const navItems = [
   { label: "Home", path: "/" },
