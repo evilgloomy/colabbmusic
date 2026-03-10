@@ -23,27 +23,16 @@ export const Navbar = () => {
         <div className="hidden md:flex items-center gap-1">
           {navItems.map((item, i) => (
             <span key={item.path} className="flex items-center">
-              {item.external ? (
-                <a
-                  href={item.external}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1 text-xs font-semibold tracking-[0.15em] uppercase text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {item.label}
-                </a>
-              ) : (
-                <Link
-                  to={item.path}
-                  className={`px-3 py-1 text-xs font-semibold tracking-[0.15em] uppercase transition-colors ${
-                    location.pathname === item.path
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              )}
+              <Link
+                to={item.path}
+                className={`px-3 py-1 text-xs font-semibold tracking-[0.15em] uppercase transition-colors ${
+                  location.pathname === item.path
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {item.label}
+              </Link>
               {i < navItems.length - 1 && (
                 <span className="text-border text-xs">/</span>
               )}
