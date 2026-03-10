@@ -46,7 +46,7 @@ export const PremiumGate = ({ onRefresh }: PremiumGateProps) => {
         Ultimate Plan Required
       </h2>
       <p className="text-sm text-muted-foreground mb-6 max-w-xs">
-        Subscribe to the Ultimate plan to unlock unrestricted conversations with Cola B powered by Grok.
+        Subscribe to the Ultimate plan to unlock unrestricted conversations with Cola B powered by ArtistAgent.AI.
       </p>
 
       <div className="w-full max-w-xs space-y-3">
