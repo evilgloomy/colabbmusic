@@ -112,11 +112,26 @@ const ReleasePage = () => {
                 {release.track_count && release.track_count > 1 ? ` · ${release.track_count} tracks` : ""}
               </p>
 
-              {release.description && (
-                <p className="text-white/60 mt-6 max-w-lg leading-relaxed">
-                  {release.description}
-                </p>
-              )}
+              {release.description && (() => {
+                // Extract only the first meaningful paragraph, skip lyrics
+                const lines = release.description.split('\n').filter(l => l.trim());
+                const firstLine = lines[0] || '';
+                // If it looks like lyrics (very long, no punctuation structure), skip
+                const isLyrics = firstLine.length > 300 || release.description.includes('Composer:') || release.description.includes('【Lyrics】');
+                if (isLyrics) {
+                  // Try to find a short intro before lyrics start
+                  const introEnd = release.description.search(/(?:Composer:|【Lyrics|🎵\s*Lyrics|\[Lyrics)/i);
+                  if (introEnd > 20) {
+                    const intro = release.description.slice(0, introEnd).trim();
+                    if (intro.length < 500) {
+                      return <p className="text-white/60 mt-6 max-w-lg leading-relaxed">{intro}</p>;
+                    }
+                  }
+                  return null;
+                }
+                const shortDesc = firstLine.length > 200 ? firstLine.slice(0, 200) + '…' : firstLine;
+                return <p className="text-white/60 mt-6 max-w-lg leading-relaxed">{shortDesc}</p>;
+              })()}
 
               {/* Play button */}
               {videoId && !isPlaying && (

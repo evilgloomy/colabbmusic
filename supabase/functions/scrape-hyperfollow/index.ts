@@ -57,21 +57,37 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch the HyperFollow page
-    const res = await fetch(hyperfollow_url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-      },
-    });
-
-    if (!res.ok) {
+    // Use Firecrawl to render JS-heavy DistroKid pages
+    const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
+    if (!firecrawlKey) {
       return new Response(
-        JSON.stringify({ success: false, error: `Failed to fetch HyperFollow page: ${res.status}` }),
+        JSON.stringify({ success: false, error: "FIRECRAWL_API_KEY not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const html = await res.text();
+    const fcRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${firecrawlKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        url: hyperfollow_url,
+        formats: ['html'],
+        waitFor: 5000,
+      }),
+    });
+
+    if (!fcRes.ok) {
+      return new Response(
+        JSON.stringify({ success: false, error: `Firecrawl scrape failed: ${fcRes.status}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const fcData = await fcRes.json();
+    const html = fcData?.data?.html || fcData?.html || '';
     const links = extractLinks(html);
 
     if (links.length === 0) {

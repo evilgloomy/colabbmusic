@@ -639,40 +639,58 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
       await new Promise(r => setTimeout(r, 300)); // Rate limit
     }
 
-    // Scrape streaming links if we have a URL
+    // Scrape streaming links using Firecrawl (DistroKid is JS-rendered)
     if (hyperfollowUrl) {
       try {
-        const pageRes = await fetch(hyperfollowUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-        });
-        if (pageRes.ok) {
-          const html = await pageRes.text();
-          const links = extractStreamingLinks(html);
-          if (links.length > 0) {
-            // Upsert streaming links
-            const upsertRes = await fetch(
-              `${supabaseUrl}/rest/v1/streaming_links`,
-              {
-                method: 'POST',
-                headers: {
-                  'apikey': serviceRoleKey,
-                  'Authorization': `Bearer ${serviceRoleKey}`,
-                  'Content-Type': 'application/json',
-                  'Prefer': 'resolution=merge-duplicates,return=minimal',
-                },
-                body: JSON.stringify(links.map(l => ({ release_id: release.id, platform: l.platform, url: l.url }))),
+        const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
+        if (!firecrawlKey) {
+          console.warn('FIRECRAWL_API_KEY not configured, skipping HyperFollow scrape');
+        } else {
+          const fcRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${firecrawlKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              url: hyperfollowUrl,
+              formats: ['html'],
+              waitFor: 5000,
+            }),
+          });
+          if (fcRes.ok) {
+            const fcData = await fcRes.json();
+            const html = fcData?.data?.html || fcData?.html || '';
+            const links = extractStreamingLinks(html);
+            if (links.length > 0) {
+              const upsertRes = await fetch(
+                `${supabaseUrl}/rest/v1/streaming_links`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'apikey': serviceRoleKey,
+                    'Authorization': `Bearer ${serviceRoleKey}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'resolution=merge-duplicates,return=minimal',
+                  },
+                  body: JSON.stringify(links.map(l => ({ release_id: release.id, platform: l.platform, url: l.url }))),
+                }
+              );
+              if (upsertRes.ok) {
+                scraped++;
+                console.log(`Scraped ${links.length} streaming links for "${release.title}" via Firecrawl`);
               }
-            );
-            if (upsertRes.ok) {
-              scraped++;
-              console.log(`Scraped ${links.length} streaming links for "${release.title}"`);
+            } else {
+              console.log(`No streaming links found in Firecrawl HTML for "${release.title}"`);
             }
+          } else {
+            console.warn(`Firecrawl scrape failed for "${release.title}": ${fcRes.status}`);
           }
         }
       } catch (e) {
         console.warn(`HyperFollow scrape failed for "${release.title}":`, e);
       }
-      await new Promise(r => setTimeout(r, 500)); // Rate limit
+      await new Promise(r => setTimeout(r, 1000)); // Rate limit for Firecrawl
     }
   }
 
