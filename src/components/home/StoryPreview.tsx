@@ -12,6 +12,7 @@ interface Story {
   ai_enhanced_text: string | null;
   category: string | null;
   media_url: string | null;
+  media_type: string | null;
   posted_at: string | null;
 }
 
@@ -23,7 +24,7 @@ export const StoryPreview = () => {
     const fetchStories = async () => {
       const { data } = await supabase
         .from("stories")
-        .select("id, ai_title, ai_enhanced_text, category, media_url, posted_at")
+        .select("id, ai_title, ai_enhanced_text, category, media_url, media_type, posted_at")
         .order("posted_at", { ascending: false })
         .limit(3);
 
@@ -56,13 +57,30 @@ export const StoryPreview = () => {
               stories.map((story) => (
                   <Link key={story.id} to={`/story/${story.id}`} className="group flex gap-3 hover:bg-muted/50 rounded-lg p-1 -m-1 transition-colors">
                     {story.media_url && (
-                      <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
-                        <img
-                          src={story.media_url}
-                          alt={story.ai_title || "Story"}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          loading="lazy"
-                        />
+                      <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-muted relative">
+                        {story.media_type === "VIDEO" ? (
+                          <video
+                            src={story.media_url!}
+                            className="w-full h-full object-cover"
+                            muted
+                            autoPlay
+                            loop
+                            playsInline
+                            preload="auto"
+                          />
+                        ) : (
+                          <img
+                            src={story.media_url!}
+                            alt={story.ai_title || "Story"}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            loading="lazy"
+                          />
+                        )}
+                        {story.media_type === "VIDEO" && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Play className="h-3 w-3 text-white drop-shadow" />
+                          </div>
+                        )}
                       </div>
                     )}
                     <div className="min-w-0">
