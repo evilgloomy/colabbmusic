@@ -3,6 +3,17 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { brand } from "@/data/content";
 import { fetchReleases, type YouTubeRelease } from "@/lib/youtube";
 import { Download, Mail } from "lucide-react";
+import pressImg1 from "@/assets/press-1.jpg";
+import pressImg2 from "@/assets/press-2.jpg";
+import pressImg3 from "@/assets/press-3.jpg";
+import pressImg4 from "@/assets/press-4.jpg";
+
+const pressImages = [
+  { src: pressImg1, alt: "Cola B — Portrait 1" },
+  { src: pressImg2, alt: "Cola B — Portrait 2" },
+  { src: pressImg3, alt: "Cola B — Portrait 3" },
+  { src: pressImg4, alt: "Cola B — Portrait 4" },
+];
 
 const PressPage = () => {
   const [latestRelease, setLatestRelease] = useState<YouTubeRelease | null>(null);
@@ -79,9 +90,14 @@ const PressPage = () => {
         <div className="container mx-auto px-6 py-24">
           <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-8">Press Images</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="aspect-[3/4] bg-card rounded-lg flex items-center justify-center">
-                <span className="text-xs text-muted-foreground">Image {i}</span>
+            {pressImages.map((img, i) => (
+              <div key={i} className="aspect-[3/4] rounded-lg overflow-hidden bg-card">
+                <img
+                  src={img.src}
+                  alt={img.alt}
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+                  loading="lazy"
+                />
               </div>
             ))}
           </div>
