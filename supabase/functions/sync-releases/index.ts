@@ -685,7 +685,8 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
   }
 
   // Step 3: Scrape each URL in batches of 3
-  for (let i = 0; i < hyperfollowUrls.length; i += 3) {
+  const urlsToProcess = hyperfollowUrls;
+  for (let i = 0; i < urlsToProcess.length; i += 3) {
     const batch = hyperfollowUrls.slice(i, i + 3);
     const results = await Promise.all(batch.map(async (url: string) => {
       try {
