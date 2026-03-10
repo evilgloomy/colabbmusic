@@ -261,18 +261,23 @@ async function scrapeOneHyperFollow(
       return { found: false, linkCount: 0 };
     }
 
-    // Page exists — now use Firecrawl for JS-rendered content
-    const fcRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, formats: ['html'], waitFor: 5000 }),
-    });
-    if (!fcRes.ok) return { found: false, linkCount: 0 };
-    const fcData = await fcRes.json();
-    const html = fcData?.data?.html || fcData?.html || '';
-    if (!html || html.length < 100) return { found: false, linkCount: 0 };
+    // First try extracting links from the initial HTML
+    let links = extractStreamingLinks(checkHtml);
 
-    const links = extractStreamingLinks(html);
+    // If no links, use Firecrawl for JS-rendered content with longer wait
+    if (links.length === 0) {
+      const fcRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, formats: ['html'], waitFor: 10000 }),
+      });
+      if (!fcRes.ok) return { found: false, linkCount: 0 };
+      const fcData = await fcRes.json();
+      const html = fcData?.data?.html || fcData?.html || '';
+      if (!html || html.length < 100) return { found: false, linkCount: 0 };
+      links = extractStreamingLinks(html);
+    }
+
     if (links.length === 0) return { found: false, linkCount: 0 };
 
     // Upsert streaming links
