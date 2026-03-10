@@ -3,6 +3,7 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { brand } from "@/data/content";
 import { fetchReleases, type YouTubeRelease } from "@/lib/youtube";
 import { Download, Mail } from "lucide-react";
+import { useSEO } from "@/hooks/useSEO";
 import pressImg1 from "@/assets/press-1.jpg";
 import pressImg2 from "@/assets/press-2.jpg";
 import pressImg3 from "@/assets/press-3.jpg";
@@ -17,6 +18,11 @@ const pressImages = [
 ];
 
 const PressPage = () => {
+  useSEO({
+    title: "Press — Cola B | Press Kit & Media",
+    description: "Official press materials, bios, high-res images, and media assets for Cola B.",
+  });
+
   const [latestRelease, setLatestRelease] = useState<YouTubeRelease | null>(null);
 
   useEffect(() => {

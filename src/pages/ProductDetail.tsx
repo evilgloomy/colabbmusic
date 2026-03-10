@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, ShoppingCart, ChevronLeft } from "lucide-react";
@@ -9,6 +9,7 @@ import { fetchProductByHandle } from "@/lib/shopify";
 import type { ShopifyProduct } from "@/lib/shopify";
 import { useCartStore } from "@/stores/cartStore";
 import { toast } from "sonner";
+import { useSEO, SITE_URL } from "@/hooks/useSEO";
 
 const ProductDetailPage = () => {
   const { handle } = useParams<{ handle: string }>();
@@ -21,6 +22,31 @@ const ProductDetailPage = () => {
     queryKey: ["shopify-product", handle],
     queryFn: () => fetchProductByHandle(handle!),
     enabled: !!handle,
+  });
+
+  const jsonLd = useMemo(() => {
+    if (!product) return undefined;
+    return {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: product.title,
+      description: product.description,
+      image: product.images?.edges?.[0]?.node?.url,
+      url: `${SITE_URL}/product/${product.handle}`,
+      offers: {
+        "@type": "Offer",
+        price: product.priceRange?.minVariantPrice?.amount,
+        priceCurrency: product.priceRange?.minVariantPrice?.currencyCode,
+        availability: "https://schema.org/InStock",
+      },
+    };
+  }, [product]);
+
+  useSEO({
+    title: product ? `${product.title} — Cola B Store` : "Product — Cola B Store",
+    description: product?.description || "Official Cola B merchandise.",
+    image: product?.images?.edges?.[0]?.node?.url,
+    jsonLd,
   });
 
   if (isLoading) {

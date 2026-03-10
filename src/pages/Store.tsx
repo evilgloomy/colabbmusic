@@ -5,9 +5,15 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { ProductCard } from "@/components/store/ProductCard";
 import { fetchProducts } from "@/lib/shopify";
 import { collections, isCoffeeProduct } from "@/lib/collections";
+import { useSEO } from "@/hooks/useSEO";
 import bannerStore from "@/assets/banner-store.jpg";
 
 const StorePage = () => {
+  useSEO({
+    title: "Store — Cola B | Official Merchandise",
+    description: "Shop official Cola B merchandise — apparel, accessories, and limited-edition drops.",
+  });
+
   const [activeCollection, setActiveCollection] = useState("all");
 
   const { data: products = [], isLoading } = useQuery({

@@ -4,11 +4,17 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { fetchYouTubeFeed, fetchReleasesPaginated, CHANNELS, type YouTubeVideo, type YouTubeRelease } from "@/lib/youtube";
 import { Music, Play, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSEO } from "@/hooks/useSEO";
 import bannerMusic from "@/assets/banner-music.jpg";
 
 const PAGE_SIZE = 30;
 
 const MusicPage = () => {
+  useSEO({
+    title: "Music — Cola B | Latest Releases & Singles",
+    description: "Explore Cola B's full discography — albums, singles, and EPs. Stream on Spotify, Apple Music, and YouTube.",
+  });
+
   const [dbReleases, setDbReleases] = useState<YouTubeRelease[]>([]);
   const [ytVideos, setYtVideos] = useState<YouTubeVideo[]>([]);
   const [loading, setLoading] = useState(true);

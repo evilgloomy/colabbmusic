@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchStreamingLinks, PLATFORM_INFO, type StreamingLink } from "@/lib/streaming";
 import type { YouTubeRelease } from "@/lib/youtube";
 import { ArrowLeft, Play, ExternalLink, Music } from "lucide-react";
+import { useSEO, SITE_URL } from "@/hooks/useSEO";
 
 const ReleasePage = () => {
   const { id } = useParams<{ id: string }>();
@@ -15,7 +16,6 @@ const ReleasePage = () => {
 
   useEffect(() => {
     if (!id) return;
-
     Promise.all([
       supabase.from("releases").select("*").eq("id", id).single(),
       fetchStreamingLinks(id),
@@ -25,6 +25,28 @@ const ReleasePage = () => {
       setLoading(false);
     });
   }, [id]);
+
+  const jsonLd = useMemo(() => {
+    if (!release) return undefined;
+    return {
+      "@context": "https://schema.org",
+      "@type": release.track_count && release.track_count > 1 ? "MusicAlbum" : "MusicRecording",
+      name: release.title,
+      byArtist: { "@type": "MusicGroup", name: "Cola B" },
+      datePublished: release.release_date || release.year,
+      image: release.thumbnail_url,
+      url: `${SITE_URL}/release/${release.id}`,
+    };
+  }, [release]);
+
+  useSEO({
+    title: release ? `${release.title} — Cola B` : "Release — Cola B",
+    description: release
+      ? `Listen to ${release.title} by Cola B. ${release.year || ""}`
+      : "Listen to Cola B on all platforms.",
+    image: release?.thumbnail_url,
+    jsonLd,
+  });
 
   if (loading) {
     return (
@@ -113,13 +135,10 @@ const ReleasePage = () => {
               </p>
 
               {release.description && (() => {
-                // Extract only the first meaningful paragraph, skip lyrics
                 const lines = release.description.split('\n').filter(l => l.trim());
                 const firstLine = lines[0] || '';
-                // If it looks like lyrics (very long, no punctuation structure), skip
                 const isLyrics = firstLine.length > 300 || release.description.includes('Composer:') || release.description.includes('【Lyrics】');
                 if (isLyrics) {
-                  // Try to find a short intro before lyrics start
                   const introEnd = release.description.search(/(?:Composer:|【Lyrics|🎵\s*Lyrics|\[Lyrics)/i);
                   if (introEnd > 20) {
                     const intro = release.description.slice(0, introEnd).trim();
