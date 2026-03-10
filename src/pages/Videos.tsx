@@ -1,12 +1,14 @@
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Play, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { fetchYouTubeFeed, CHANNELS, type YouTubeVideo } from "@/lib/youtube";
 
 const VideosPage = () => {
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [featuredIndex, setFeaturedIndex] = useState(0);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchYouTubeFeed(CHANNELS.VEVO, 15)
@@ -14,8 +16,15 @@ const VideosPage = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  const featured = videos[0];
-  const rest = videos.slice(1);
+  const featured = videos[featuredIndex];
+  const rest = videos.filter((_, i) => i !== featuredIndex);
+
+  const handleSelectVideo = (video: YouTubeVideo) => {
+    const idx = videos.findIndex((v) => v.videoId === video.videoId);
+    setFeaturedIndex(idx);
+    setPlayingId(video.videoId);
+    heroRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   return (
     <PageLayout>
@@ -43,7 +52,7 @@ const VideosPage = () => {
         <>
           {/* Featured video */}
           {featured && (
-            <section className="container mx-auto px-6 pb-16">
+            <section ref={heroRef} className="container mx-auto px-6 pb-16">
               <div className="relative aspect-video overflow-hidden rounded-lg glass">
                 {playingId === featured.videoId ? (
                   <iframe
@@ -83,28 +92,18 @@ const VideosPage = () => {
                 {rest.map((video) => (
                   <div key={video.videoId} className="group">
                     <div className="relative aspect-video overflow-hidden rounded-lg mb-4">
-                      {playingId === video.videoId ? (
-                        <iframe
-                          src={`${video.embedUrl}?autoplay=1`}
-                          className="w-full h-full"
-                          allow="autoplay; encrypted-media"
-                          allowFullScreen
-                          title={video.title}
-                        />
-                      ) : (
-                        <button
-                          onClick={() => setPlayingId(video.videoId)}
-                          className="w-full h-full relative cursor-pointer"
-                        >
-                          <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                          <div className="absolute inset-0 bg-foreground/15 group-hover:bg-foreground/5 transition-colors" />
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-12 h-12 rounded-full bg-primary/70 flex items-center justify-center group-hover:bg-primary transition-colors">
-                              <Play className="h-5 w-5 text-primary-foreground ml-0.5" />
-                            </div>
+                      <button
+                        onClick={() => handleSelectVideo(video)}
+                        className="w-full h-full relative cursor-pointer"
+                      >
+                        <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                        <div className="absolute inset-0 bg-foreground/15 group-hover:bg-foreground/5 transition-colors" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-12 h-12 rounded-full bg-primary/70 flex items-center justify-center group-hover:bg-primary transition-colors">
+                            <Play className="h-5 w-5 text-primary-foreground ml-0.5" />
                           </div>
-                        </button>
-                      )}
+                        </div>
+                      </button>
                     </div>
                     <p className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground mb-1">
                       {new Date(video.published).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
