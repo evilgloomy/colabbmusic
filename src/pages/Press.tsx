@@ -3,6 +3,17 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { brand } from "@/data/content";
 import { fetchReleases, type YouTubeRelease } from "@/lib/youtube";
 import { Download, Mail } from "lucide-react";
+import pressImg1 from "@/assets/press-1.jpg";
+import pressImg2 from "@/assets/press-2.jpg";
+import pressImg3 from "@/assets/press-3.jpg";
+import pressImg4 from "@/assets/press-4.jpg";
+
+const pressImages = [
+  { src: pressImg1, alt: "Cola B — Portrait 1" },
+  { src: pressImg2, alt: "Cola B — Portrait 2" },
+  { src: pressImg3, alt: "Cola B — Portrait 3" },
+  { src: pressImg4, alt: "Cola B — Portrait 4" },
+];
 
 const PressPage = () => {
   const [latestRelease, setLatestRelease] = useState<YouTubeRelease | null>(null);
