@@ -32,6 +32,7 @@ const AppInner = () => {
       <Route path="/store" element={<StorePage />} />
       <Route path="/product/:handle" element={<ProductDetailPage />} />
       <Route path="/press" element={<PressPage />} />
+      <Route path="/chat" element={<ChatPage />} />
       <Route path="/policies" element={<PoliciesPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

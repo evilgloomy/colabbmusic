@@ -10,6 +10,7 @@ const navItems = [
   { label: "Videos", path: "/videos" },
   { label: "Store", path: "/store" },
   { label: "Press", path: "/press" },
+  { label: "Chat", path: "/chat" },
 ];
 
 export const Navbar = () => {
