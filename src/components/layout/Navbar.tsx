@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Instagram } from "lucide-react";
+import { CartDrawer } from "@/components/store/CartDrawer";
 
 const navItems = [
   { label: "Home", path: "/" },
   { label: "Music", path: "/music" },
   { label: "Story", path: "/story" },
   { label: "Videos", path: "/videos" },
-  { label: "Store", path: "/store", external: "https://www.colabbshop.com" },
+  { label: "Store", path: "/store" },
   { label: "Press", path: "/press" },
 ];
 
@@ -22,27 +23,16 @@ export const Navbar = () => {
         <div className="hidden md:flex items-center gap-1">
           {navItems.map((item, i) => (
             <span key={item.path} className="flex items-center">
-              {item.external ? (
-                <a
-                  href={item.external}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1 text-xs font-semibold tracking-[0.15em] uppercase text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {item.label}
-                </a>
-              ) : (
-                <Link
-                  to={item.path}
-                  className={`px-3 py-1 text-xs font-semibold tracking-[0.15em] uppercase transition-colors ${
-                    location.pathname === item.path
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              )}
+              <Link
+                to={item.path}
+                className={`px-3 py-1 text-xs font-semibold tracking-[0.15em] uppercase transition-colors ${
+                  location.pathname === item.path
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {item.label}
+              </Link>
               {i < navItems.length - 1 && (
                 <span className="text-border text-xs">/</span>
               )}
@@ -51,7 +41,8 @@ export const Navbar = () => {
         </div>
 
         {/* Right side: social icons + hamburger */}
-        <div className="flex items-center gap-3 ml-auto">
+        <div className="flex items-center gap-4 ml-auto">
+          <CartDrawer />
           <a
             href="https://www.instagram.com/cola_bb_official/"
             target="_blank"
@@ -84,33 +75,20 @@ export const Navbar = () => {
       {mobileOpen && (
         <div className="md:hidden glass-strong border-t border-border/40">
           <div className="container mx-auto px-6 py-6 flex flex-col gap-4">
-            {navItems.map((item) =>
-              item.external ? (
-                <a
-                  key={item.path}
-                  href={item.external}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setMobileOpen(false)}
-                  className="text-sm font-semibold tracking-[0.15em] uppercase text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {item.label}
-                </a>
-              ) : (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setMobileOpen(false)}
-                  className={`text-sm font-semibold tracking-[0.15em] uppercase transition-colors ${
-                    location.pathname === item.path
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              )
-            )}
+            {navItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setMobileOpen(false)}
+                className={`text-sm font-semibold tracking-[0.15em] uppercase transition-colors ${
+                  location.pathname === item.path
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
           </div>
         </div>
       )}
