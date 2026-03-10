@@ -580,9 +580,32 @@ function extractStreamingLinks(html: string): { platform: string; url: string }[
 function normalizeTitle(title: string): string {
   return title
     .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, '') // Remove accents
     .replace(/\s*\(.*?\)\s*/g, '') // Remove parentheticals like "(Cola Ver)"
     .replace(/[^a-z0-9\u4e00-\u9fff\u3400-\u4dbf]+/g, '') // Keep alphanumeric + CJK chars
     .trim();
+}
+
+// Multi-tier matching: exact → startsWith → contains
+function findMatchingRelease(normalizedPageTitle: string, titleMap: Map<string, any>): any | null {
+  // Tier 1: Exact match
+  if (titleMap.has(normalizedPageTitle)) return titleMap.get(normalizedPageTitle);
+
+  // Tier 2: startsWith (either direction)
+  for (const [normTitle, release] of titleMap) {
+    if (normalizedPageTitle.startsWith(normTitle) || normTitle.startsWith(normalizedPageTitle)) {
+      if (normTitle.length > 0 && normalizedPageTitle.length > 0) return release;
+    }
+  }
+
+  // Tier 3: contains (either direction, but require minimum length to avoid false matches)
+  for (const [normTitle, release] of titleMap) {
+    if (normTitle.length < 2 && normalizedPageTitle.length < 2) continue; // Skip single-char unless exact
+    if (normTitle.length >= 2 && normalizedPageTitle.includes(normTitle)) return release;
+    if (normalizedPageTitle.length >= 2 && normTitle.includes(normalizedPageTitle)) return release;
+  }
+
+  return null;
 }
 
 function extractPageTitle(html: string): string | null {
@@ -595,8 +618,20 @@ function extractPageTitle(html: string): string | null {
   return byMatch ? byMatch[1].trim() : raw;
 }
 
-async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey: string): Promise<{ discovered: number; scraped: number }> {
+// Convert a title to a slug for matching against URL slugs
+function titleToSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s*\(.*?\)\s*/g, '') // Remove parentheticals
+    .replace(/[^a-z0-9]+/g, '-')   // Replace non-alphanumeric with hyphens
+    .replace(/^-+|-+$/g, '')        // Trim hyphens
+    .replace(/-+/g, '-');           // Collapse multiple hyphens
+}
+
+async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey: string): Promise<{ discovered: number; scraped: number; debugInfo?: any }> {
   let discovered = 0, scraped = 0;
+  const debugLog: string[] = [];
 
   const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
   if (!firecrawlKey) {
@@ -605,18 +640,11 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
   }
 
   // Step 1: Use Firecrawl Map to discover all HyperFollow URLs
-  console.log('Calling Firecrawl Map to discover all HyperFollow URLs...');
+  console.log('Calling Firecrawl Map...');
   const mapRes = await fetch('https://api.firecrawl.dev/v1/map', {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${firecrawlKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      url: 'https://distrokid.com/hyperfollow/colab2/',
-      limit: 5000,
-      includeSubdomains: false,
-    }),
+    headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: 'https://distrokid.com/hyperfollow/colab2/', limit: 5000, includeSubdomains: false }),
   });
 
   if (!mapRes.ok) {
@@ -626,14 +654,12 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
 
   const mapData = await mapRes.json();
   const allUrls: string[] = mapData?.links || mapData?.data || [];
-  
-  // Filter to only colab2 HyperFollow URLs (exclude the base URL itself)
   const hyperfollowUrls = allUrls.filter((u: string) =>
     u.startsWith('https://distrokid.com/hyperfollow/colab2/') &&
     u !== 'https://distrokid.com/hyperfollow/colab2/' &&
     u !== 'https://distrokid.com/hyperfollow/colab2'
   );
-  console.log(`Firecrawl Map found ${hyperfollowUrls.length} HyperFollow URLs`);
+  console.log(`Found ${hyperfollowUrls.length} HyperFollow URLs`);
 
   if (hyperfollowUrls.length === 0) return { discovered, scraped };
 
@@ -651,34 +677,90 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
   const existingLinks = await linksRes.json();
   const hasLinks = new Set((existingLinks || []).map((l: any) => l.release_id));
 
-  // Build normalized title lookup: normalizedTitle -> release
-  const titleMap = new Map<string, any>();
+  // Build multiple lookup maps for matching
+  const normalizedTitleMap = new Map<string, any>(); // normalizedTitle -> release
+  const slugMap = new Map<string, any>();             // slug -> release
   for (const r of releases) {
-    titleMap.set(normalizeTitle(r.title), r);
+    normalizedTitleMap.set(normalizeTitle(r.title), r);
+    const slug = titleToSlug(r.title);
+    if (slug) slugMap.set(slug, r);
   }
 
-  // Step 3: Scrape each URL in batches of 3
-  for (let i = 0; i < hyperfollowUrls.length; i += 3) {
-    const batch = hyperfollowUrls.slice(i, i + 3);
-    const results = await Promise.all(batch.map(async (url: string) => {
+  // Step 3: Match URLs to releases using slug-based matching first
+  const urlsNeedingScrape: { url: string; release: any }[] = [];
+  const unmatchedUrls: string[] = [];
+
+  for (const url of hyperfollowUrls) {
+    // Extract slug from URL
+    const slug = url.replace('https://distrokid.com/hyperfollow/colab2/', '').replace(/\/$/, '');
+    if (!slug) continue;
+
+    // Check if release already has this URL assigned
+    const alreadyAssigned = releases.find((r: any) => r.hyperfollow_url === url);
+    if (alreadyAssigned) {
+      // Already assigned, just check if it needs streaming links
+      if (!hasLinks.has(alreadyAssigned.id)) {
+        urlsNeedingScrape.push({ url, release: alreadyAssigned });
+      }
+      continue;
+    }
+
+    // Try slug-based matching: exact slug match
+    let matched = slugMap.get(slug);
+
+    // Try slug contains/startsWith matching
+    if (!matched) {
+      for (const [relSlug, rel] of slugMap) {
+        if (slug.startsWith(relSlug) || relSlug.startsWith(slug)) {
+          matched = rel;
+          break;
+        }
+      }
+    }
+
+    // Try normalized title matching against slug (slug as normalized)
+    if (!matched) {
+      const normalizedSlug = slug.replace(/-/g, '');
+      matched = findMatchingRelease(normalizedSlug, normalizedTitleMap);
+    }
+
+    if (matched) {
+      // Set hyperfollow_url on the release
+      if (!matched.hyperfollow_url) {
+        await fetch(`${supabaseUrl}/rest/v1/releases?id=eq.${matched.id}`, {
+          method: 'PATCH',
+          headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ hyperfollow_url: url }),
+        });
+        discovered++;
+        console.log(`Matched "${matched.title}" -> ${slug}`);
+      }
+      if (!hasLinks.has(matched.id)) {
+        urlsNeedingScrape.push({ url, release: matched });
+      }
+    } else {
+      unmatchedUrls.push(url);
+      debugLog.push(`Unmatched: ${slug}`);
+    }
+  }
+
+  console.log(`Matched ${discovered} new URLs, ${urlsNeedingScrape.length} need scraping, ${unmatchedUrls.length} unmatched`);
+
+  // Step 4: Scrape streaming links for matched URLs (batch of 3)
+  for (let i = 0; i < urlsNeedingScrape.length; i += 3) {
+    const batch = urlsNeedingScrape.slice(i, i + 3);
+    const results = await Promise.all(batch.map(async ({ url, release }) => {
       try {
         const fcRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${firecrawlKey}`,
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ url, formats: ['html'], waitFor: 5000 }),
         });
-        if (!fcRes.ok) {
-          console.warn(`Firecrawl scrape failed for ${url}: ${fcRes.status}`);
-          return null;
-        }
+        if (!fcRes.ok) return null;
         const fcData = await fcRes.json();
         const html = fcData?.data?.html || fcData?.html || '';
-        const pageTitle = extractPageTitle(html);
         const streamingLinks = extractStreamingLinks(html);
-        return { url, pageTitle, streamingLinks };
+        return { release, streamingLinks };
       } catch (e) {
         console.warn(`Error scraping ${url}:`, e);
         return null;
@@ -686,32 +768,7 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
     }));
 
     for (const result of results) {
-      if (!result || !result.pageTitle || result.streamingLinks.length === 0) continue;
-
-      // Match page title to a release
-      const normalizedPageTitle = normalizeTitle(result.pageTitle);
-      const matchedRelease = titleMap.get(normalizedPageTitle);
-
-      if (!matchedRelease) {
-        console.log(`No release match for page title "${result.pageTitle}" (normalized: "${normalizedPageTitle}")`);
-        continue;
-      }
-
-      // Update hyperfollow_url if not set
-      if (!matchedRelease.hyperfollow_url) {
-        await fetch(`${supabaseUrl}/rest/v1/releases?id=eq.${matchedRelease.id}`, {
-          method: 'PATCH',
-          headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ hyperfollow_url: result.url }),
-        });
-        discovered++;
-        console.log(`Discovered HyperFollow for "${matchedRelease.title}": ${result.url}`);
-      }
-
-      // Skip if already has streaming links
-      if (hasLinks.has(matchedRelease.id)) continue;
-
-      // Upsert streaming links
+      if (!result || result.streamingLinks.length === 0) continue;
       const upsertRes = await fetch(`${supabaseUrl}/rest/v1/streaming_links`, {
         method: 'POST',
         headers: {
@@ -719,23 +776,20 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
           'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal',
         },
         body: JSON.stringify(result.streamingLinks.map(l => ({
-          release_id: matchedRelease.id, platform: l.platform, url: l.url,
+          release_id: result.release.id, platform: l.platform, url: l.url,
         }))),
       });
       if (upsertRes.ok) {
         scraped++;
-        hasLinks.add(matchedRelease.id); // Mark as done
-        console.log(`Scraped ${result.streamingLinks.length} links for "${matchedRelease.title}"`);
+        hasLinks.add(result.release.id);
+        console.log(`Scraped ${result.streamingLinks.length} links for "${result.release.title}"`);
       }
     }
 
-    // Rate limit between batches
-    if (i + 3 < hyperfollowUrls.length) {
-      await new Promise(r => setTimeout(r, 1500));
-    }
+    if (i + 3 < urlsNeedingScrape.length) await new Promise(r => setTimeout(r, 1500));
   }
 
-  return { discovered, scraped };
+  return { discovered, scraped, debugInfo: { unmatched: unmatchedUrls, debugLog } };
 }
 
 // ── Main handler ──────────────────────────────────────────────
@@ -749,10 +803,48 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const testMode = body?.test === true;
     const hyperfollowOnly = body?.hyperfollow_only === true;
+    const debugHyperfollow = body?.debug_hyperfollow === true;
     const handle = '@Cola_BB';
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    // Debug mode: test scraping a few URLs and return detailed results
+    if (debugHyperfollow) {
+      const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
+      const mapRes = await fetch('https://api.firecrawl.dev/v1/map', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: 'https://distrokid.com/hyperfollow/colab2/', limit: 5000 }),
+      });
+      const mapData = await mapRes.json();
+      const allUrls: string[] = mapData?.links || mapData?.data || [];
+      const hfUrls = allUrls.filter((u: string) =>
+        u.startsWith('https://distrokid.com/hyperfollow/colab2/') &&
+        u !== 'https://distrokid.com/hyperfollow/colab2/' &&
+        u !== 'https://distrokid.com/hyperfollow/colab2'
+      );
+
+      const debugResults: any[] = [];
+      for (const url of hfUrls.slice(0, 2)) {
+        const fcRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, formats: ['html'], waitFor: 5000 }),
+        });
+        const fcData = await fcRes.json();
+        const html = fcData?.data?.html || fcData?.html || '';
+        const pageTitle = extractPageTitle(html);
+        const streamingLinks = extractStreamingLinks(html);
+        debugResults.push({ url, htmlLen: html.length, pageTitle, linksCount: streamingLinks.length, htmlSnippet: html.substring(0, 500) });
+      }
+
+      return new Response(JSON.stringify({
+        totalUrls: hfUrls.length,
+        sampleUrls: hfUrls.slice(0, 10),
+        debugResults,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
 
     // HyperFollow-only mode: skip YouTube scraping, just discover & scrape streaming links
     if (hyperfollowOnly) {
