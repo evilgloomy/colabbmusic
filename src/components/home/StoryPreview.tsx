@@ -107,18 +107,23 @@ export const StoryPreview = () => {
           </div>
 
           {/* DIGITAL CONTENT */}
-          {video && (
+          {latestVideo && (
             <div className="rounded-xl overflow-hidden bg-card border border-border/50">
               <div className="p-5 pb-3">
                 <p className="text-xs font-bold tracking-[0.2em] uppercase text-muted-foreground">
-                  Digital Content
+                  Latest Music Video
                 </p>
               </div>
               <div className="px-5 pb-5">
-                <div className="aspect-[4/3] rounded-lg overflow-hidden relative group cursor-pointer">
+                <a
+                  href={`https://www.youtube.com/watch?v=${latestVideo.videoId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="aspect-[4/3] rounded-lg overflow-hidden relative group cursor-pointer block"
+                >
                   <img
-                    src={video.thumbnail}
-                    alt={video.title}
+                    src={latestVideo.thumbnail}
+                    alt={latestVideo.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     loading="lazy"
                   />
@@ -130,10 +135,10 @@ export const StoryPreview = () => {
                   </div>
                   <div className="absolute bottom-0 left-0 right-0 p-4">
                     <p className="text-sm font-semibold text-white">
-                      New Video: "Pastel Dreams"
+                      {latestVideo.title}
                     </p>
                   </div>
-                </div>
+                </a>
               </div>
             </div>
           )}
