@@ -24,7 +24,7 @@ export const StoryPreview = () => {
     const fetchStories = async () => {
       const { data } = await supabase
         .from("stories")
-        .select("id, ai_title, ai_enhanced_text, category, media_url, posted_at")
+        .select("id, ai_title, ai_enhanced_text, category, media_url, media_type, posted_at")
         .order("posted_at", { ascending: false })
         .limit(3);
 
