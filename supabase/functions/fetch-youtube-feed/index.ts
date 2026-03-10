@@ -285,12 +285,25 @@ Deno.serve(async (req) => {
     console.log('Fetching RSS feed for channel:', resolvedChannelId);
 
     const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${resolvedChannelId}`;
-    const rssResponse = await fetch(rssUrl);
+    
+    // Retry up to 3 times since YouTube RSS can be flaky
+    let rssResponse: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      rssResponse = await fetch(rssUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/xml, text/xml, */*',
+        },
+      });
+      if (rssResponse.ok) break;
+      console.log(`RSS feed attempt ${attempt + 1} returned ${rssResponse.status}, retrying...`);
+      if (attempt < 2) await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+    }
 
-    if (!rssResponse.ok) {
+    if (!rssResponse || !rssResponse.ok) {
       return new Response(
-        JSON.stringify({ success: false, error: `RSS feed returned ${rssResponse.status}` }),
-        { status: rssResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: `RSS feed returned ${rssResponse?.status ?? 'unknown'}` }),
+        { status: rssResponse?.status ?? 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
