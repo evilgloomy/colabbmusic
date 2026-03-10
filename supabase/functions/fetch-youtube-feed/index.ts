@@ -250,6 +250,71 @@ function getBestThumbnail(thumbnails: any[] | undefined): string {
   return sorted[0]?.url || '';
 }
 
+async function scrapeChannelVideos(channelId: string, maxResults?: number): Promise<YouTubeVideo[]> {
+  const url = `https://www.youtube.com/channel/${channelId}/videos`;
+  console.log('Scraping channel videos page:', url);
+
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    },
+  });
+
+  if (!response.ok) {
+    console.error('Channel page fetch failed:', response.status);
+    return [];
+  }
+
+  const html = await response.text();
+  const ytDataMatch = html.match(/var ytInitialData\s*=\s*({.*?});\s*<\/script>/s);
+  if (!ytDataMatch) {
+    console.log('No ytInitialData found on channel videos page');
+    return [];
+  }
+
+  try {
+    const data = JSON.parse(ytDataMatch[1]);
+    const videos: YouTubeVideo[] = [];
+
+    // Extract channel name
+    const channelName = data?.metadata?.channelMetadataRenderer?.title || '';
+
+    // Navigate to the video grid
+    const tabs = data?.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
+    for (const tab of tabs) {
+      const contents = tab?.tabRenderer?.content?.richGridRenderer?.contents || [];
+      for (const item of contents) {
+        const vr = item?.richItemRenderer?.content?.videoRenderer;
+        if (!vr?.videoId) continue;
+
+        const videoId = vr.videoId;
+        const title = vr.title?.runs?.[0]?.text || vr.title?.simpleText || 'Unknown';
+        const published = vr.publishedTimeText?.simpleText || '';
+
+        videos.push({
+          videoId,
+          title,
+          published,
+          thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+          embedUrl: `https://www.youtube.com/embed/${videoId}`,
+          channelName,
+        });
+
+        if (maxResults && videos.length >= maxResults) break;
+      }
+      if (videos.length > 0) break;
+    }
+
+    console.log(`Scraped ${videos.length} videos from channel page`);
+    return videos;
+  } catch (e) {
+    console.error('Failed to parse channel videos ytInitialData:', e);
+    return [];
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
