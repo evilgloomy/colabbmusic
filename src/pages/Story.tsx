@@ -41,9 +41,10 @@ const StoryPage = () => {
     fetchStories();
   }, []);
 
+  const withMedia = stories.filter((s) => s.media_url);
   const filtered = filter === "all"
-    ? stories
-    : stories.filter((s) => s.category === filter);
+    ? withMedia
+    : withMedia.filter((s) => s.category === filter);
 
   return (
     <PageLayout>
