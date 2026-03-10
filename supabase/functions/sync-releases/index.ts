@@ -657,6 +657,10 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
     u !== 'https://distrokid.com/hyperfollow/colab2'
   );
   console.log(`Firecrawl Map found ${hyperfollowUrls.length} HyperFollow URLs`);
+  // Log first 5 URLs for debugging
+  for (const u of hyperfollowUrls.slice(0, 5)) {
+    console.log(`  URL: ${u}`);
+  }
 
   if (hyperfollowUrls.length === 0) return { discovered, scraped };
 
