@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -109,46 +110,51 @@ const StoryPage = () => {
 
 const StoryCard = ({ story, size }: { story: Story; size: "large" | "normal" }) => {
   const isLarge = size === "large";
-  const fallbackImage = "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80";
 
   return (
-    <a
-      href={story.permalink || "#"}
-      target="_blank"
-      rel="noopener noreferrer"
+    <Link
+      to={`/story/${story.id}`}
       className={`group block ${isLarge ? "md:col-span-2 md:row-span-2" : ""}`}
     >
       <div className={`relative overflow-hidden rounded-lg ${isLarge ? "aspect-[4/3]" : "aspect-square"}`}>
-        <img
-          src={story.media_url || fallbackImage}
-          alt={story.ai_title || "Story"}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-          loading="lazy"
-        />
+        {story.media_url ? (
+          <img
+            src={story.media_url}
+            alt={story.ai_title || "Cola B story"}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-secondary via-muted to-accent/30 flex items-center justify-center p-6">
+            <p className="text-foreground/60 text-center text-sm font-display italic line-clamp-4">
+              {story.ai_enhanced_text || story.ai_title || ""}
+            </p>
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/10 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-[10px] font-medium tracking-[0.2em] uppercase text-primary-foreground/80">
+            <span className="text-[10px] font-medium tracking-[0.2em] uppercase text-accent-foreground/80">
               {story.category || "lifestyle"}
             </span>
             {story.location && (
-              <span className="text-[10px] text-primary-foreground/60">· {story.location}</span>
+              <span className="text-[10px] text-accent-foreground/60">· {story.location}</span>
             )}
           </div>
-          <h3 className={`font-display font-medium text-primary-foreground ${isLarge ? "text-lg md:text-xl" : "text-sm"}`}>
+          <h3 className={`font-display font-medium text-accent-foreground ${isLarge ? "text-lg md:text-xl" : "text-sm"}`}>
             {story.ai_title || "Untitled"}
           </h3>
-          <p className={`text-primary-foreground/70 mt-1 ${isLarge ? "text-sm" : "text-xs"} line-clamp-2`}>
+          <p className={`text-accent-foreground/70 mt-1 ${isLarge ? "text-sm" : "text-xs"} line-clamp-2`}>
             {story.ai_enhanced_text || ""}
           </p>
           {story.posted_at && (
-            <p className="text-[10px] text-primary-foreground/40 mt-2">
+            <p className="text-[10px] text-accent-foreground/40 mt-2">
               {new Date(story.posted_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
             </p>
           )}
         </div>
       </div>
-    </a>
+    </Link>
   );
 };
 

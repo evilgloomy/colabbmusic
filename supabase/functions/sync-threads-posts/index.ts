@@ -221,7 +221,7 @@ Deno.serve(async (req) => {
 
       const aiResult = await enhanceWithAI(post.text || "", LOVABLE_API_KEY);
 
-      const { error } = await supabase.from("stories").insert({
+      const { error } = await supabase.from("stories").upsert({
         threads_post_id: post.id,
         original_text: post.text || null,
         ai_enhanced_text: aiResult.enhanced_caption,
@@ -232,7 +232,7 @@ Deno.serve(async (req) => {
         permalink: post.permalink || null,
         posted_at: post.timestamp || null,
         location: aiResult.location || null,
-      });
+      }, { onConflict: "threads_post_id" });
 
       if (error) {
         console.error("Insert error for post", post.id, error);

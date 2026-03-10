@@ -53,8 +53,8 @@ export const StoryPreview = () => {
             </div>
             <div className="px-5 pb-5 space-y-4">
               {stories.length > 0 ? (
-                stories.map((story) => (
-                  <div key={story.id} className="group flex gap-3">
+              stories.map((story) => (
+                  <Link key={story.id} to={`/story/${story.id}`} className="group flex gap-3 hover:bg-muted/50 rounded-lg p-1 -m-1 transition-colors">
                     {story.media_url && (
                       <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
                         <img
@@ -76,7 +76,7 @@ export const StoryPreview = () => {
                         {story.ai_enhanced_text || ""}
                       </p>
                     </div>
-                  </div>
+                  </Link>
                 ))
               ) : (
                 <div className="py-8 text-center">

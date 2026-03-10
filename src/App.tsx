@@ -10,6 +10,7 @@ import VideosPage from "./pages/Videos";
 import PressPage from "./pages/Press";
 import NotFound from "./pages/NotFound";
 import ReleasePage from "./pages/ReleasePage";
+import StoryDetailPage from "./pages/StoryDetail";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/music" element={<MusicPage />} />
           <Route path="/release/:id" element={<ReleasePage />} />
           <Route path="/story" element={<StoryPage />} />
+          <Route path="/story/:id" element={<StoryDetailPage />} />
           <Route path="/videos" element={<VideosPage />} />
           <Route path="/press" element={<PressPage />} />
           <Route path="*" element={<NotFound />} />
