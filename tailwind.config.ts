@@ -125,6 +125,8 @@ export default {
         "slide-up": "slide-up 0.8s ease-out forwards",
         "shimmer": "shimmer 8s ease-in-out infinite",
         "pulse-glow": "pulse-glow 3s ease-in-out infinite",
+        "float": "float 5s ease-in-out infinite",
+        "spin-slow": "spin-slow 20s linear infinite",
       },
     },
   },
