@@ -34,8 +34,7 @@ export const Footer = () => {
           <Link to="/story" className="hover:text-foreground transition-colors">About Cola B</Link>
           <Link to="/press" className="hover:text-foreground transition-colors">Press Kit</Link>
           <a href="mailto:cola.bb.225@gmail.com" className="hover:text-foreground transition-colors">Contact</a>
-          <span className="hover:text-foreground transition-colors cursor-pointer">FAQ</span>
-          <span className="hover:text-foreground transition-colors cursor-pointer">Shipping & Returns</span>
+          <Link to="/policies" className="hover:text-foreground transition-colors">Shipping & Returns</Link>
         </div>
 
         {/* Bottom row */}
