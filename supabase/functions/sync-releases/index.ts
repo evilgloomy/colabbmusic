@@ -642,7 +642,7 @@ Deno.serve(async (req) => {
 
         const uploadRes = await fetch(`${storageBase}/object/album-art/${rel.id}.jpg`, {
           method: 'PUT',
-          headers: { Authorization: `Bearer ${serviceRoleKey}`, 'Content-Type': contentType, 'x-upsert': 'true' },
+          headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}`, 'Content-Type': contentType, 'x-upsert': 'true' },
           body: imageData,
         });
         if (!uploadRes.ok) continue;
