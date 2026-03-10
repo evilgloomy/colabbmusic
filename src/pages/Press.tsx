@@ -113,9 +113,13 @@ const PressPage = () => {
               <p className="text-sm text-muted-foreground mb-6">
                 Download the complete press kit including high-resolution images, bio, and release information.
               </p>
-              <button className="inline-flex items-center gap-2 px-6 py-3 border border-border text-foreground text-xs font-medium tracking-wider uppercase rounded-sm hover:border-primary hover:text-primary transition-colors">
+              <a
+                href="/Cola_B_Press_Kit.pdf"
+                download="Cola_B_Press_Kit.pdf"
+                className="inline-flex items-center gap-2 px-6 py-3 border border-border text-foreground text-xs font-medium tracking-wider uppercase rounded-sm hover:border-primary hover:text-primary transition-colors"
+              >
                 <Download className="h-4 w-4" /> Download Press Kit
-              </button>
+              </a>
             </div>
             <div>
               <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-4">Inquiries</p>
