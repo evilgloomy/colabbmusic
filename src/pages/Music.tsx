@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { fetchYouTubeFeed, fetchReleasesPaginated, CHANNELS, type YouTubeVideo, type YouTubeRelease } from "@/lib/youtube";
 import { Music, Play, Loader2 } from "lucide-react";
@@ -164,17 +165,8 @@ const MusicPage = () => {
 
 const ReleaseCard = ({ release }: { release: YouTubeRelease }) => {
   const decodedThumb = release.thumbnail_url?.replace(/&amp;/g, '&');
-  return (
-    <a
-      href={release.playlist_id
-        ? `https://www.youtube.com/playlist?list=${release.playlist_id}`
-        : release.video_id
-          ? `https://www.youtube.com/watch?v=${release.video_id}`
-          : '#'}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group block"
-    >
+  const content = (
+    <>
       <div className="aspect-square overflow-hidden mb-4 relative rounded-sm bg-card">
         {decodedThumb ? (
           <img
@@ -195,7 +187,13 @@ const ReleaseCard = ({ release }: { release: YouTubeRelease }) => {
         {release.year}
         {release.track_count && release.track_count > 1 && ` · ${release.track_count} tracks`}
       </p>
-    </a>
+    </>
+  );
+
+  return (
+    <Link to={`/release/${release.id}`} className="group block">
+      {content}
+    </Link>
   );
 };
 
