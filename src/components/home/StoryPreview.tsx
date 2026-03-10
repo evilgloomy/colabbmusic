@@ -21,6 +21,8 @@ export const StoryPreview = () => {
   const [stories, setStories] = useState<Story[]>([]);
 
   useEffect(() => {
+    fetchYouTubeFeed(CHANNELS.VEVO, 1).then((vids) => setLatestVideo(vids[0] || null));
+
     const fetchStories = async () => {
       const { data } = await supabase
         .from("stories")
