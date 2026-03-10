@@ -33,7 +33,7 @@ interface YouTubeFeedResponse {
 
 // Cola B's YouTube channels
 export const CHANNELS = {
-  VEVO: "@ColaBVEVO",
+  VEVO: "@Cola_BB",
   ARTIST: "@Cola_BB",
 } as const;
 
