@@ -12,6 +12,7 @@ interface Story {
   ai_enhanced_text: string | null;
   category: string | null;
   media_url: string | null;
+  media_type: string | null;
   posted_at: string | null;
 }
 

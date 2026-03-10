@@ -119,17 +119,34 @@ const StoryCard = ({ story, size }: { story: Story; size: "large" | "normal" }) 
     >
       <div className={`relative overflow-hidden rounded-lg ${isLarge ? "aspect-[4/3]" : "aspect-square"}`}>
         {story.media_url ? (
-          <img
-            src={story.media_url}
-            alt={story.ai_title || "Cola B story"}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-            loading="lazy"
-          />
+          story.media_type === "VIDEO" ? (
+            <video
+              src={story.media_url}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              muted
+              autoPlay
+              loop
+              playsInline
+              preload="auto"
+            />
+          ) : (
+            <img
+              src={story.media_url}
+              alt={story.ai_title || "Cola B story"}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              loading="lazy"
+            />
+          )
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-secondary via-muted to-accent/30 flex items-center justify-center p-6">
             <p className="text-foreground/60 text-center text-sm font-display italic line-clamp-4">
               {story.ai_enhanced_text || story.ai_title || ""}
             </p>
+          </div>
+        )}
+        {story.media_type === "VIDEO" && story.media_url && (
+          <div className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-foreground/40 backdrop-blur-sm flex items-center justify-center">
+            <Play className="h-4 w-4 text-white ml-0.5" />
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/10 to-transparent" />
