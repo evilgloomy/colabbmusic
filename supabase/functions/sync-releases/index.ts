@@ -275,7 +275,9 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
 
   // Filter to releases that need scraping
   const needsScraping = (releases || []).filter((r: any) => !hasLinks.has(r.id));
-  console.log(`${needsScraping.length} of ${releases.length} releases need streaming links`);
+  const totalNeeded = needsScraping.length;
+  console.log(`${totalNeeded} of ${releases.length} releases need streaming links (processing up to ${batchSize})`);
+  const toProcess = needsScraping.slice(0, batchSize);
 
   const BASE_URL = 'https://distrokid.com/hyperfollow/colab2/';
 
