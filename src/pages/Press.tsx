@@ -90,9 +90,14 @@ const PressPage = () => {
         <div className="container mx-auto px-6 py-24">
           <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-8">Press Images</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="aspect-[3/4] bg-card rounded-lg flex items-center justify-center">
-                <span className="text-xs text-muted-foreground">Image {i}</span>
+            {pressImages.map((img, i) => (
+              <div key={i} className="aspect-[3/4] rounded-lg overflow-hidden bg-card">
+                <img
+                  src={img.src}
+                  alt={img.alt}
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+                  loading="lazy"
+                />
               </div>
             ))}
           </div>
