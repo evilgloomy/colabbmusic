@@ -556,15 +556,7 @@ async function processInBatches<T, R>(items: T[], batchSize: number, delayMs: nu
   return results;
 }
 
-// ── HyperFollow discovery & scraping ──────────────────────────
-
-function titleToSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/['']/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
+// ── HyperFollow discovery & scraping (Firecrawl Map approach) ──
 
 function extractStreamingLinks(html: string): { platform: string; url: string }[] {
   const links: { platform: string; url: string }[] = [];
@@ -585,112 +577,161 @@ function extractStreamingLinks(html: string): { platform: string; url: string }[
   return links;
 }
 
+function normalizeTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/\s*\(.*?\)\s*/g, '') // Remove parentheticals like "(Cola Ver)"
+    .replace(/[^a-z0-9\u4e00-\u9fff\u3400-\u4dbf]+/g, '') // Keep alphanumeric + CJK chars
+    .trim();
+}
+
+function extractPageTitle(html: string): string | null {
+  // Match <title>SONG by ARTIST</title>
+  const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+  if (!titleMatch) return null;
+  const raw = titleMatch[1].trim();
+  // Remove " by Artist" suffix
+  const byMatch = raw.match(/^(.+?)\s+by\s+/i);
+  return byMatch ? byMatch[1].trim() : raw;
+}
+
 async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey: string): Promise<{ discovered: number; scraped: number }> {
   let discovered = 0, scraped = 0;
 
-  // Get all releases
-  const relRes = await fetch(
-    `${supabaseUrl}/rest/v1/releases?select=id,title,hyperfollow_url&order=sort_order.asc`,
-    { headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}` } }
-  );
-  const releases = await relRes.json();
+  const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
+  if (!firecrawlKey) {
+    console.warn('FIRECRAWL_API_KEY not configured, skipping HyperFollow');
+    return { discovered, scraped };
+  }
 
-  // Get releases that already have streaming links
-  const linksRes = await fetch(
-    `${supabaseUrl}/rest/v1/streaming_links?select=release_id`,
-    { headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}` } }
+  // Step 1: Use Firecrawl Map to discover all HyperFollow URLs
+  console.log('Calling Firecrawl Map to discover all HyperFollow URLs...');
+  const mapRes = await fetch('https://api.firecrawl.dev/v1/map', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${firecrawlKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      url: 'https://distrokid.com/hyperfollow/colab2/',
+      limit: 5000,
+      includeSubdomains: false,
+    }),
+  });
+
+  if (!mapRes.ok) {
+    console.error(`Firecrawl Map failed: ${mapRes.status}`);
+    return { discovered, scraped };
+  }
+
+  const mapData = await mapRes.json();
+  const allUrls: string[] = mapData?.links || mapData?.data || [];
+  
+  // Filter to only colab2 HyperFollow URLs (exclude the base URL itself)
+  const hyperfollowUrls = allUrls.filter((u: string) =>
+    u.startsWith('https://distrokid.com/hyperfollow/colab2/') &&
+    u !== 'https://distrokid.com/hyperfollow/colab2/' &&
+    u !== 'https://distrokid.com/hyperfollow/colab2'
   );
+  console.log(`Firecrawl Map found ${hyperfollowUrls.length} HyperFollow URLs`);
+
+  if (hyperfollowUrls.length === 0) return { discovered, scraped };
+
+  // Step 2: Get all releases and existing streaming links
+  const [relRes, linksRes] = await Promise.all([
+    fetch(`${supabaseUrl}/rest/v1/releases?select=id,title,hyperfollow_url&order=sort_order.asc&limit=1000`, {
+      headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}` },
+    }),
+    fetch(`${supabaseUrl}/rest/v1/streaming_links?select=release_id`, {
+      headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}` },
+    }),
+  ]);
+
+  const releases = await relRes.json();
   const existingLinks = await linksRes.json();
   const hasLinks = new Set((existingLinks || []).map((l: any) => l.release_id));
 
-  for (const release of releases) {
-    // Skip if already has streaming links
-    if (hasLinks.has(release.id)) continue;
+  // Build normalized title lookup: normalizedTitle -> release
+  const titleMap = new Map<string, any>();
+  for (const r of releases) {
+    titleMap.set(normalizeTitle(r.title), r);
+  }
 
-    let hyperfollowUrl = release.hyperfollow_url;
-
-    // Try to discover HyperFollow URL if not set
-    if (!hyperfollowUrl) {
-      const slug = titleToSlug(release.title);
-      const candidateUrl = `https://distrokid.com/hyperfollow/colab2/${slug}`;
+  // Step 3: Scrape each URL in batches of 3
+  for (let i = 0; i < hyperfollowUrls.length; i += 3) {
+    const batch = hyperfollowUrls.slice(i, i + 3);
+    const results = await Promise.all(batch.map(async (url: string) => {
       try {
-        const checkRes = await fetch(candidateUrl, {
-          method: 'HEAD',
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-          redirect: 'follow',
+        const fcRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${firecrawlKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url, formats: ['html'], waitFor: 5000 }),
         });
-        if (checkRes.ok) {
-          hyperfollowUrl = candidateUrl;
-          // Store the discovered URL
-          await fetch(
-            `${supabaseUrl}/rest/v1/releases?id=eq.${release.id}`,
-            {
-              method: 'PATCH',
-              headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-              body: JSON.stringify({ hyperfollow_url: hyperfollowUrl }),
-            }
-          );
-          discovered++;
-          console.log(`Discovered HyperFollow for "${release.title}": ${candidateUrl}`);
+        if (!fcRes.ok) {
+          console.warn(`Firecrawl scrape failed for ${url}: ${fcRes.status}`);
+          return null;
         }
+        const fcData = await fcRes.json();
+        const html = fcData?.data?.html || fcData?.html || '';
+        const pageTitle = extractPageTitle(html);
+        const streamingLinks = extractStreamingLinks(html);
+        return { url, pageTitle, streamingLinks };
       } catch (e) {
-        console.warn(`HyperFollow check failed for "${release.title}":`, e);
+        console.warn(`Error scraping ${url}:`, e);
+        return null;
       }
-      await new Promise(r => setTimeout(r, 300)); // Rate limit
+    }));
+
+    for (const result of results) {
+      if (!result || !result.pageTitle || result.streamingLinks.length === 0) continue;
+
+      // Match page title to a release
+      const normalizedPageTitle = normalizeTitle(result.pageTitle);
+      const matchedRelease = titleMap.get(normalizedPageTitle);
+
+      if (!matchedRelease) {
+        console.log(`No release match for page title "${result.pageTitle}" (normalized: "${normalizedPageTitle}")`);
+        continue;
+      }
+
+      // Update hyperfollow_url if not set
+      if (!matchedRelease.hyperfollow_url) {
+        await fetch(`${supabaseUrl}/rest/v1/releases?id=eq.${matchedRelease.id}`, {
+          method: 'PATCH',
+          headers: { 'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ hyperfollow_url: result.url }),
+        });
+        discovered++;
+        console.log(`Discovered HyperFollow for "${matchedRelease.title}": ${result.url}`);
+      }
+
+      // Skip if already has streaming links
+      if (hasLinks.has(matchedRelease.id)) continue;
+
+      // Upsert streaming links
+      const upsertRes = await fetch(`${supabaseUrl}/rest/v1/streaming_links`, {
+        method: 'POST',
+        headers: {
+          'apikey': serviceRoleKey, 'Authorization': `Bearer ${serviceRoleKey}`,
+          'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal',
+        },
+        body: JSON.stringify(result.streamingLinks.map(l => ({
+          release_id: matchedRelease.id, platform: l.platform, url: l.url,
+        }))),
+      });
+      if (upsertRes.ok) {
+        scraped++;
+        hasLinks.add(matchedRelease.id); // Mark as done
+        console.log(`Scraped ${result.streamingLinks.length} links for "${matchedRelease.title}"`);
+      }
     }
 
-    // Scrape streaming links using Firecrawl (DistroKid is JS-rendered)
-    if (hyperfollowUrl) {
-      try {
-        const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
-        if (!firecrawlKey) {
-          console.warn('FIRECRAWL_API_KEY not configured, skipping HyperFollow scrape');
-        } else {
-          const fcRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${firecrawlKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              url: hyperfollowUrl,
-              formats: ['html'],
-              waitFor: 5000,
-            }),
-          });
-          if (fcRes.ok) {
-            const fcData = await fcRes.json();
-            const html = fcData?.data?.html || fcData?.html || '';
-            const links = extractStreamingLinks(html);
-            if (links.length > 0) {
-              const upsertRes = await fetch(
-                `${supabaseUrl}/rest/v1/streaming_links`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'apikey': serviceRoleKey,
-                    'Authorization': `Bearer ${serviceRoleKey}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'resolution=merge-duplicates,return=minimal',
-                  },
-                  body: JSON.stringify(links.map(l => ({ release_id: release.id, platform: l.platform, url: l.url }))),
-                }
-              );
-              if (upsertRes.ok) {
-                scraped++;
-                console.log(`Scraped ${links.length} streaming links for "${release.title}" via Firecrawl`);
-              }
-            } else {
-              console.log(`No streaming links found in Firecrawl HTML for "${release.title}"`);
-            }
-          } else {
-            console.warn(`Firecrawl scrape failed for "${release.title}": ${fcRes.status}`);
-          }
-        }
-      } catch (e) {
-        console.warn(`HyperFollow scrape failed for "${release.title}":`, e);
-      }
-      await new Promise(r => setTimeout(r, 1000)); // Rate limit for Firecrawl
+    // Rate limit between batches
+    if (i + 3 < hyperfollowUrls.length) {
+      await new Promise(r => setTimeout(r, 1500));
     }
   }
 
