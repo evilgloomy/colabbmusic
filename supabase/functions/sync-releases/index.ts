@@ -786,10 +786,48 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const testMode = body?.test === true;
     const hyperfollowOnly = body?.hyperfollow_only === true;
+    const debugHyperfollow = body?.debug_hyperfollow === true;
     const handle = '@Cola_BB';
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    // Debug mode: test scraping a few URLs and return detailed results
+    if (debugHyperfollow) {
+      const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
+      const mapRes = await fetch('https://api.firecrawl.dev/v1/map', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: 'https://distrokid.com/hyperfollow/colab2/', limit: 5000 }),
+      });
+      const mapData = await mapRes.json();
+      const allUrls: string[] = mapData?.links || mapData?.data || [];
+      const hfUrls = allUrls.filter((u: string) =>
+        u.startsWith('https://distrokid.com/hyperfollow/colab2/') &&
+        u !== 'https://distrokid.com/hyperfollow/colab2/' &&
+        u !== 'https://distrokid.com/hyperfollow/colab2'
+      );
+
+      const debugResults: any[] = [];
+      for (const url of hfUrls.slice(0, 2)) {
+        const fcRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, formats: ['html'], waitFor: 5000 }),
+        });
+        const fcData = await fcRes.json();
+        const html = fcData?.data?.html || fcData?.html || '';
+        const pageTitle = extractPageTitle(html);
+        const streamingLinks = extractStreamingLinks(html);
+        debugResults.push({ url, htmlLen: html.length, pageTitle, linksCount: streamingLinks.length, htmlSnippet: html.substring(0, 500) });
+      }
+
+      return new Response(JSON.stringify({
+        totalUrls: hfUrls.length,
+        sampleUrls: hfUrls.slice(0, 10),
+        debugResults,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
 
     // HyperFollow-only mode: skip YouTube scraping, just discover & scrape streaming links
     if (hyperfollowOnly) {
