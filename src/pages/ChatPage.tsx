@@ -3,6 +3,7 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { ChatAuthForm } from '@/components/chat/ChatAuthForm';
 import { ChatMessages } from '@/components/chat/ChatMessages';
 import { ChatInput } from '@/components/chat/ChatInput';
+import { PremiumGate } from '@/components/chat/PremiumGate';
 import { useArtistAgentAuth } from '@/contexts/ArtistAgentAuth';
 import { artistAgent } from '@/lib/artistAgent';
 import { Button } from '@/components/ui/button';
@@ -23,22 +24,61 @@ const ChatPage = () => {
   const [isSending, setIsSending] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState('');
+  const [subscriptionStatus, setSubscriptionStatus] = useState<{
+    subscribed: boolean;
+    subscription_tier?: string;
+  } | null>(null);
+  const [subCheckDone, setSubCheckDone] = useState(false);
 
-  // Load character + conversation once authenticated
+  // Check subscription after auth
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
       setPageLoading(false);
+      setSubCheckDone(false);
+      setSubscriptionStatus(null);
+      return;
+    }
+    checkSubscription();
+  }, [user, authLoading]);
+
+  const checkSubscription = async () => {
+    setPageLoading(true);
+    try {
+      const { data, error: subErr } = await artistAgent.functions.invoke('check-subscription', {
+        body: {},
+      });
+
+      if (subErr) {
+        console.error('Subscription check error:', subErr);
+        setSubscriptionStatus({ subscribed: false });
+      } else {
+        setSubscriptionStatus({
+          subscribed: data?.subscribed === true,
+          subscription_tier: data?.subscription_tier,
+        });
+      }
+    } catch (err) {
+      console.error('Subscription check failed:', err);
+      setSubscriptionStatus({ subscribed: false });
+    } finally {
+      setSubCheckDone(true);
+    }
+  };
+
+  // Init chat only after subscription confirmed
+  useEffect(() => {
+    if (!subCheckDone || !subscriptionStatus?.subscribed || !user) {
+      if (subCheckDone) setPageLoading(false);
       return;
     }
     initChat();
-  }, [user, authLoading]);
+  }, [subCheckDone, subscriptionStatus, user]);
 
   const initChat = async () => {
     setPageLoading(true);
     setError('');
     try {
-      // 1. Look up Cola B character by name
       const { data: charData, error: charErr } = await artistAgent
         .from('characters')
         .select('id,name,greeting,description,personality,system_prompt,instruction_details,avatar_url,is_premium,is_public')
@@ -53,7 +93,6 @@ const ChatPage = () => {
       }
       setCharacter(charData);
 
-      // 2. Find or create conversation
       const { data: existingConvo } = await artistAgent
         .from('conversations')
         .select('*')
@@ -72,6 +111,7 @@ const ChatPage = () => {
             user_id: user!.id,
             character_id: charData.id,
             title: `Chat with ${charData.name}`,
+            context: { model: 'grok' },
           })
           .select()
           .single();
@@ -83,7 +123,6 @@ const ChatPage = () => {
         }
         convoId = newConvo.id;
 
-        // Add greeting
         if (charData.greeting?.trim()) {
           await artistAgent.from('messages').insert({
             conversation_id: convoId,
@@ -96,7 +135,6 @@ const ChatPage = () => {
 
       setConversationId(convoId);
 
-      // 3. Fetch messages
       const { data: msgs } = await artistAgent
         .from('messages')
         .select('id,content,sender,created_at,message_type')
@@ -124,7 +162,6 @@ const ChatPage = () => {
     setIsSending(true);
 
     try {
-      // Save user message
       const { data: savedMsg } = await artistAgent
         .from('messages')
         .insert({
@@ -145,8 +182,8 @@ const ChatPage = () => {
 
       setMessages((prev) => [...prev, userMessage]);
 
-      // Call chat-with-ai edge function
-      const { data: aiData, error: aiError } = await artistAgent.functions.invoke('chat-with-ai', {
+      // Use chat-with-grok for unrestricted mode
+      const { data: aiData, error: aiError } = await artistAgent.functions.invoke('chat-with-grok', {
         body: {
           message: content,
           conversationId,
@@ -156,6 +193,7 @@ const ChatPage = () => {
           characterDescription: character.description,
           characterInstructions: character.instruction_details,
           systemPrompt: character.system_prompt,
+          model: 'grok',
         },
       });
 
@@ -163,7 +201,6 @@ const ChatPage = () => {
 
       const aiContent = aiData?.response || 'Sorry, I could not generate a response.';
 
-      // Save AI message
       const { data: savedAi } = await artistAgent
         .from('messages')
         .insert({
@@ -184,7 +221,6 @@ const ChatPage = () => {
 
       setMessages((prev) => [...prev, aiMessage]);
 
-      // Update conversation timestamp
       await artistAgent
         .from('conversations')
         .update({ updated_at: new Date().toISOString() })
@@ -228,6 +264,17 @@ const ChatPage = () => {
     );
   }
 
+  // Not subscribed — show premium gate
+  if (subCheckDone && (!subscriptionStatus?.subscribed)) {
+    return (
+      <PageLayout hideFooter>
+        <div style={{ height: 'calc(100vh - 4rem)' }}>
+          <PremiumGate onRefresh={checkSubscription} />
+        </div>
+      </PageLayout>
+    );
+  }
+
   // Error state
   if (error) {
     return (
@@ -245,7 +292,6 @@ const ChatPage = () => {
   return (
     <PageLayout hideFooter>
       <div className="flex flex-col" style={{ height: 'calc(100vh - 4rem)' }}>
-        {/* Chat header */}
         <div className="border-b border-border bg-background px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {character?.avatar_url && (
@@ -257,7 +303,7 @@ const ChatPage = () => {
             )}
             <div>
               <h1 className="text-sm font-semibold text-foreground font-sora">{character?.name || 'Cola B'}</h1>
-              <p className="text-xs text-muted-foreground">AI Chat</p>
+              <p className="text-xs text-muted-foreground">AI Chat · Grok Mode</p>
             </div>
           </div>
           <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
@@ -265,14 +311,12 @@ const ChatPage = () => {
           </Button>
         </div>
 
-        {/* Messages */}
         <ChatMessages
           messages={messages}
           isLoading={isSending}
           characterName={character?.name || 'Cola B'}
         />
 
-        {/* Input */}
         <ChatInput onSend={handleSend} disabled={isSending} />
       </div>
     </PageLayout>
