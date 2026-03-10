@@ -249,7 +249,7 @@ async function scrapeOneHyperFollow(
   }
 }
 
-async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey: string): Promise<{ discovered: number; scraped: number; skipped: number; failed: string[] }> {
+async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey: string, batchSize: number = 10): Promise<{ discovered: number; scraped: number; skipped: number; remaining: number; failed: string[] }> {
   let discovered = 0, scraped = 0, skipped = 0;
   const failed: string[] = [];
 
