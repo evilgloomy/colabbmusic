@@ -388,19 +388,29 @@ async function mapAndMatchHyperFollow(supabaseUrl: string, serviceRoleKey: strin
 
       console.log(`  Matched "${matchedRelease.title}" -> "${pageTitle}"`);
 
-      // Now scrape with Firecrawl for JS-rendered streaming links
-      const fcRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, formats: ['html'], waitFor: 5000 }),
-      });
-      if (!fcRes.ok) continue;
-      const fcData = await fcRes.json();
-      const renderedHtml = fcData?.data?.html || fcData?.html || '';
-      const links = extractStreamingLinks(renderedHtml);
+      // First try extracting links from the initial HTML (embedded JSON)
+      let links = extractStreamingLinks(html);
+
+      // If no links found, try Firecrawl for JS-rendered content with longer wait
+      if (links.length === 0) {
+        const fcRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, formats: ['html'], waitFor: 10000 }),
+        });
+        if (fcRes.ok) {
+          const fcData = await fcRes.json();
+          const renderedHtml = fcData?.data?.html || fcData?.html || '';
+          links = extractStreamingLinks(renderedHtml);
+          console.log(`  Firecrawl rendered HTML length: ${renderedHtml.length}, links found: ${links.length}`);
+        }
+      } else {
+        console.log(`  Found ${links.length} links from initial HTML`);
+      }
 
       if (links.length === 0) {
-        console.log(`  No streaming links after Firecrawl render`);
+        console.log(`  No streaming links found for "${matchedRelease.title}"`);
+        failed.push(matchedRelease.title);
         continue;
       }
 
