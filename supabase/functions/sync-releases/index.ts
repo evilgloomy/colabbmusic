@@ -722,13 +722,83 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
 
   return { discovered, scraped, skipped, failed };
 }
-  const links: { platform: string; url: string }[] = [];
-  const linkRegex =
-    /<a[^>]+target="_blank"[^>]+href="([^"]+)"[^>]*>[\s\S]*?<div[^>]*style="flex:\s*1[^"]*"[^>]*>\s*([\w\s]+?)\s*<\/div>/gi;
-
-  let match;
-
 // ── Main handler ──────────────────────────────────────────────
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const body = await req.json().catch(() => ({}));
+    const testMode = body?.test === true;
+    const hyperfollowOnly = body?.hyperfollow_only === true;
+    const handle = '@Cola_BB';
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    // HyperFollow-only mode: skip YouTube scraping, just scrape streaming links per-release
+    if (hyperfollowOnly) {
+      console.log('Running HyperFollow-only mode...');
+      const result = await discoverAndScrapeHyperFollow(supabaseUrl, serviceRoleKey);
+      const summary = { success: true, mode: 'hyperfollow_only', ...result, timestamp: new Date().toISOString() };
+      console.log('HyperFollow sync complete:', JSON.stringify(summary));
+      return new Response(JSON.stringify(summary), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    console.log(`Starting sync for ${handle} (test=${testMode})...`);
+
+    // Step 1: Scrape /releases page + resolve channel ID + fetch RSS in parallel
+    const [scrapedReleases, channelId] = await Promise.all([
+      fetchReleasesPage(handle),
+      resolveChannelId(handle),
+    ]);
+
+    if (scrapedReleases.length === 0) {
+      return new Response(
+        JSON.stringify({ success: true, message: 'No releases found', inserted: 0, updated: 0 }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Fetch RSS feed for video descriptions (if we got channel ID)
+    const rssMap = channelId ? await fetchRssDescriptions(channelId) : new Map();
+
+    const toProcess = testMode ? scrapedReleases.slice(0, 2) : scrapedReleases;
+    console.log(`Processing ${toProcess.length} releases (RSS has ${rssMap.size} videos)...`);
+
+    // Step 2: Enrich (5 at a time, 500ms delay)
+    const enriched = await processInBatches(toProcess, 5, 500, (r) => enrichRelease(r, rssMap));
+
+    const stats = {
+      thumbnails: enriched.filter(r => r.thumbnail_url).length,
+      descriptions: enriched.filter(r => r.description).length,
+      years: enriched.filter(r => r.year).length,
+      videoIds: enriched.filter(r => r.video_id).length,
+    };
+    console.log(`Enriched:`, JSON.stringify(stats));
+
+    // Step 3: Upsert
+    const { inserted, updated } = await upsertReleases(enriched);
+
+    // Step 4: HyperFollow scraping should be triggered separately with { hyperfollow_only: true }
+
+    const summary = {
+      success: true, total: toProcess.length, inserted, updated, ...stats,
+      timestamp: new Date().toISOString(),
+    };
+    console.log('Sync complete:', JSON.stringify(summary));
+
+    return new Response(JSON.stringify(summary), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  } catch (error) {
+    console.error('Sync error:', error);
+    return new Response(
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
