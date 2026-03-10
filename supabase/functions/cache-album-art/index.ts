@@ -72,6 +72,7 @@ Deno.serve(async (req) => {
       const uploadRes = await fetch(`${storageBase}/object/album-art/${filePath}`, {
         method: 'PUT',
         headers: {
+          apikey: serviceRoleKey,
           Authorization: `Bearer ${serviceRoleKey}`,
           'Content-Type': contentType,
           'x-upsert': 'true',
