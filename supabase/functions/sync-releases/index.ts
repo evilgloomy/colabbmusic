@@ -196,9 +196,9 @@ function titleToSlugs(title: string): string[] {
 
   if (!base) return []; // Chinese-only titles produce empty slugs
 
-  // Try base slug, then numbered variants (DistroKid appends -2, -3, etc. for duplicates)
+  // Try base slug, then numbered variants (DistroKid appends -2, -3, etc.)
   const candidates = [base];
-  for (let i = 2; i <= 6; i++) {
+  for (let i = 2; i <= 4; i++) {
     candidates.push(`${base}-${i}`);
   }
   return candidates;
