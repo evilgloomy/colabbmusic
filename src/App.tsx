@@ -11,8 +11,29 @@ import PressPage from "./pages/Press";
 import NotFound from "./pages/NotFound";
 import ReleasePage from "./pages/ReleasePage";
 import StoryDetailPage from "./pages/StoryDetail";
+import StorePage from "./pages/Store";
+import ProductDetailPage from "./pages/ProductDetail";
+import { useCartSync } from "./hooks/useCartSync";
 
 const queryClient = new QueryClient();
+
+const AppInner = () => {
+  useCartSync();
+  return (
+    <Routes>
+      <Route path="/" element={<Index />} />
+      <Route path="/music" element={<MusicPage />} />
+      <Route path="/release/:id" element={<ReleasePage />} />
+      <Route path="/story" element={<StoryPage />} />
+      <Route path="/story/:id" element={<StoryDetailPage />} />
+      <Route path="/videos" element={<VideosPage />} />
+      <Route path="/store" element={<StorePage />} />
+      <Route path="/product/:handle" element={<ProductDetailPage />} />
+      <Route path="/press" element={<PressPage />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -20,16 +41,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/music" element={<MusicPage />} />
-          <Route path="/release/:id" element={<ReleasePage />} />
-          <Route path="/story" element={<StoryPage />} />
-          <Route path="/story/:id" element={<StoryDetailPage />} />
-          <Route path="/videos" element={<VideosPage />} />
-          <Route path="/press" element={<PressPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AppInner />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

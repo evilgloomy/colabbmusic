@@ -52,7 +52,8 @@ export const Navbar = () => {
         </div>
 
         {/* Right side: social icons + hamburger */}
-        <div className="flex items-center gap-3 ml-auto">
+        <div className="flex items-center gap-4 ml-auto">
+          <CartDrawer />
           <a
             href="https://www.instagram.com/cola_bb_official/"
             target="_blank"
