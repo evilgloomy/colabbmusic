@@ -52,7 +52,7 @@ const ChatPage = () => {
       // The edge function may return 500 but still include valid subscription data
       const subData = data || {};
       if (subErr && !subData.subscription_tier) {
-        console.error('Subscription check error:', subErr);
+        console.warn('Subscription check returned error without data:', subErr);
         setSubscriptionStatus({ subscribed: false });
       } else {
         setSubscriptionStatus({
