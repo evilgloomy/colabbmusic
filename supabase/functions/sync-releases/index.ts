@@ -799,9 +799,6 @@ Deno.serve(async (req) => {
     );
   }
 });
-    const handle = '@Cola_BB';
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
     // Debug mode: test scraping a few URLs and return detailed results
