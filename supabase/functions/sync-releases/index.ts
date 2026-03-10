@@ -317,7 +317,7 @@ async function discoverAndScrapeHyperFollow(supabaseUrl: string, serviceRoleKey:
         break;
       }
       // Small delay between slug attempts
-      await new Promise(r => setTimeout(r, 800));
+      await new Promise(r => setTimeout(r, 300));
     }
 
     if (!found) {
