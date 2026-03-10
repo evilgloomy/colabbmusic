@@ -167,15 +167,26 @@ const MusicPage = () => {
 
 const ReleaseCard = ({ release }: { release: YouTubeRelease }) => {
   const decodedThumb = release.thumbnail_url?.replace(/&amp;/g, '&');
+  // Fallback to video-based thumbnail which doesn't require signed params
+  const fallbackThumb = release.video_id
+    ? `https://img.youtube.com/vi/${release.video_id}/mqdefault.jpg`
+    : null;
+  const [imgSrc, setImgSrc] = useState(decodedThumb || fallbackThumb);
+
   const content = (
     <>
       <div className="aspect-square overflow-hidden mb-4 relative rounded-sm bg-card">
-        {decodedThumb ? (
+        {imgSrc ? (
           <img
-            src={decodedThumb}
+            src={imgSrc}
             alt={release.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
             loading="lazy"
+            onError={() => {
+              if (imgSrc !== fallbackThumb && fallbackThumb) {
+                setImgSrc(fallbackThumb);
+              }
+            }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground">
