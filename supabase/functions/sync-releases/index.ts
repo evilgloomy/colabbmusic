@@ -542,7 +542,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const testMode = body?.test === true;
     const hyperfollowOnly = body?.hyperfollow_only === true;
-    const handle = '@Cola_BB';
+    const handle = 'Cola_BB';
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
