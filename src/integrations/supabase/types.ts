@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      release_tracks: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          release_id: string
+          thumbnail_url: string | null
+          title: string
+          track_number: number
+          video_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          release_id: string
+          thumbnail_url?: string | null
+          title: string
+          track_number: number
+          video_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          release_id?: string
+          thumbnail_url?: string | null
+          title?: string
+          track_number?: number
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "release_tracks_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       releases: {
         Row: {
           created_at: string
