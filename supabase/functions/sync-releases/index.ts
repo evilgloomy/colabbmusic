@@ -759,6 +759,7 @@ Deno.serve(async (req) => {
       inserted,
       updated,
       artCached,
+      tracksSynced,
       timestamp: new Date().toISOString(),
     };
     console.log('Sync complete:', JSON.stringify(summary));

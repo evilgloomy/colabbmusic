@@ -75,6 +75,32 @@ export async function fetchReleases(): Promise<YouTubeRelease[]> {
   return (data as YouTubeRelease[]) || [];
 }
 
+export interface ReleaseTrack {
+  id: string;
+  release_id: string;
+  video_id: string;
+  title: string;
+  track_number: number;
+  duration_seconds: number | null;
+  thumbnail_url: string | null;
+  created_at: string;
+}
+
+export async function fetchReleaseTracks(releaseId: string): Promise<ReleaseTrack[]> {
+  const { data, error } = await supabase
+    .from("release_tracks")
+    .select("*")
+    .eq("release_id", releaseId)
+    .order("track_number", { ascending: true });
+
+  if (error) {
+    console.error("Release tracks fetch error:", error);
+    return [];
+  }
+
+  return (data as ReleaseTrack[]) || [];
+}
+
 const PAGE_SIZE = 30;
 
 export async function fetchReleasesPaginated(
