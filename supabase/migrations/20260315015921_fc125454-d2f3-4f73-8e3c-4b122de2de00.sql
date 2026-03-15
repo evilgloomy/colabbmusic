@@ -1,0 +1,1 @@
+DELETE FROM releases a USING releases b WHERE a.video_id = b.video_id AND a.id > b.id; CREATE UNIQUE INDEX IF NOT EXISTS releases_video_id_unique ON releases(video_id) WHERE video_id IS NOT NULL;
