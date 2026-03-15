@@ -3,16 +3,18 @@ import { useParams, Link } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchStreamingLinks, PLATFORM_INFO, type StreamingLink } from "@/lib/streaming";
-import type { YouTubeRelease } from "@/lib/youtube";
-import { ArrowLeft, Play, ExternalLink, Music } from "lucide-react";
+import { fetchReleaseTracks, type YouTubeRelease, type ReleaseTrack } from "@/lib/youtube";
+import { ArrowLeft, Play, Pause, ExternalLink, Music } from "lucide-react";
 import { useSEO, SITE_URL } from "@/hooks/useSEO";
 
 const ReleasePage = () => {
   const { id } = useParams<{ id: string }>();
   const [release, setRelease] = useState<YouTubeRelease | null>(null);
   const [links, setLinks] = useState<StreamingLink[]>([]);
+  const [tracks, setTracks] = useState<ReleaseTrack[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
