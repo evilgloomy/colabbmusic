@@ -3,118 +3,108 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// ── YouTube Data API v3 ────────────────────────────────────────
+// ── YouTube Data API v3 — Artist Releases ──────────────────────
 
-const CHANNEL_ID = 'UCCoEVSxdgOn_gcFI2jEFUEQ'; // Cola B VEVO
+const ARTIST_HANDLE = '@Cola_BB';
 
-interface YTPlaylistItem {
-  videoId: string;
+interface ArtistRelease {
+  playlistId: string;
   title: string;
   description: string;
   thumbnail_url: string;
   publishedAt: string;
+  videoId: string | null;
+  trackCount: number;
 }
 
-async function fetchChannelUploads(apiKey: string): Promise<YTPlaylistItem[]> {
-  // 1. Get the "uploads" playlist ID from the channel
-  const channelUrl = `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${apiKey}`;
-  console.log('Fetching channel info...');
-  const channelRes = await fetch(channelUrl);
-  if (!channelRes.ok) throw new Error(`Channel API error: ${channelRes.status} ${await channelRes.text()}`);
-  const channelData = await channelRes.json();
-  const uploadsPlaylistId = channelData?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
-  if (!uploadsPlaylistId) throw new Error('Could not find uploads playlist');
-  console.log(`Uploads playlist: ${uploadsPlaylistId}`);
+async function resolveChannelId(apiKey: string, handle: string): Promise<string> {
+  const url = `https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${encodeURIComponent(handle)}&key=${apiKey}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Channel resolve error: ${res.status} ${await res.text()}`);
+  const data = await res.json();
+  const channelId = data?.items?.[0]?.id;
+  if (!channelId) throw new Error(`Could not resolve channel for handle ${handle}`);
+  console.log(`Resolved ${handle} → ${channelId}`);
+  return channelId;
+}
 
-  // 2. Paginate through all uploads
-  const items: YTPlaylistItem[] = [];
+async function fetchArtistReleases(apiKey: string): Promise<ArtistRelease[]> {
+  const channelId = await resolveChannelId(apiKey, ARTIST_HANDLE);
+
+  // Fetch all playlists from the artist channel (paginated)
+  const playlists: ArtistRelease[] = [];
   let pageToken: string | undefined;
 
   do {
-    const url = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
-    url.searchParams.set('part', 'snippet');
-    url.searchParams.set('playlistId', uploadsPlaylistId);
+    const url = new URL('https://www.googleapis.com/youtube/v3/playlists');
+    url.searchParams.set('part', 'snippet,contentDetails');
+    url.searchParams.set('channelId', channelId);
     url.searchParams.set('maxResults', '50');
     url.searchParams.set('key', apiKey);
     if (pageToken) url.searchParams.set('pageToken', pageToken);
 
     const res = await fetch(url.toString());
-    if (!res.ok) throw new Error(`PlaylistItems API error: ${res.status} ${await res.text()}`);
+    if (!res.ok) throw new Error(`Playlists API error: ${res.status} ${await res.text()}`);
     const data = await res.json();
 
     for (const item of data.items || []) {
-      const snippet = item.snippet;
-      const videoId = snippet?.resourceId?.videoId;
-      if (!videoId) continue;
+      const playlistId = item.id;
+      // Only keep official YouTube Music releases (OLAK5uy_ prefix)
+      if (!playlistId?.startsWith('OLAK5uy_')) continue;
 
+      const snippet = item.snippet;
+      const trackCount = item.contentDetails?.itemCount || 0;
       const thumb = snippet.thumbnails?.maxres?.url
         || snippet.thumbnails?.high?.url
         || snippet.thumbnails?.medium?.url
         || snippet.thumbnails?.default?.url
-        || `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`;
+        || '';
 
-      items.push({
-        videoId,
+      playlists.push({
+        playlistId,
         title: snippet.title || '',
         description: snippet.description || '',
         thumbnail_url: thumb,
         publishedAt: snippet.publishedAt || '',
+        videoId: null, // will be filled below
+        trackCount,
       });
     }
 
     pageToken = data.nextPageToken;
-    console.log(`Fetched ${items.length} videos so far...`);
+    console.log(`Fetched ${playlists.length} release playlists so far...`);
   } while (pageToken);
 
-  console.log(`Total uploads found: ${items.length}`);
-  return items;
-}
+  console.log(`Total release playlists found: ${playlists.length}`);
 
-// Also search for releases from the artist channel (non-VEVO)
-const ARTIST_CHANNEL_ID = 'UC...'; // Will be resolved if needed
-
-async function searchChannelVideos(apiKey: string, channelId: string, query?: string): Promise<YTPlaylistItem[]> {
-  const items: YTPlaylistItem[] = [];
-  let pageToken: string | undefined;
-
-  do {
-    const url = new URL('https://www.googleapis.com/youtube/v3/search');
-    url.searchParams.set('part', 'snippet');
-    url.searchParams.set('channelId', channelId);
-    url.searchParams.set('type', 'video');
-    url.searchParams.set('maxResults', '50');
-    url.searchParams.set('order', 'date');
-    url.searchParams.set('key', apiKey);
-    if (query) url.searchParams.set('q', query);
-    if (pageToken) url.searchParams.set('pageToken', pageToken);
-
-    const res = await fetch(url.toString());
-    if (!res.ok) break; // Non-fatal
-    const data = await res.json();
-
-    for (const item of data.items || []) {
-      const snippet = item.snippet;
-      const videoId = item.id?.videoId;
-      if (!videoId) continue;
-
-      items.push({
-        videoId,
-        title: snippet.title || '',
-        description: snippet.description || '',
-        thumbnail_url: snippet.thumbnails?.high?.url || `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`,
-        publishedAt: snippet.publishedAt || '',
-      });
+  // For each playlist, fetch the first item to get videoId and better thumbnail
+  for (const playlist of playlists) {
+    try {
+      const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${playlist.playlistId}&maxResults=1&key=${apiKey}`;
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const data = await res.json();
+      const firstItem = data.items?.[0]?.snippet;
+      if (firstItem) {
+        playlist.videoId = firstItem.resourceId?.videoId || null;
+        // Use the video thumbnail if playlist thumbnail is missing
+        if (!playlist.thumbnail_url && playlist.videoId) {
+          playlist.thumbnail_url = firstItem.thumbnails?.maxres?.url
+            || firstItem.thumbnails?.high?.url
+            || `https://i.ytimg.com/vi/${playlist.videoId}/maxresdefault.jpg`;
+        }
+      }
+    } catch (e) {
+      console.warn(`Failed to fetch first item for playlist ${playlist.playlistId}:`, e);
     }
+  }
 
-    pageToken = data.nextPageToken;
-  } while (pageToken && items.length < 200);
-
-  return items;
+  return playlists;
 }
 
 // ── Enrichment + DB upsert ──────────────────────────────────────
 
-function enrichRelease(item: YTPlaylistItem): any {
+function enrichRelease(item: ArtistRelease): any {
   let year: number | null = null;
   const yearMatch = item.title?.match(/\((\d{4})\)$/);
   if (yearMatch) year = parseInt(yearMatch[1]);
