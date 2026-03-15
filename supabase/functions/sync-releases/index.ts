@@ -3,135 +3,235 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// ── YouTube Data API v3 ────────────────────────────────────────
+// ── Scrape @Cola_BB/releases page ──────────────────────────────
 
-const CHANNEL_ID = 'UCCoEVSxdgOn_gcFI2jEFUEQ'; // Cola B VEVO
+const ARTIST_HANDLE = 'Cola_BB';
 
-interface YTPlaylistItem {
-  videoId: string;
+interface ArtistRelease {
+  playlistId: string | null;
   title: string;
   description: string;
   thumbnail_url: string;
   publishedAt: string;
+  videoId: string | null;
+  trackCount: number;
 }
 
-async function fetchChannelUploads(apiKey: string): Promise<YTPlaylistItem[]> {
-  // 1. Get the "uploads" playlist ID from the channel
-  const channelUrl = `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${apiKey}`;
-  console.log('Fetching channel info...');
-  const channelRes = await fetch(channelUrl);
-  if (!channelRes.ok) throw new Error(`Channel API error: ${channelRes.status} ${await channelRes.text()}`);
-  const channelData = await channelRes.json();
-  const uploadsPlaylistId = channelData?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
-  if (!uploadsPlaylistId) throw new Error('Could not find uploads playlist');
-  console.log(`Uploads playlist: ${uploadsPlaylistId}`);
-
-  // 2. Paginate through all uploads
-  const items: YTPlaylistItem[] = [];
-  let pageToken: string | undefined;
-
-  do {
-    const url = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
-    url.searchParams.set('part', 'snippet');
-    url.searchParams.set('playlistId', uploadsPlaylistId);
-    url.searchParams.set('maxResults', '50');
-    url.searchParams.set('key', apiKey);
-    if (pageToken) url.searchParams.set('pageToken', pageToken);
-
-    const res = await fetch(url.toString());
-    if (!res.ok) throw new Error(`PlaylistItems API error: ${res.status} ${await res.text()}`);
-    const data = await res.json();
-
-    for (const item of data.items || []) {
-      const snippet = item.snippet;
-      const videoId = snippet?.resourceId?.videoId;
-      if (!videoId) continue;
-
-      const thumb = snippet.thumbnails?.maxres?.url
-        || snippet.thumbnails?.high?.url
-        || snippet.thumbnails?.medium?.url
-        || snippet.thumbnails?.default?.url
-        || `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`;
-
-      items.push({
-        videoId,
-        title: snippet.title || '',
-        description: snippet.description || '',
-        thumbnail_url: thumb,
-        publishedAt: snippet.publishedAt || '',
-      });
-    }
-
-    pageToken = data.nextPageToken;
-    console.log(`Fetched ${items.length} videos so far...`);
-  } while (pageToken);
-
-  console.log(`Total uploads found: ${items.length}`);
-  return items;
+function getBestThumbnail(thumbnails: any[] | undefined): string {
+  if (!thumbnails || !Array.isArray(thumbnails)) return '';
+  const sorted = [...thumbnails].sort((a, b) => (b.width || 0) - (a.width || 0));
+  return sorted[0]?.url || '';
 }
 
-// Also search for releases from the artist channel (non-VEVO)
-const ARTIST_CHANNEL_ID = 'UC...'; // Will be resolved if needed
+function extractReleasesFromInitialData(data: any): ArtistRelease[] {
+  const releases: ArtistRelease[] = [];
 
-async function searchChannelVideos(apiKey: string, channelId: string, query?: string): Promise<YTPlaylistItem[]> {
-  const items: YTPlaylistItem[] = [];
-  let pageToken: string | undefined;
+  try {
+    const tabs = data?.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
 
-  do {
-    const url = new URL('https://www.googleapis.com/youtube/v3/search');
-    url.searchParams.set('part', 'snippet');
-    url.searchParams.set('channelId', channelId);
-    url.searchParams.set('type', 'video');
-    url.searchParams.set('maxResults', '50');
-    url.searchParams.set('order', 'date');
-    url.searchParams.set('key', apiKey);
-    if (query) url.searchParams.set('q', query);
-    if (pageToken) url.searchParams.set('pageToken', pageToken);
+    for (const tab of tabs) {
+      const tabRenderer = tab?.tabRenderer;
+      if (!tabRenderer?.content) continue;
 
-    const res = await fetch(url.toString());
-    if (!res.ok) break; // Non-fatal
-    const data = await res.json();
+      const sectionListRenderer = tabRenderer.content?.richGridRenderer ||
+        tabRenderer.content?.sectionListRenderer;
+      if (!sectionListRenderer) continue;
 
-    for (const item of data.items || []) {
-      const snippet = item.snippet;
-      const videoId = item.id?.videoId;
-      if (!videoId) continue;
+      // richGridRenderer (newer layout)
+      const items = sectionListRenderer?.contents || [];
+      for (const item of items) {
+        const richItem = item?.richItemRenderer?.content;
+        const shelfRenderer = item?.richShelfRenderer;
 
-      items.push({
-        videoId,
-        title: snippet.title || '',
-        description: snippet.description || '',
-        thumbnail_url: snippet.thumbnails?.high?.url || `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`,
-        publishedAt: snippet.publishedAt || '',
-      });
+        if (richItem?.playlistRenderer) {
+          const pl = richItem.playlistRenderer;
+          releases.push({
+            title: pl.title?.simpleText || pl.title?.runs?.[0]?.text || 'Unknown',
+            description: '',
+            publishedAt: pl.publishedTimeText?.simpleText || '',
+            thumbnail_url: getBestThumbnail(pl.thumbnails || pl.thumbnail?.thumbnails),
+            playlistId: pl.playlistId || null,
+            videoId: null,
+            trackCount: pl.videoCount ? parseInt(pl.videoCount) : 0,
+          });
+        }
+
+        if (richItem?.videoRenderer) {
+          const vr = richItem.videoRenderer;
+          releases.push({
+            title: vr.title?.runs?.[0]?.text || vr.title?.simpleText || 'Unknown',
+            description: '',
+            publishedAt: vr.publishedTimeText?.simpleText || '',
+            thumbnail_url: getBestThumbnail(vr.thumbnail?.thumbnails),
+            playlistId: null,
+            videoId: vr.videoId || null,
+            trackCount: 1,
+          });
+        }
+
+        if (shelfRenderer) {
+          for (const si of (shelfRenderer.contents || [])) {
+            const renderer = si?.richItemRenderer?.content;
+            if (renderer?.playlistRenderer) {
+              const pl = renderer.playlistRenderer;
+              releases.push({
+                title: pl.title?.simpleText || pl.title?.runs?.[0]?.text || 'Unknown',
+                description: '',
+                publishedAt: pl.publishedTimeText?.simpleText || '',
+                thumbnail_url: getBestThumbnail(pl.thumbnails || pl.thumbnail?.thumbnails),
+                playlistId: pl.playlistId || null,
+                videoId: null,
+                trackCount: pl.videoCount ? parseInt(pl.videoCount) : 0,
+              });
+            }
+          }
+        }
+      }
+
+      // sectionListRenderer (older layout)
+      const sections = sectionListRenderer?.contents || [];
+      for (const section of sections) {
+        const shelf = section?.itemSectionRenderer?.contents?.[0]?.shelfRenderer;
+        if (!shelf) continue;
+        const gridItems = shelf.content?.horizontalListRenderer?.items ||
+          shelf.content?.expandedShelfContentsRenderer?.items || [];
+        for (const gridItem of gridItems) {
+          const musicItem = gridItem?.gridPlaylistRenderer || gridItem?.gridVideoRenderer;
+          if (musicItem) {
+            releases.push({
+              title: musicItem.title?.runs?.[0]?.text || musicItem.title?.simpleText || 'Unknown',
+              description: '',
+              publishedAt: musicItem.publishedTimeText?.simpleText || '',
+              thumbnail_url: getBestThumbnail(musicItem.thumbnail?.thumbnails || musicItem.thumbnailRenderer?.musicThumbnailRenderer?.thumbnail?.thumbnails),
+              playlistId: musicItem.playlistId || null,
+              videoId: musicItem.videoId || null,
+              trackCount: musicItem.videoCount ? parseInt(musicItem.videoCount) : 1,
+            });
+          }
+        }
+      }
     }
 
-    pageToken = data.nextPageToken;
-  } while (pageToken && items.length < 200);
+    console.log(`Extracted ${releases.length} releases from ytInitialData`);
+  } catch (e) {
+    console.error('Error extracting releases:', e);
+  }
 
-  return items;
+  return releases;
+}
+
+async function fetchArtistReleases(apiKey: string): Promise<ArtistRelease[]> {
+  const url = `https://www.youtube.com/@${ARTIST_HANDLE}/releases`;
+  console.log('Fetching releases page:', url);
+
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch releases page: ${response.status}`);
+  }
+
+  const html = await response.text();
+  console.log(`Releases page HTML length: ${html.length}`);
+
+  // Extract ytInitialData
+  const ytDataMatch = html.match(/var ytInitialData\s*=\s*({.*?});\s*<\/script>/s);
+  if (ytDataMatch) {
+    try {
+      const data = JSON.parse(ytDataMatch[1]);
+      const releases = extractReleasesFromInitialData(data);
+      if (releases.length > 0) return enrichWithVideoIds(releases, apiKey);
+    } catch (e) {
+      console.error('Failed to parse ytInitialData:', e);
+    }
+  }
+
+  // Alt pattern
+  const altMatch = html.match(/ytInitialData\s*=\s*'([^']+)'/);
+  if (altMatch) {
+    try {
+      const decoded = JSON.parse(altMatch[1].replace(/\\x([0-9a-f]{2})/gi, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16))));
+      const releases = extractReleasesFromInitialData(decoded);
+      if (releases.length > 0) return enrichWithVideoIds(releases, apiKey);
+    } catch (e) {
+      console.error('Failed to parse alt ytInitialData:', e);
+    }
+  }
+
+  const jsonMatch = html.match(/ytInitialData["\s]*[=:]\s*({[\s\S]*?});\s*(?:window\[|var )/);
+  if (jsonMatch) {
+    try {
+      const data = JSON.parse(jsonMatch[1]);
+      const releases = extractReleasesFromInitialData(data);
+      if (releases.length > 0) return enrichWithVideoIds(releases, apiKey);
+    } catch (e) {
+      console.error('Failed to parse json ytInitialData:', e);
+    }
+  }
+
+  console.warn('No ytInitialData found in releases page');
+  return [];
+}
+
+// For releases with a playlist but no video, resolve the first video via API
+async function enrichWithVideoIds(releases: ArtistRelease[], apiKey: string): Promise<ArtistRelease[]> {
+  for (const release of releases) {
+    if (release.videoId || !release.playlistId) continue;
+    try {
+      const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${release.playlistId}&maxResults=1&key=${apiKey}`;
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const data = await res.json();
+      const firstItem = data.items?.[0]?.snippet;
+      if (firstItem) {
+        release.videoId = firstItem.resourceId?.videoId || null;
+        if (!release.thumbnail_url && release.videoId) {
+          release.thumbnail_url = firstItem.thumbnails?.maxres?.url
+            || firstItem.thumbnails?.high?.url
+            || `https://i.ytimg.com/vi/${release.videoId}/maxresdefault.jpg`;
+        }
+      }
+    } catch (e) {
+      console.warn(`Failed to resolve video for playlist ${release.playlistId}:`, e);
+    }
+  }
+  return releases;
 }
 
 // ── Enrichment + DB upsert ──────────────────────────────────────
 
-function enrichRelease(item: YTPlaylistItem): any {
+function enrichRelease(item: ArtistRelease): any {
   let year: number | null = null;
   const yearMatch = item.title?.match(/\((\d{4})\)$/);
   if (yearMatch) year = parseInt(yearMatch[1]);
 
-  // Try to extract year from publishedAt
-  if (!year && item.publishedAt) {
+  // publishedAt from scraper is relative text ("2 weeks ago"), not ISO
+  // Only use it if it looks like an ISO date
+  const isIsoDate = item.publishedAt && /^\d{4}-\d{2}-\d{2}/.test(item.publishedAt);
+  const dateStr = isIsoDate ? item.publishedAt.split('T')[0] : null;
+
+  if (!year && isIsoDate) {
     year = new Date(item.publishedAt).getFullYear();
+  }
+  if (!year) {
+    year = new Date().getFullYear();
   }
 
   return {
-    video_id: item.videoId,
+    playlist_id: item.playlistId,
+    video_id: item.videoId || null,
     title: item.title,
     description: item.description || null,
-    thumbnail_url: item.thumbnail_url,
+    thumbnail_url: item.thumbnail_url || null,
+    track_count: item.trackCount || null,
     year: year ? String(year) : null,
-    release_date: item.publishedAt ? item.publishedAt.split('T')[0] : null,
-    sort_date: item.publishedAt ? item.publishedAt.split('T')[0] : null,
+    release_date: dateStr,
+    sort_date: dateStr,
   };
 }
 
@@ -139,16 +239,17 @@ async function upsertReleases(releases: any[]): Promise<{ inserted: number; upda
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-  // Deduplicate by video_id (keep first occurrence)
+  // Deduplicate by playlist_id (keep first occurrence)
   const seen = new Set<string>();
   const deduped = releases.filter((r) => {
-    if (!r.video_id || seen.has(r.video_id)) return false;
-    seen.add(r.video_id);
+    const key = r.playlist_id || r.video_id;
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 
-  // Resolve existing rows by video_id, then upsert by primary key (id)
-  const existingRes = await fetch(`${supabaseUrl}/rest/v1/releases?select=id,video_id&limit=1000`, {
+  // Resolve existing rows by playlist_id and video_id, then upsert by primary key (id)
+  const existingRes = await fetch(`${supabaseUrl}/rest/v1/releases?select=id,playlist_id,video_id&limit=1000`, {
     headers: {
       apikey: serviceRoleKey,
       Authorization: `Bearer ${serviceRoleKey}`,
@@ -161,6 +262,11 @@ async function upsertReleases(releases: any[]): Promise<{ inserted: number; upda
   }
 
   const existingRows = await existingRes.json();
+  const idByPlaylistId = new Map<string, string>(
+    (existingRows || [])
+      .filter((row: any) => row.playlist_id)
+      .map((row: any) => [row.playlist_id, row.id])
+  );
   const idByVideoId = new Map<string, string>(
     (existingRows || [])
       .filter((row: any) => row.video_id)
@@ -170,13 +276,16 @@ async function upsertReleases(releases: any[]): Promise<{ inserted: number; upda
   let inserted = 0;
   let updated = 0;
   const payload = deduped.map((release) => {
-    const existingId = release.video_id ? idByVideoId.get(release.video_id) : undefined;
+    // Match by playlist_id first, then video_id
+    const existingId = (release.playlist_id ? idByPlaylistId.get(release.playlist_id) : undefined)
+      || (release.video_id ? idByVideoId.get(release.video_id) : undefined);
     if (existingId) {
       updated++;
       return { ...release, id: existingId, updated_at: new Date().toISOString() };
     }
     inserted++;
-    return release;
+    // Ensure all objects have same keys by including id as undefined (will use default)
+    return { ...release, id: crypto.randomUUID(), updated_at: new Date().toISOString() };
   });
 
   const upsertRes = await fetch(`${supabaseUrl}/rest/v1/releases`, {
@@ -506,25 +615,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Starting YouTube Data API sync (test=${testMode})...`);
+    console.log(`Starting artist releases sync (test=${testMode})...`);
 
-    // Step 1: Fetch all uploads via YouTube Data API
-    const uploads = await fetchChannelUploads(youtubeApiKey);
+    // Step 1: Fetch all official releases from @Cola_BB channel
+    const releases = await fetchArtistReleases(youtubeApiKey);
 
-    if (uploads.length === 0) {
+    if (releases.length === 0) {
       return new Response(
-        JSON.stringify({ success: true, message: 'No uploads found', inserted: 0, updated: 0 }),
+        JSON.stringify({ success: true, message: 'No releases found', inserted: 0, updated: 0 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Filter out music videos — only keep audio releases
-    const MV_PATTERNS = /official\s*(music\s*)?video|[\(（]\s*MV\s*[\)）]/i;
-    const filtered = uploads.filter(v => !MV_PATTERNS.test(v.title));
-    console.log(`Filtered ${uploads.length - filtered.length} music videos, ${filtered.length} releases remain`);
-
-    const toProcess = testMode ? filtered.slice(0, 3) : filtered;
-    console.log(`Processing ${toProcess.length} uploads...`);
+    const toProcess = testMode ? releases.slice(0, 3) : releases;
+    console.log(`Processing ${toProcess.length} releases...`);
 
     // Step 2: Enrich + stable ordering (latest first)
     const enriched = [...toProcess]
@@ -595,7 +699,7 @@ Deno.serve(async (req) => {
 
     const summary = {
       success: true,
-      source: 'youtube_data_api',
+      source: 'artist_releases',
       total: toProcess.length,
       inserted,
       updated,
