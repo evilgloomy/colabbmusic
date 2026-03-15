@@ -23,6 +23,8 @@ interface AIResult {
   location: string | null;
 }
 
+// ── AI Enhancement ──────────────────────────────────────────────────────────
+
 async function enhanceWithAI(
   originalText: string,
   apiKey: string
@@ -86,11 +88,7 @@ async function enhanceWithAI(
                       "Location mentioned in the post, or null if none",
                   },
                 },
-                required: [
-                  "title",
-                  "enhanced_caption",
-                  "category",
-                ],
+                required: ["title", "enhanced_caption", "category"],
                 additionalProperties: false,
               },
             },
@@ -107,7 +105,6 @@ async function enhanceWithAI(
   if (!response.ok) {
     const errText = await response.text();
     console.error("AI gateway error:", response.status, errText);
-    // Fallback
     return {
       title: originalText?.slice(0, 40) || "Untitled",
       enhanced_caption: originalText || "",
@@ -130,6 +127,90 @@ async function enhanceWithAI(
   }
 }
 
+// ── Media Caching ───────────────────────────────────────────────────────────
+
+function getExtension(mediaType?: string): string {
+  if (!mediaType) return "jpg";
+  if (mediaType === "VIDEO") return "mp4";
+  return "jpg"; // IMAGE, CAROUSEL_ALBUM → jpg
+}
+
+async function cacheMedia(
+  mediaUrl: string,
+  storyId: string,
+  mediaType: string | undefined,
+  supabaseUrl: string,
+  serviceRoleKey: string
+): Promise<string | null> {
+  try {
+    const res = await fetch(mediaUrl);
+    if (!res.ok) {
+      console.warn(`Failed to fetch media for ${storyId}: ${res.status}`);
+      return null;
+    }
+
+    const data = await res.arrayBuffer();
+    if (data.byteLength < 500) {
+      console.warn(`Media too small for ${storyId}, skipping cache`);
+      return null;
+    }
+
+    const ext = getExtension(mediaType);
+    const filePath = `${storyId}.${ext}`;
+    const contentType = ext === "mp4" ? "video/mp4" : "image/jpeg";
+
+    const uploadRes = await fetch(
+      `${supabaseUrl}/storage/v1/object/story-media/${filePath}`,
+      {
+        method: "PUT",
+        headers: {
+          apikey: serviceRoleKey,
+          Authorization: `Bearer ${serviceRoleKey}`,
+          "Content-Type": contentType,
+          "x-upsert": "true",
+        },
+        body: data,
+      }
+    );
+
+    if (!uploadRes.ok) {
+      const errText = await uploadRes.text();
+      console.error(`Upload failed for ${storyId}: ${errText}`);
+      return null;
+    }
+
+    return `${supabaseUrl}/storage/v1/object/public/story-media/${filePath}`;
+  } catch (err) {
+    console.error(`Media cache error for ${storyId}:`, err);
+    return null;
+  }
+}
+
+// ── Threads API Fetcher ─────────────────────────────────────────────────────
+
+async function fetchAllThreadsPosts(
+  accessToken: string
+): Promise<ThreadsPost[]> {
+  let allPosts: ThreadsPost[] = [];
+  let url = `https://graph.threads.net/v1.0/me/threads?fields=id,text,media_url,media_type,permalink,timestamp,thumbnail_url&limit=50&access_token=${accessToken}`;
+
+  for (let page = 0; page < 3 && url; page++) {
+    const res = await fetch(url);
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("Threads API error:", res.status, errText);
+      throw new Error(`Threads API error: ${res.status}`);
+    }
+    const data = await res.json();
+    allPosts = allPosts.concat(data.data || []);
+    url = data.paging?.next || "";
+  }
+
+  return allPosts;
+}
+
+// ── Main Handler ────────────────────────────────────────────────────────────
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -138,101 +219,91 @@ Deno.serve(async (req) => {
   try {
     const THREADS_ACCESS_TOKEN = Deno.env.get("THREADS_ACCESS_TOKEN");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     if (!THREADS_ACCESS_TOKEN) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "THREADS_ACCESS_TOKEN not configured",
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ success: false, error: "THREADS_ACCESS_TOKEN not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
     if (!LOVABLE_API_KEY) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "LOVABLE_API_KEY not configured",
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ success: false, error: "LOVABLE_API_KEY not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Fetch posts from Threads API with pagination
-    let allPosts: ThreadsPost[] = [];
-    let url = `https://graph.threads.net/v1.0/me/threads?fields=id,text,media_url,media_type,permalink,timestamp,thumbnail_url&limit=50&access_token=${THREADS_ACCESS_TOKEN}`;
-
-    // Fetch up to 3 pages (150 posts max per sync)
-    for (let page = 0; page < 3 && url; page++) {
-      const res = await fetch(url);
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error("Threads API error:", res.status, errText);
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: `Threads API error: ${res.status}`,
-          }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-      const data = await res.json();
-      allPosts = allPosts.concat(data.data || []);
-      url = data.paging?.next || "";
-    }
+    // 1. Fetch all posts from Threads API (fresh CDN URLs)
+    const allPosts = await fetchAllThreadsPosts(THREADS_ACCESS_TOKEN);
 
     if (allPosts.length === 0) {
       return new Response(
-        JSON.stringify({ success: true, synced: 0, message: "No posts found" }),
+        JSON.stringify({ success: true, synced: 0, refreshed: 0, message: "No posts found" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Get existing post IDs to skip duplicates
+    // Build a lookup of fresh CDN URLs by threads_post_id
+    const freshMediaMap = new Map<string, { url: string; type?: string }>();
+    for (const p of allPosts) {
+      const url = p.media_url || p.thumbnail_url;
+      if (url) {
+        freshMediaMap.set(p.id, { url, type: p.media_type });
+      }
+    }
+
+    // 2. Get existing post IDs
     const { data: existing } = await supabase
       .from("stories")
-      .select("threads_post_id");
+      .select("id, threads_post_id, media_url");
 
-    const existingIds = new Set(
-      (existing || []).map((e: { threads_post_id: string }) => e.threads_post_id)
+    const existingMap = new Map(
+      (existing || []).map((e: any) => [e.threads_post_id, e])
     );
 
-    const newPosts = allPosts.filter((p) => !existingIds.has(p.id));
-
+    // 3. Process NEW posts
+    const newPosts = allPosts.filter((p) => !existingMap.has(p.id));
     let synced = 0;
+
     for (const post of newPosts) {
-      // Skip posts without text or media
       if (!post.text && !post.media_url) continue;
 
       const aiResult = await enhanceWithAI(post.text || "", LOVABLE_API_KEY);
 
-      const { error } = await supabase.from("stories").upsert({
-        threads_post_id: post.id,
-        original_text: post.text || null,
-        ai_enhanced_text: aiResult.enhanced_caption,
-        ai_title: aiResult.title,
-        category: aiResult.category,
-        media_url: post.media_url || post.thumbnail_url || null,
-        media_type: post.media_type || null,
-        permalink: post.permalink || null,
-        posted_at: post.timestamp || null,
-        location: aiResult.location || null,
-      }, { onConflict: "threads_post_id" });
+      // Cache media to storage
+      const rawMediaUrl = post.media_url || post.thumbnail_url || null;
+      let finalMediaUrl = rawMediaUrl;
+
+      if (rawMediaUrl) {
+        const cached = await cacheMedia(
+          rawMediaUrl,
+          post.id,
+          post.media_type,
+          supabaseUrl,
+          serviceRoleKey
+        );
+        if (cached) finalMediaUrl = cached;
+      }
+
+      const { error } = await supabase.from("stories").upsert(
+        {
+          threads_post_id: post.id,
+          original_text: post.text || null,
+          ai_enhanced_text: aiResult.enhanced_caption,
+          ai_title: aiResult.title,
+          category: aiResult.category,
+          media_url: finalMediaUrl,
+          media_type: post.media_type || null,
+          permalink: post.permalink || null,
+          posted_at: post.timestamp || null,
+          location: aiResult.location || null,
+        },
+        { onConflict: "threads_post_id" }
+      );
 
       if (error) {
         console.error("Insert error for post", post.id, error);
@@ -241,12 +312,52 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 4. Refresh pass: fix existing stories with expired CDN URLs
+    let refreshed = 0;
+    const staleStories = (existing || []).filter(
+      (e: any) =>
+        e.media_url &&
+        !e.media_url.includes(supabaseUrl) && // not yet cached
+        (e.media_url.includes("cdninstagram.com") ||
+          e.media_url.includes("scontent") ||
+          e.media_url.includes("fbcdn"))
+    );
+
+    for (const story of staleStories) {
+      // Try to find a fresh CDN URL from the API response
+      const fresh = freshMediaMap.get(story.threads_post_id);
+      const sourceUrl = fresh?.url || story.media_url;
+
+      const cached = await cacheMedia(
+        sourceUrl,
+        story.threads_post_id,
+        fresh?.type,
+        supabaseUrl,
+        serviceRoleKey
+      );
+
+      if (cached) {
+        const { error } = await supabase
+          .from("stories")
+          .update({ media_url: cached })
+          .eq("id", story.id);
+
+        if (error) {
+          console.error("Refresh error for story", story.id, error);
+        } else {
+          refreshed++;
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         synced,
+        refreshed,
         total_fetched: allPosts.length,
         skipped_existing: allPosts.length - newPosts.length,
+        stale_found: staleStories.length,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
