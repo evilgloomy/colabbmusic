@@ -159,7 +159,10 @@ const ReleasePage = () => {
               {/* Play button */}
               {videoId && !isPlaying && (
                 <button
-                  onClick={() => setIsPlaying(true)}
+                  onClick={() => {
+                    setActiveVideoId(videoId);
+                    setIsPlaying(true);
+                  }}
                   className="mt-8 inline-flex items-center gap-3 px-8 py-4 rounded-full font-semibold text-sm tracking-wider uppercase transition-all hover:scale-105"
                   style={{
                     background: "linear-gradient(135deg, hsl(var(--champagne)) 0%, hsl(var(--primary)) 100%)",
