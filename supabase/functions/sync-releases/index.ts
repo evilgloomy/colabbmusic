@@ -131,16 +131,17 @@ async function upsertReleases(releases: any[]): Promise<{ inserted: number; upda
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-  // Deduplicate by video_id (keep first occurrence)
+  // Deduplicate by playlist_id (keep first occurrence)
   const seen = new Set<string>();
   const deduped = releases.filter((r) => {
-    if (!r.video_id || seen.has(r.video_id)) return false;
-    seen.add(r.video_id);
+    const key = r.playlist_id || r.video_id;
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 
-  // Resolve existing rows by video_id, then upsert by primary key (id)
-  const existingRes = await fetch(`${supabaseUrl}/rest/v1/releases?select=id,video_id&limit=1000`, {
+  // Resolve existing rows by playlist_id and video_id, then upsert by primary key (id)
+  const existingRes = await fetch(`${supabaseUrl}/rest/v1/releases?select=id,playlist_id,video_id&limit=1000`, {
     headers: {
       apikey: serviceRoleKey,
       Authorization: `Bearer ${serviceRoleKey}`,
@@ -153,6 +154,11 @@ async function upsertReleases(releases: any[]): Promise<{ inserted: number; upda
   }
 
   const existingRows = await existingRes.json();
+  const idByPlaylistId = new Map<string, string>(
+    (existingRows || [])
+      .filter((row: any) => row.playlist_id)
+      .map((row: any) => [row.playlist_id, row.id])
+  );
   const idByVideoId = new Map<string, string>(
     (existingRows || [])
       .filter((row: any) => row.video_id)
@@ -162,7 +168,9 @@ async function upsertReleases(releases: any[]): Promise<{ inserted: number; upda
   let inserted = 0;
   let updated = 0;
   const payload = deduped.map((release) => {
-    const existingId = release.video_id ? idByVideoId.get(release.video_id) : undefined;
+    // Match by playlist_id first, then video_id
+    const existingId = (release.playlist_id ? idByPlaylistId.get(release.playlist_id) : undefined)
+      || (release.video_id ? idByVideoId.get(release.video_id) : undefined);
     if (existingId) {
       updated++;
       return { ...release, id: existingId, updated_at: new Date().toISOString() };
