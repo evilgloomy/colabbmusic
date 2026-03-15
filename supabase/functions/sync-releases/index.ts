@@ -277,7 +277,8 @@ async function upsertReleases(releases: any[]): Promise<{ inserted: number; upda
       return { ...release, id: existingId, updated_at: new Date().toISOString() };
     }
     inserted++;
-    return release;
+    // Ensure all objects have same keys by including id as undefined (will use default)
+    return { ...release, id: crypto.randomUUID(), updated_at: new Date().toISOString() };
   });
 
   const upsertRes = await fetch(`${supabaseUrl}/rest/v1/releases`, {
