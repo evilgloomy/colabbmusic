@@ -64,7 +64,8 @@ export async function fetchReleases(): Promise<YouTubeRelease[]> {
   const { data, error } = await supabase
     .from("releases")
     .select("*")
-    .order("sort_order", { ascending: true, nullsFirst: false });
+    .order("sort_date", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false });
 
   if (error) {
     console.error("Releases fetch error:", error);
@@ -83,7 +84,8 @@ export async function fetchReleasesPaginated(
   const { data, error } = await supabase
     .from("releases")
     .select("*")
-    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("sort_date", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
   if (error) {

@@ -141,31 +141,59 @@ async function upsertReleases(releases: any[]): Promise<{ inserted: number; upda
 
   // Deduplicate by video_id (keep first occurrence)
   const seen = new Set<string>();
-  const deduped = releases.filter(r => {
+  const deduped = releases.filter((r) => {
     if (!r.video_id || seen.has(r.video_id)) return false;
     seen.add(r.video_id);
     return true;
   });
 
-  const res = await fetch(`${supabaseUrl}/rest/v1/releases`, {
-    method: 'POST',
+  // Resolve existing rows by video_id, then upsert by primary key (id)
+  const existingRes = await fetch(`${supabaseUrl}/rest/v1/releases?select=id,video_id&limit=1000`, {
     headers: {
-      'apikey': serviceRoleKey,
-      'Authorization': `Bearer ${serviceRoleKey}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'resolution=merge-duplicates,return=representation',
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
     },
-    body: JSON.stringify(deduped),
   });
 
-  if (!res.ok) {
-    console.error('Upsert error:', res.status, await res.text());
-    throw new Error(`HTTP error ${res.status} at upsert`);
+  if (!existingRes.ok) {
+    console.error('Failed to fetch existing releases:', existingRes.status, await existingRes.text());
+    throw new Error(`HTTP error ${existingRes.status} while fetching existing releases`);
   }
 
-  const data = await res.json();
-  const inserted = data.filter((r: any) => r.created_at === r.updated_at).length;
-  const updated = data.length - inserted;
+  const existingRows = await existingRes.json();
+  const idByVideoId = new Map<string, string>(
+    (existingRows || [])
+      .filter((row: any) => row.video_id)
+      .map((row: any) => [row.video_id, row.id])
+  );
+
+  let inserted = 0;
+  let updated = 0;
+  const payload = deduped.map((release) => {
+    const existingId = release.video_id ? idByVideoId.get(release.video_id) : undefined;
+    if (existingId) {
+      updated++;
+      return { ...release, id: existingId, updated_at: new Date().toISOString() };
+    }
+    inserted++;
+    return release;
+  });
+
+  const upsertRes = await fetch(`${supabaseUrl}/rest/v1/releases`, {
+    method: 'POST',
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!upsertRes.ok) {
+    console.error('Upsert error:', upsertRes.status, await upsertRes.text());
+    throw new Error(`HTTP error ${upsertRes.status} at upsert`);
+  }
 
   console.log(`Upserted ${deduped.length} releases: ${inserted} inserted, ${updated} updated`);
   return { inserted, updated };
@@ -493,8 +521,13 @@ Deno.serve(async (req) => {
     const toProcess = testMode ? uploads.slice(0, 3) : uploads;
     console.log(`Processing ${toProcess.length} uploads...`);
 
-    // Step 2: Enrich
-    const enriched = toProcess.map(enrichRelease);
+    // Step 2: Enrich + stable ordering (latest first)
+    const enriched = [...toProcess]
+      .sort((a, b) => (b.publishedAt || '').localeCompare(a.publishedAt || ''))
+      .map((item, index) => ({
+        ...enrichRelease(item),
+        sort_order: index,
+      }));
 
     // Step 3: Upsert
     const { inserted, updated } = await upsertReleases(enriched);
