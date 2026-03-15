@@ -21,9 +21,11 @@ const ReleasePage = () => {
     Promise.all([
       supabase.from("releases").select("*").eq("id", id).single(),
       fetchStreamingLinks(id),
-    ]).then(([{ data }, streamLinks]) => {
+      fetchReleaseTracks(id),
+    ]).then(([{ data }, streamLinks, releaseTracks]) => {
       if (data) setRelease(data as YouTubeRelease);
       setLinks(streamLinks);
+      setTracks(releaseTracks);
       setLoading(false);
     });
   }, [id]);
