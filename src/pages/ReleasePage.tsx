@@ -3,25 +3,29 @@ import { useParams, Link } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchStreamingLinks, PLATFORM_INFO, type StreamingLink } from "@/lib/streaming";
-import type { YouTubeRelease } from "@/lib/youtube";
-import { ArrowLeft, Play, ExternalLink, Music } from "lucide-react";
+import { fetchReleaseTracks, type YouTubeRelease, type ReleaseTrack } from "@/lib/youtube";
+import { ArrowLeft, Play, Pause, ExternalLink, Music } from "lucide-react";
 import { useSEO, SITE_URL } from "@/hooks/useSEO";
 
 const ReleasePage = () => {
   const { id } = useParams<{ id: string }>();
   const [release, setRelease] = useState<YouTubeRelease | null>(null);
   const [links, setLinks] = useState<StreamingLink[]>([]);
+  const [tracks, setTracks] = useState<ReleaseTrack[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
     Promise.all([
       supabase.from("releases").select("*").eq("id", id).single(),
       fetchStreamingLinks(id),
-    ]).then(([{ data }, streamLinks]) => {
+      fetchReleaseTracks(id),
+    ]).then(([{ data }, streamLinks, releaseTracks]) => {
       if (data) setRelease(data as YouTubeRelease);
       setLinks(streamLinks);
+      setTracks(releaseTracks);
       setLoading(false);
     });
   }, [id]);
@@ -155,7 +159,10 @@ const ReleasePage = () => {
               {/* Play button */}
               {videoId && !isPlaying && (
                 <button
-                  onClick={() => setIsPlaying(true)}
+                  onClick={() => {
+                    setActiveVideoId(videoId);
+                    setIsPlaying(true);
+                  }}
                   className="mt-8 inline-flex items-center gap-3 px-8 py-4 rounded-full font-semibold text-sm tracking-wider uppercase transition-all hover:scale-105"
                   style={{
                     background: "linear-gradient(135deg, hsl(var(--champagne)) 0%, hsl(var(--primary)) 100%)",
@@ -172,18 +179,74 @@ const ReleasePage = () => {
       </section>
 
       {/* YouTube Player */}
-      {videoId && isPlaying && (
+      {isPlaying && activeVideoId && (
         <section className="bg-black">
           <div className="container mx-auto px-6">
             <div className="max-w-4xl mx-auto aspect-video">
               <iframe
-                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
+                key={activeVideoId}
+                src={`https://www.youtube.com/embed/${activeVideoId}?autoplay=1&rel=0&modestbranding=1`}
                 className="w-full h-full"
                 allow="autoplay; encrypted-media"
                 allowFullScreen
                 title={release.title}
               />
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* Tracklist for albums */}
+      {tracks.length > 0 && (
+        <section className="container mx-auto px-6 py-16">
+          <h2 className="text-display-sm font-display font-bold text-foreground mb-8">
+            Tracklist
+          </h2>
+          <div className="max-w-3xl space-y-1">
+            {tracks.map((track) => {
+              const isCurrent = isPlaying && activeVideoId === track.video_id;
+              return (
+                <button
+                  key={track.id}
+                  onClick={() => {
+                    setActiveVideoId(track.video_id);
+                    setIsPlaying(true);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className={`w-full flex items-center gap-4 p-4 rounded-lg text-left transition-all group ${
+                    isCurrent
+                      ? "bg-primary/10 border border-primary/30"
+                      : "hover:bg-muted/50 border border-transparent"
+                  }`}
+                >
+                  <span className={`w-8 text-center text-sm font-mono ${isCurrent ? "text-primary" : "text-muted-foreground"}`}>
+                    {isCurrent ? (
+                      <Pause className="h-4 w-4 mx-auto text-primary" />
+                    ) : (
+                      <span className="group-hover:hidden">{track.track_number}</span>
+                    )}
+                    {!isCurrent && (
+                      <Play className="h-4 w-4 mx-auto hidden group-hover:block text-foreground" />
+                    )}
+                  </span>
+                  {track.thumbnail_url && (
+                    <img
+                      src={track.thumbnail_url}
+                      alt=""
+                      className="w-10 h-10 rounded object-cover flex-shrink-0"
+                    />
+                  )}
+                  <span className={`flex-1 font-medium truncate ${isCurrent ? "text-primary" : "text-foreground"}`}>
+                    {track.title}
+                  </span>
+                  {track.duration_seconds && (
+                    <span className="text-sm text-muted-foreground">
+                      {Math.floor(track.duration_seconds / 60)}:{String(track.duration_seconds % 60).padStart(2, "0")}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </section>
       )}
