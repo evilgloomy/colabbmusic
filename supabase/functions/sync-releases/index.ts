@@ -3,12 +3,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// ── YouTube Data API v3 — Artist Releases ──────────────────────
+// ── Scrape @Cola_BB/releases page ──────────────────────────────
 
-const ARTIST_HANDLE = '@Cola_BB';
+const ARTIST_HANDLE = 'Cola_BB';
 
 interface ArtistRelease {
-  playlistId: string;
+  playlistId: string | null;
   title: string;
   description: string;
   thumbnail_url: string;
@@ -17,89 +17,190 @@ interface ArtistRelease {
   trackCount: number;
 }
 
-async function resolveChannelId(apiKey: string, handle: string): Promise<string> {
-  const url = `https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${encodeURIComponent(handle)}&key=${apiKey}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Channel resolve error: ${res.status} ${await res.text()}`);
-  const data = await res.json();
-  const channelId = data?.items?.[0]?.id;
-  if (!channelId) throw new Error(`Could not resolve channel for handle ${handle}`);
-  console.log(`Resolved ${handle} → ${channelId}`);
-  return channelId;
+function getBestThumbnail(thumbnails: any[] | undefined): string {
+  if (!thumbnails || !Array.isArray(thumbnails)) return '';
+  const sorted = [...thumbnails].sort((a, b) => (b.width || 0) - (a.width || 0));
+  return sorted[0]?.url || '';
+}
+
+function extractReleasesFromInitialData(data: any): ArtistRelease[] {
+  const releases: ArtistRelease[] = [];
+
+  try {
+    const tabs = data?.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
+
+    for (const tab of tabs) {
+      const tabRenderer = tab?.tabRenderer;
+      if (!tabRenderer?.content) continue;
+
+      const sectionListRenderer = tabRenderer.content?.richGridRenderer ||
+        tabRenderer.content?.sectionListRenderer;
+      if (!sectionListRenderer) continue;
+
+      // richGridRenderer (newer layout)
+      const items = sectionListRenderer?.contents || [];
+      for (const item of items) {
+        const richItem = item?.richItemRenderer?.content;
+        const shelfRenderer = item?.richShelfRenderer;
+
+        if (richItem?.playlistRenderer) {
+          const pl = richItem.playlistRenderer;
+          releases.push({
+            title: pl.title?.simpleText || pl.title?.runs?.[0]?.text || 'Unknown',
+            description: '',
+            publishedAt: pl.publishedTimeText?.simpleText || '',
+            thumbnail_url: getBestThumbnail(pl.thumbnails || pl.thumbnail?.thumbnails),
+            playlistId: pl.playlistId || null,
+            videoId: null,
+            trackCount: pl.videoCount ? parseInt(pl.videoCount) : 0,
+          });
+        }
+
+        if (richItem?.videoRenderer) {
+          const vr = richItem.videoRenderer;
+          releases.push({
+            title: vr.title?.runs?.[0]?.text || vr.title?.simpleText || 'Unknown',
+            description: '',
+            publishedAt: vr.publishedTimeText?.simpleText || '',
+            thumbnail_url: getBestThumbnail(vr.thumbnail?.thumbnails),
+            playlistId: null,
+            videoId: vr.videoId || null,
+            trackCount: 1,
+          });
+        }
+
+        if (shelfRenderer) {
+          for (const si of (shelfRenderer.contents || [])) {
+            const renderer = si?.richItemRenderer?.content;
+            if (renderer?.playlistRenderer) {
+              const pl = renderer.playlistRenderer;
+              releases.push({
+                title: pl.title?.simpleText || pl.title?.runs?.[0]?.text || 'Unknown',
+                description: '',
+                publishedAt: pl.publishedTimeText?.simpleText || '',
+                thumbnail_url: getBestThumbnail(pl.thumbnails || pl.thumbnail?.thumbnails),
+                playlistId: pl.playlistId || null,
+                videoId: null,
+                trackCount: pl.videoCount ? parseInt(pl.videoCount) : 0,
+              });
+            }
+          }
+        }
+      }
+
+      // sectionListRenderer (older layout)
+      const sections = sectionListRenderer?.contents || [];
+      for (const section of sections) {
+        const shelf = section?.itemSectionRenderer?.contents?.[0]?.shelfRenderer;
+        if (!shelf) continue;
+        const gridItems = shelf.content?.horizontalListRenderer?.items ||
+          shelf.content?.expandedShelfContentsRenderer?.items || [];
+        for (const gridItem of gridItems) {
+          const musicItem = gridItem?.gridPlaylistRenderer || gridItem?.gridVideoRenderer;
+          if (musicItem) {
+            releases.push({
+              title: musicItem.title?.runs?.[0]?.text || musicItem.title?.simpleText || 'Unknown',
+              description: '',
+              publishedAt: musicItem.publishedTimeText?.simpleText || '',
+              thumbnail_url: getBestThumbnail(musicItem.thumbnail?.thumbnails || musicItem.thumbnailRenderer?.musicThumbnailRenderer?.thumbnail?.thumbnails),
+              playlistId: musicItem.playlistId || null,
+              videoId: musicItem.videoId || null,
+              trackCount: musicItem.videoCount ? parseInt(musicItem.videoCount) : 1,
+            });
+          }
+        }
+      }
+    }
+
+    console.log(`Extracted ${releases.length} releases from ytInitialData`);
+  } catch (e) {
+    console.error('Error extracting releases:', e);
+  }
+
+  return releases;
 }
 
 async function fetchArtistReleases(apiKey: string): Promise<ArtistRelease[]> {
-  const channelId = await resolveChannelId(apiKey, ARTIST_HANDLE);
+  const url = `https://www.youtube.com/@${ARTIST_HANDLE}/releases`;
+  console.log('Fetching releases page:', url);
 
-  // Fetch all playlists from the artist channel (paginated)
-  const playlists: ArtistRelease[] = [];
-  let pageToken: string | undefined;
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    },
+  });
 
-  do {
-    const url = new URL('https://www.googleapis.com/youtube/v3/playlists');
-    url.searchParams.set('part', 'snippet,contentDetails');
-    url.searchParams.set('channelId', channelId);
-    url.searchParams.set('maxResults', '50');
-    url.searchParams.set('key', apiKey);
-    if (pageToken) url.searchParams.set('pageToken', pageToken);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch releases page: ${response.status}`);
+  }
 
-    const res = await fetch(url.toString());
-    if (!res.ok) throw new Error(`Playlists API error: ${res.status} ${await res.text()}`);
-    const data = await res.json();
+  const html = await response.text();
+  console.log(`Releases page HTML length: ${html.length}`);
 
-    for (const item of data.items || []) {
-      const playlistId = item.id;
-      // Only keep official YouTube Music releases (OLAK5uy_ prefix)
-      if (!playlistId?.startsWith('OLAK5uy_')) continue;
-
-      const snippet = item.snippet;
-      const trackCount = item.contentDetails?.itemCount || 0;
-      const thumb = snippet.thumbnails?.maxres?.url
-        || snippet.thumbnails?.high?.url
-        || snippet.thumbnails?.medium?.url
-        || snippet.thumbnails?.default?.url
-        || '';
-
-      playlists.push({
-        playlistId,
-        title: snippet.title || '',
-        description: snippet.description || '',
-        thumbnail_url: thumb,
-        publishedAt: snippet.publishedAt || '',
-        videoId: null, // will be filled below
-        trackCount,
-      });
-    }
-
-    pageToken = data.nextPageToken;
-    console.log(`Fetched ${playlists.length} release playlists so far...`);
-  } while (pageToken);
-
-  console.log(`Total release playlists found: ${playlists.length}`);
-
-  // For each playlist, fetch the first item to get videoId and better thumbnail
-  for (const playlist of playlists) {
+  // Extract ytInitialData
+  const ytDataMatch = html.match(/var ytInitialData\s*=\s*({.*?});\s*<\/script>/s);
+  if (ytDataMatch) {
     try {
-      const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${playlist.playlistId}&maxResults=1&key=${apiKey}`;
+      const data = JSON.parse(ytDataMatch[1]);
+      const releases = extractReleasesFromInitialData(data);
+      if (releases.length > 0) return enrichWithVideoIds(releases, apiKey);
+    } catch (e) {
+      console.error('Failed to parse ytInitialData:', e);
+    }
+  }
+
+  // Alt pattern
+  const altMatch = html.match(/ytInitialData\s*=\s*'([^']+)'/);
+  if (altMatch) {
+    try {
+      const decoded = JSON.parse(altMatch[1].replace(/\\x([0-9a-f]{2})/gi, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16))));
+      const releases = extractReleasesFromInitialData(decoded);
+      if (releases.length > 0) return enrichWithVideoIds(releases, apiKey);
+    } catch (e) {
+      console.error('Failed to parse alt ytInitialData:', e);
+    }
+  }
+
+  const jsonMatch = html.match(/ytInitialData["\s]*[=:]\s*({[\s\S]*?});\s*(?:window\[|var )/);
+  if (jsonMatch) {
+    try {
+      const data = JSON.parse(jsonMatch[1]);
+      const releases = extractReleasesFromInitialData(data);
+      if (releases.length > 0) return enrichWithVideoIds(releases, apiKey);
+    } catch (e) {
+      console.error('Failed to parse json ytInitialData:', e);
+    }
+  }
+
+  console.warn('No ytInitialData found in releases page');
+  return [];
+}
+
+// For releases with a playlist but no video, resolve the first video via API
+async function enrichWithVideoIds(releases: ArtistRelease[], apiKey: string): Promise<ArtistRelease[]> {
+  for (const release of releases) {
+    if (release.videoId || !release.playlistId) continue;
+    try {
+      const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${release.playlistId}&maxResults=1&key=${apiKey}`;
       const res = await fetch(url);
       if (!res.ok) continue;
       const data = await res.json();
       const firstItem = data.items?.[0]?.snippet;
       if (firstItem) {
-        playlist.videoId = firstItem.resourceId?.videoId || null;
-        // Use the video thumbnail if playlist thumbnail is missing
-        if (!playlist.thumbnail_url && playlist.videoId) {
-          playlist.thumbnail_url = firstItem.thumbnails?.maxres?.url
+        release.videoId = firstItem.resourceId?.videoId || null;
+        if (!release.thumbnail_url && release.videoId) {
+          release.thumbnail_url = firstItem.thumbnails?.maxres?.url
             || firstItem.thumbnails?.high?.url
-            || `https://i.ytimg.com/vi/${playlist.videoId}/maxresdefault.jpg`;
+            || `https://i.ytimg.com/vi/${release.videoId}/maxresdefault.jpg`;
         }
       }
     } catch (e) {
-      console.warn(`Failed to fetch first item for playlist ${playlist.playlistId}:`, e);
+      console.warn(`Failed to resolve video for playlist ${release.playlistId}:`, e);
     }
   }
-
-  return playlists;
+  return releases;
 }
 
 // ── Enrichment + DB upsert ──────────────────────────────────────
