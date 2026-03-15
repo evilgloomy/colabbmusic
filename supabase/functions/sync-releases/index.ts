@@ -641,7 +641,62 @@ Deno.serve(async (req) => {
     // Step 3: Upsert
     const { inserted, updated } = await upsertReleases(enriched);
 
-    // Step 4: Cache album art thumbnails to storage
+    // Step 4: Sync album tracks for playlists
+    let tracksSynced = 0;
+    try {
+      const allRelRes = await fetch(
+        `${supabaseUrl}/rest/v1/releases?select=id,playlist_id,track_count&track_count=gt.1&playlist_id=not.is.null&limit=500`,
+        { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } }
+      );
+      const albums = await allRelRes.json();
+      console.log(`Found ${(albums || []).length} albums with playlists to sync tracks`);
+
+      for (const album of (albums || [])) {
+        try {
+          const plUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${album.playlist_id}&maxResults=50&key=${youtubeApiKey}`;
+          const plRes = await fetch(plUrl);
+          if (!plRes.ok) { console.warn(`Playlist fetch failed for ${album.playlist_id}: ${plRes.status}`); continue; }
+          const plData = await plRes.json();
+          const items = plData.items || [];
+          if (items.length === 0) continue;
+
+          const trackRows = items.map((item: any, idx: number) => ({
+            release_id: album.id,
+            video_id: item.snippet?.resourceId?.videoId || item.contentDetails?.videoId || '',
+            title: item.snippet?.title || 'Untitled',
+            track_number: idx + 1,
+            thumbnail_url: item.snippet?.thumbnails?.high?.url || item.snippet?.thumbnails?.default?.url || null,
+          })).filter((t: any) => t.video_id && t.title !== 'Private video' && t.title !== 'Deleted video');
+
+          if (trackRows.length === 0) continue;
+
+          const trackUpsertRes = await fetch(`${supabaseUrl}/rest/v1/release_tracks`, {
+            method: 'POST',
+            headers: {
+              apikey: serviceRoleKey,
+              Authorization: `Bearer ${serviceRoleKey}`,
+              'Content-Type': 'application/json',
+              Prefer: 'resolution=merge-duplicates,return=minimal',
+            },
+            body: JSON.stringify(trackRows),
+          });
+          if (trackUpsertRes.ok) {
+            tracksSynced += trackRows.length;
+            console.log(`Synced ${trackRows.length} tracks for "${album.playlist_id}"`);
+          } else {
+            console.warn(`Track upsert failed for ${album.playlist_id}: ${trackUpsertRes.status}`);
+          }
+          await new Promise(r => setTimeout(r, 200));
+        } catch (e) {
+          console.warn(`Error syncing tracks for ${album.playlist_id}:`, e);
+        }
+      }
+      console.log(`Total tracks synced: ${tracksSynced}`);
+    } catch (e) {
+      console.warn('Track sync error (non-fatal):', e);
+    }
+
+    // Step 5: Cache album art thumbnails to storage
     let artCached = 0;
     try {
       const storageBase = `${supabaseUrl}/storage/v1`;
