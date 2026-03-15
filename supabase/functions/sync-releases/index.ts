@@ -590,7 +590,7 @@ Deno.serve(async (req) => {
 
     const summary = {
       success: true,
-      source: 'youtube_data_api',
+      source: 'artist_releases',
       total: toProcess.length,
       inserted,
       updated,
