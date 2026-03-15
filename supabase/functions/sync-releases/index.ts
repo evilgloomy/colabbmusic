@@ -506,25 +506,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Starting YouTube Data API sync (test=${testMode})...`);
+    console.log(`Starting artist releases sync (test=${testMode})...`);
 
-    // Step 1: Fetch all uploads via YouTube Data API
-    const uploads = await fetchChannelUploads(youtubeApiKey);
+    // Step 1: Fetch all official releases from @Cola_BB channel
+    const releases = await fetchArtistReleases(youtubeApiKey);
 
-    if (uploads.length === 0) {
+    if (releases.length === 0) {
       return new Response(
-        JSON.stringify({ success: true, message: 'No uploads found', inserted: 0, updated: 0 }),
+        JSON.stringify({ success: true, message: 'No releases found', inserted: 0, updated: 0 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Filter out music videos — only keep audio releases
-    const MV_PATTERNS = /official\s*(music\s*)?video|[\(（]\s*MV\s*[\)）]/i;
-    const filtered = uploads.filter(v => !MV_PATTERNS.test(v.title));
-    console.log(`Filtered ${uploads.length - filtered.length} music videos, ${filtered.length} releases remain`);
-
-    const toProcess = testMode ? filtered.slice(0, 3) : filtered;
-    console.log(`Processing ${toProcess.length} uploads...`);
+    const toProcess = testMode ? releases.slice(0, 3) : releases;
+    console.log(`Processing ${toProcess.length} releases...`);
 
     // Step 2: Enrich + stable ordering (latest first)
     const enriched = [...toProcess]
