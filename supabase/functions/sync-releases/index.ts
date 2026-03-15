@@ -115,10 +115,12 @@ function enrichRelease(item: ArtistRelease): any {
   }
 
   return {
-    video_id: item.videoId,
+    playlist_id: item.playlistId,
+    video_id: item.videoId || null,
     title: item.title,
     description: item.description || null,
-    thumbnail_url: item.thumbnail_url,
+    thumbnail_url: item.thumbnail_url || null,
+    track_count: item.trackCount || null,
     year: year ? String(year) : null,
     release_date: item.publishedAt ? item.publishedAt.split('T')[0] : null,
     sort_date: item.publishedAt ? item.publishedAt.split('T')[0] : null,
