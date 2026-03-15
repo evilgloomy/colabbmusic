@@ -210,9 +210,16 @@ function enrichRelease(item: ArtistRelease): any {
   const yearMatch = item.title?.match(/\((\d{4})\)$/);
   if (yearMatch) year = parseInt(yearMatch[1]);
 
-  // Try to extract year from publishedAt
-  if (!year && item.publishedAt) {
+  // publishedAt from scraper is relative text ("2 weeks ago"), not ISO
+  // Only use it if it looks like an ISO date
+  const isIsoDate = item.publishedAt && /^\d{4}-\d{2}-\d{2}/.test(item.publishedAt);
+  const dateStr = isIsoDate ? item.publishedAt.split('T')[0] : null;
+
+  if (!year && isIsoDate) {
     year = new Date(item.publishedAt).getFullYear();
+  }
+  if (!year) {
+    year = new Date().getFullYear();
   }
 
   return {
@@ -223,8 +230,8 @@ function enrichRelease(item: ArtistRelease): any {
     thumbnail_url: item.thumbnail_url || null,
     track_count: item.trackCount || null,
     year: year ? String(year) : null,
-    release_date: item.publishedAt ? item.publishedAt.split('T')[0] : null,
-    sort_date: item.publishedAt ? item.publishedAt.split('T')[0] : null,
+    release_date: dateStr,
+    sort_date: dateStr,
   };
 }
 
