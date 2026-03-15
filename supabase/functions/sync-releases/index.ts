@@ -147,7 +147,7 @@ async function upsertReleases(releases: any[]): Promise<{ inserted: number; upda
     return true;
   });
 
-  const res = await fetch(`${supabaseUrl}/rest/v1/releases`, {
+  const res = await fetch(`${supabaseUrl}/rest/v1/releases?on_conflict=video_id`, {
     method: 'POST',
     headers: {
       'apikey': serviceRoleKey,
