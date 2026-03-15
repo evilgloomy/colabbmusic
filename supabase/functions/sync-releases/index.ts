@@ -518,7 +518,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    const toProcess = testMode ? uploads.slice(0, 3) : uploads;
+    // Filter out music videos — only keep audio releases
+    const MV_PATTERNS = /official\s*(music\s*)?video|[\(（]\s*MV\s*[\)）]/i;
+    const filtered = uploads.filter(v => !MV_PATTERNS.test(v.title));
+    console.log(`Filtered ${uploads.length - filtered.length} music videos, ${filtered.length} releases remain`);
+
+    const toProcess = testMode ? filtered.slice(0, 3) : filtered;
     console.log(`Processing ${toProcess.length} uploads...`);
 
     // Step 2: Enrich + stable ordering (latest first)
