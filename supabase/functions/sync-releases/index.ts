@@ -493,8 +493,13 @@ Deno.serve(async (req) => {
     const toProcess = testMode ? uploads.slice(0, 3) : uploads;
     console.log(`Processing ${toProcess.length} uploads...`);
 
-    // Step 2: Enrich
-    const enriched = toProcess.map(enrichRelease);
+    // Step 2: Enrich + stable ordering (latest first)
+    const enriched = [...toProcess]
+      .sort((a, b) => (b.publishedAt || '').localeCompare(a.publishedAt || ''))
+      .map((item, index) => ({
+        ...enrichRelease(item),
+        sort_order: index,
+      }));
 
     // Step 3: Upsert
     const { inserted, updated } = await upsertReleases(enriched);
