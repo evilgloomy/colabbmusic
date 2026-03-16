@@ -8,6 +8,7 @@ import { useArtistAgentAuth } from '@/contexts/ArtistAgentAuth';
 import { artistAgent } from '@/lib/artistAgent';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface Message {
   id: string;
@@ -17,6 +18,7 @@ interface Message {
 }
 
 const ChatPage = () => {
+  const { t } = useTranslation();
   const { user, session, loading: authLoading, signOut } = useArtistAgentAuth();
   const [character, setCharacter] = useState<any>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -30,7 +32,6 @@ const ChatPage = () => {
   } | null>(null);
   const [subCheckDone, setSubCheckDone] = useState(false);
 
-  // Check subscription after auth
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
@@ -45,20 +46,12 @@ const ChatPage = () => {
   const checkSubscription = async () => {
     setPageLoading(true);
     try {
-      const { data, error: subErr } = await artistAgent.functions.invoke('check-subscription', {
-        body: {},
-      });
-
-      // The edge function may return 500 but still include valid subscription data
+      const { data, error: subErr } = await artistAgent.functions.invoke('check-subscription', { body: {} });
       const subData = data || {};
       if (subErr && !subData.subscription_tier) {
-        console.warn('Subscription check returned error without data:', subErr);
         setSubscriptionStatus({ subscribed: false });
       } else {
-        setSubscriptionStatus({
-          subscribed: subData.subscribed === true,
-          subscription_tier: subData.subscription_tier,
-        });
+        setSubscriptionStatus({ subscribed: subData.subscribed === true, subscription_tier: subData.subscription_tier });
       }
     } catch (err) {
       console.error('Subscription check failed:', err);
@@ -68,7 +61,6 @@ const ChatPage = () => {
     }
   };
 
-  // Init chat only after subscription confirmed
   useEffect(() => {
     if (!subCheckDone || !subscriptionStatus?.subscribed || !user) {
       if (subCheckDone) setPageLoading(false);
@@ -103,54 +95,33 @@ const ChatPage = () => {
         .maybeSingle();
 
       let convoId: string;
-
       if (existingConvo) {
         convoId = existingConvo.id;
       } else {
         const { data: newConvo, error: convoErr } = await artistAgent
           .from('conversations')
-          .insert({
-            user_id: user!.id,
-            character_id: charData.id,
-            title: `Chat with ${charData.name}`,
-            context: { model: 'grok' },
-          })
+          .insert({ user_id: user!.id, character_id: charData.id, title: `Chat with ${charData.name}`, context: { model: 'grok' } })
           .select()
           .single();
-
         if (convoErr || !newConvo) {
           setError('Could not start conversation. Please try again.');
           setPageLoading(false);
           return;
         }
         convoId = newConvo.id;
-
         if (charData.greeting?.trim()) {
-          await artistAgent.from('messages').insert({
-            conversation_id: convoId,
-            content: charData.greeting,
-            sender: 'character',
-            message_type: 'text',
-          });
+          await artistAgent.from('messages').insert({ conversation_id: convoId, content: charData.greeting, sender: 'character', message_type: 'text' });
         }
       }
 
       setConversationId(convoId);
-
       const { data: msgs } = await artistAgent
         .from('messages')
         .select('id,content,sender,created_at,message_type')
         .eq('conversation_id', convoId)
         .order('created_at', { ascending: true });
 
-      setMessages(
-        (msgs || []).map((m: any) => ({
-          id: m.id,
-          content: m.content,
-          sender: m.sender as 'user' | 'character',
-          created_at: m.created_at,
-        }))
-      );
+      setMessages((msgs || []).map((m: any) => ({ id: m.id, content: m.content, sender: m.sender as 'user' | 'character', created_at: m.created_at })));
     } catch (err) {
       console.error('Chat init error:', err);
       setError('Something went wrong. Please try again.');
@@ -162,122 +133,57 @@ const ChatPage = () => {
   const handleSend = useCallback(async (content: string) => {
     if (!conversationId || !character || !session) return;
     setIsSending(true);
-
     try {
-      const { data: savedMsg } = await artistAgent
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          content,
-          sender: 'user',
-          message_type: 'text',
-        })
-        .select()
-        .single();
-
-      const userMessage: Message = {
-        id: savedMsg?.id || crypto.randomUUID(),
-        content,
-        sender: 'user',
-        created_at: savedMsg?.created_at || new Date().toISOString(),
-      };
-
+      const { data: savedMsg } = await artistAgent.from('messages').insert({ conversation_id: conversationId, content, sender: 'user', message_type: 'text' }).select().single();
+      const userMessage: Message = { id: savedMsg?.id || crypto.randomUUID(), content, sender: 'user', created_at: savedMsg?.created_at || new Date().toISOString() };
       setMessages((prev) => [...prev, userMessage]);
 
-      // Use chat-with-grok for unrestricted mode
       const { data: aiData, error: aiError } = await artistAgent.functions.invoke('chat-with-grok', {
-        body: {
-          message: content,
-          conversationId,
-          characterId: character.id,
-          characterName: character.name,
-          characterPersonality: character.personality,
-          characterDescription: character.description,
-          characterInstructions: character.instruction_details,
-          systemPrompt: character.system_prompt,
-          model: 'grok',
-        },
+        body: { message: content, conversationId, characterId: character.id, characterName: character.name, characterPersonality: character.personality, characterDescription: character.description, characterInstructions: character.instruction_details, systemPrompt: character.system_prompt, model: 'grok' },
       });
-
       if (aiError) throw aiError;
-
       const aiContent = aiData?.response || 'Sorry, I could not generate a response.';
-
-      const { data: savedAi } = await artistAgent
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          content: aiContent,
-          sender: 'character',
-          message_type: 'text',
-        })
-        .select()
-        .single();
-
-      const aiMessage: Message = {
-        id: savedAi?.id || crypto.randomUUID(),
-        content: aiContent,
-        sender: 'character',
-        created_at: savedAi?.created_at || new Date().toISOString(),
-      };
-
+      const { data: savedAi } = await artistAgent.from('messages').insert({ conversation_id: conversationId, content: aiContent, sender: 'character', message_type: 'text' }).select().single();
+      const aiMessage: Message = { id: savedAi?.id || crypto.randomUUID(), content: aiContent, sender: 'character', created_at: savedAi?.created_at || new Date().toISOString() };
       setMessages((prev) => [...prev, aiMessage]);
-
-      await artistAgent
-        .from('conversations')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', conversationId);
+      await artistAgent.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', conversationId);
     } catch (err) {
       console.error('Send error:', err);
-      const errorMsg: Message = {
-        id: crypto.randomUUID(),
-        content: '❌ Failed to send message. Please try again.',
-        sender: 'character',
-        created_at: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) => [...prev, { id: crypto.randomUUID(), content: '❌ Failed to send message. Please try again.', sender: 'character', created_at: new Date().toISOString() }]);
     } finally {
       setIsSending(false);
     }
   }, [conversationId, character, session]);
 
-  // Loading state
   if (authLoading || pageLoading) {
     return (
       <PageLayout hideFooter>
         <div className="flex items-center justify-center" style={{ height: 'calc(100vh - 4rem)' }}>
           <div className="flex flex-col items-center gap-3">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <p className="text-sm text-muted-foreground">Loading Chat with Cola B…</p>
+            <p className="text-sm text-muted-foreground">{t("chat.loadingChat")}</p>
           </div>
         </div>
       </PageLayout>
     );
   }
 
-  // Not authenticated
   if (!user) {
     return (
       <PageLayout hideFooter>
-        <div style={{ height: 'calc(100vh - 4rem)' }}>
-          <ChatAuthForm />
-        </div>
+        <div style={{ height: 'calc(100vh - 4rem)' }}><ChatAuthForm /></div>
       </PageLayout>
     );
   }
 
-  // Not subscribed — show premium gate
   if (subCheckDone && (!subscriptionStatus?.subscribed)) {
     return (
       <PageLayout hideFooter>
-        <div style={{ height: 'calc(100vh - 4rem)' }}>
-          <PremiumGate onRefresh={checkSubscription} />
-        </div>
+        <div style={{ height: 'calc(100vh - 4rem)' }}><PremiumGate onRefresh={checkSubscription} /></div>
       </PageLayout>
     );
   }
 
-  // Error state
   if (error) {
     return (
       <PageLayout hideFooter>
@@ -296,29 +202,15 @@ const ChatPage = () => {
       <div className="flex flex-col" style={{ height: 'calc(100vh - 4rem)' }}>
         <div className="border-b border-border bg-background px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {character?.avatar_url && (
-              <img
-                src={character.avatar_url}
-                alt={character.name}
-                className="w-9 h-9 rounded-full object-cover border border-border"
-              />
-            )}
+            {character?.avatar_url && <img src={character.avatar_url} alt={character.name} className="w-9 h-9 rounded-full object-cover border border-border" />}
             <div>
               <h1 className="text-sm font-semibold text-foreground font-sora">{character?.name || 'Cola B'}</h1>
-              <p className="text-xs text-muted-foreground">AI Chat · Powered by ArtistAgent.AI</p>
+              <p className="text-xs text-muted-foreground">{t("chat.aiChat")}</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
-            <LogOut className="w-4 h-4" />
-          </Button>
+          <Button variant="ghost" size="icon" onClick={signOut} title="Sign out"><LogOut className="w-4 h-4" /></Button>
         </div>
-
-        <ChatMessages
-          messages={messages}
-          isLoading={isSending}
-          characterName={character?.name || 'Cola B'}
-        />
-
+        <ChatMessages messages={messages} isLoading={isSending} characterName={character?.name || 'Cola B'} />
         <ChatInput onSend={handleSend} disabled={isSending} />
       </div>
     </PageLayout>

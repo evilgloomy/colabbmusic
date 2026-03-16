@@ -4,6 +4,7 @@ import { ArrowLeft, ExternalLink, MapPin, Calendar } from "lucide-react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useSEO, SITE_URL } from "@/hooks/useSEO";
+import { useTranslation } from "react-i18next";
 
 interface Story {
   id: string;
@@ -19,6 +20,8 @@ interface Story {
 }
 
 const StoryDetailPage = () => {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language?.startsWith("zh") ? "zh-HK" : "en-US";
   const { id } = useParams<{ id: string }>();
   const [story, setStory] = useState<Story | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,10 +80,8 @@ const StoryDetailPage = () => {
     return (
       <PageLayout>
         <div className="container mx-auto px-6 py-32 text-center">
-          <h1 className="text-display-md font-display font-bold text-foreground mb-4">Story not found</h1>
-          <Link to="/story" className="text-primary hover:underline text-sm">
-            ← Back to all stories
-          </Link>
+          <h1 className="text-display-md font-display font-bold text-foreground mb-4">{t("story.storyNotFound")}</h1>
+          <Link to="/story" className="text-primary hover:underline text-sm">{t("story.backToStories")}</Link>
         </div>
       </PageLayout>
     );
@@ -88,93 +89,48 @@ const StoryDetailPage = () => {
 
   const isVideo = story.media_type === "VIDEO";
   const formattedDate = story.posted_at
-    ? new Date(story.posted_at).toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      })
+    ? new Date(story.posted_at).toLocaleDateString(locale, { weekday: "long", month: "long", day: "numeric", year: "numeric" })
     : null;
 
   return (
     <PageLayout>
       <article className="container mx-auto px-6 py-24 md:py-32">
         <div className="max-w-3xl mx-auto">
-          {/* Back link */}
-          <Link
-            to="/story"
-            className="inline-flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase text-muted-foreground hover:text-foreground transition-colors mb-8"
-          >
+          <Link to="/story" className="inline-flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase text-muted-foreground hover:text-foreground transition-colors mb-8">
             <ArrowLeft className="h-3.5 w-3.5" />
-            All Stories
+            {t("story.allStories")}
           </Link>
 
-          {/* Category + meta */}
           <div className="flex flex-wrap items-center gap-3 mb-6">
             <span className="px-3 py-1 text-[10px] font-bold tracking-[0.2em] uppercase bg-secondary text-secondary-foreground rounded-sm">
-              {story.category || "lifestyle"}
+              {story.category || t("common.lifestyle")}
             </span>
             {story.location && (
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <MapPin className="h-3 w-3" />
-                {story.location}
-              </span>
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="h-3 w-3" />{story.location}</span>
             )}
             {formattedDate && (
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <Calendar className="h-3 w-3" />
-                {formattedDate}
-              </span>
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Calendar className="h-3 w-3" />{formattedDate}</span>
             )}
           </div>
 
-          {/* Title */}
-          <h1 className="text-display-md font-display font-bold text-foreground mb-8">
-            {story.ai_title || "Untitled"}
-          </h1>
+          <h1 className="text-display-md font-display font-bold text-foreground mb-8">{story.ai_title || t("common.untitled")}</h1>
 
-          {/* Media */}
           {story.media_url && (
             <div className="rounded-xl overflow-hidden mb-10">
               {isVideo ? (
-                <video
-                  src={story.media_url}
-                  controls
-                  muted
-                  autoPlay
-                  playsInline
-                  loop
-                  preload="auto"
-                  className="w-full rounded-xl"
-                />
+                <video src={story.media_url} controls muted autoPlay playsInline loop preload="auto" className="w-full rounded-xl" />
               ) : (
-                <img
-                  src={story.media_url}
-                  alt={story.ai_title || "Cola B story"}
-                  className="w-full h-auto rounded-xl"
-                  loading="eager"
-                />
+                <img src={story.media_url} alt={story.ai_title || t("common.untitled")} className="w-full h-auto rounded-xl" loading="eager" />
               )}
             </div>
           )}
 
-          {/* Enhanced text */}
-          {story.ai_enhanced_text && (
-            <p className="text-lg md:text-xl leading-relaxed text-foreground mb-8">
-              {story.ai_enhanced_text}
-            </p>
-          )}
+          {story.ai_enhanced_text && <p className="text-lg md:text-xl leading-relaxed text-foreground mb-8">{story.ai_enhanced_text}</p>}
 
-
-          {/* Threads link */}
           {story.permalink && (
-            <a
-              href={story.permalink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase text-muted-foreground hover:text-primary transition-colors"
-            >
-              View on Threads <ExternalLink className="h-3 w-3" />
+            <a href={story.permalink} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase text-muted-foreground hover:text-primary transition-colors">
+              {t("story.viewOnThreads")} <ExternalLink className="h-3 w-3" />
             </a>
           )}
         </div>
