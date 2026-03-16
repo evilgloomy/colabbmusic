@@ -3,8 +3,10 @@ import { Link } from "react-router-dom";
 import { fetchProducts } from "@/lib/shopify";
 import { isCoffeeProduct } from "@/lib/collections";
 import { ProductCard } from "@/components/store/ProductCard";
+import { useTranslation } from "react-i18next";
 
 export const StorePreview = () => {
+  const { t } = useTranslation();
   const { data: products = [] } = useQuery({
     queryKey: ["shopify-products-preview"],
     queryFn: () => fetchProducts(8),
@@ -17,18 +19,11 @@ export const StorePreview = () => {
     <section className="container mx-auto px-6 py-24 md:py-32">
       <div className="flex items-end justify-between mb-12">
         <div>
-          <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-3">
-            Shop
-          </p>
-          <h2 className="text-display-md font-display font-bold text-foreground">
-            Store
-          </h2>
+          <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-3">{t("home.shop")}</p>
+          <h2 className="text-display-md font-display font-bold text-foreground">{t("home.store")}</h2>
         </div>
-        <Link
-          to="/store"
-          className="text-xs font-medium tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors"
-        >
-          View All →
+        <Link to="/store" className="text-xs font-medium tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors">
+          {t("home.viewAllArrow")}
         </Link>
       </div>
       {filtered.length > 0 ? (
@@ -39,14 +34,9 @@ export const StorePreview = () => {
         </div>
       ) : (
         <div className="text-center py-16">
-          <p className="text-muted-foreground mb-6">
-            Browse Cola B's official merchandise and music.
-          </p>
-          <Link
-            to="/store"
-            className="inline-flex items-center px-8 py-3 bg-primary text-primary-foreground font-medium text-sm tracking-widest uppercase hover:bg-primary/90 transition-colors"
-          >
-            Shop Now
+          <p className="text-muted-foreground mb-6">{t("home.browseMerch")}</p>
+          <Link to="/store" className="inline-flex items-center px-8 py-3 bg-primary text-primary-foreground font-medium text-sm tracking-widest uppercase hover:bg-primary/90 transition-colors">
+            {t("home.shopNow")}
           </Link>
         </div>
       )}

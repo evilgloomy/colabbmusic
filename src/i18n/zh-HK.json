@@ -1,0 +1,147 @@
+{
+  "nav": {
+    "home": "主頁",
+    "music": "音樂",
+    "story": "故事",
+    "videos": "影片",
+    "store": "商店",
+    "press": "媒體",
+    "chat": "聊天"
+  },
+  "hero": {
+    "digitalSingerSongwriter": "數碼創作歌手。",
+    "livingHerMusic": "用音樂、生活和每一刻，活出自己。",
+    "listenNow": "立即收聽",
+    "watchVideo": "觀看影片"
+  },
+  "home": {
+    "latestReleases": "最新發佈",
+    "outNow": "現已推出",
+    "tracks": "首歌曲",
+    "viewAllLinks": "查看所有連結 →",
+    "insideColasWorld": "Cola的世界",
+    "fromHerWorld": "她的世界",
+    "viewAll": "查看全部",
+    "storiesComingSoon": "故事即將推出",
+    "latestMusicVideo": "最新音樂影片",
+    "visitTheStore": "瀏覽商店",
+    "featured": "精選",
+    "music": "音樂",
+    "viewAllMusic": "查看所有音樂 →",
+    "viewAllArrow": "查看全部 →",
+    "watch": "觀看",
+    "featuredVideo": "精選影片",
+    "shop": "選購",
+    "store": "商店",
+    "browseMerch": "瀏覽Cola B官方周邊商品及音樂。",
+    "shopNow": "立即選購",
+    "aboutTheArtist": "關於藝人",
+    "viewPressKit": "查看媒體資料"
+  },
+  "music": {
+    "listenEverywhere": "隨處收聽",
+    "pageTitle": "音樂",
+    "pageDesc": "每首歌是一個章節，每張專輯是一個世界。",
+    "streamOn": "收聽平台",
+    "discography": "作品集",
+    "albumsAndEPs": "專輯及EP",
+    "latestReleases": "最新發佈",
+    "singles": "單曲",
+    "showMore": "顯示更多",
+    "loading": "載入中…",
+    "noReleases": "未找到發佈作品。"
+  },
+  "story": {
+    "herWorld": "她的世界",
+    "pageTitle": "故事",
+    "pageDesc": "音樂、城市、時刻，以及其間的一切。Cola B世界的生活檔案。",
+    "all": "全部",
+    "categories": {
+      "all": "全部",
+      "music": "音樂",
+      "travel": "旅遊",
+      "fashion": "時尚",
+      "events": "活動",
+      "studio": "錄音室",
+      "lifestyle": "生活",
+      "humor": "幽默"
+    },
+    "noStoriesYet": "Threads上的故事同步後將在此顯示。",
+    "noCategoryStories": "此分類暫無故事。",
+    "storyNotFound": "未找到故事",
+    "backToStories": "← 返回所有故事",
+    "allStories": "所有故事",
+    "viewOnThreads": "在Threads上查看"
+  },
+  "videos": {
+    "visual": "視覺",
+    "pageTitle": "影片",
+    "pageDesc": "Cola B VEVO頻道的官方音樂影片。",
+    "noVideos": "未找到影片，請稍後再來。",
+    "latest": "最新",
+    "allVideos": "所有影片"
+  },
+  "store": {
+    "shop": "選購",
+    "pageTitle": "商店",
+    "noProducts": "此系列暫無商品。"
+  },
+  "press": {
+    "media": "媒體",
+    "pageTitle": "媒體",
+    "pageDesc": "Cola B的官方媒體資料、簡介及媒體素材。",
+    "shortBio": "簡短介紹",
+    "biography": "藝人簡介",
+    "extendedBiography": "詳細介紹",
+    "latestRelease": "最新發佈",
+    "pressImages": "媒體圖片",
+    "pressKit": "媒體資料包",
+    "pressKitDesc": "下載完整媒體資料包，包括高清圖片、簡介及發佈資訊。",
+    "downloadPressKit": "下載媒體資料包",
+    "inquiries": "查詢",
+    "inquiriesDesc": "媒體查詢、演出預約及合作邀請。",
+    "contact": "聯絡"
+  },
+  "release": {
+    "album": "專輯",
+    "single": "單曲",
+    "playNow": "立即播放",
+    "tracklist": "曲目列表",
+    "listenEverywhere": "隨處收聽",
+    "streamingLinksSoon": "串流連結即將推出，同時可於以下平台收聽：",
+    "backToMusic": "返回音樂",
+    "releaseNotFound": "未找到作品"
+  },
+  "chat": {
+    "loadingChat": "正在載入與Cola B的聊天…",
+    "aiChat": "AI聊天 · 由ArtistAgent.AI提供"
+  },
+  "policies": {
+    "storePolicies": "商店政策",
+    "returnPolicy": "退貨政策",
+    "pageDesc": "關於退貨、退款及換貨的所有須知。",
+    "allSalesFinal": "所有銷售為最終交易。",
+    "allSalesFinalDesc": "由於每件商品均為獨立生產及包裝，我們不接受因尺寸、合適度或改變主意而提出的退貨或換貨。",
+    "damagedTitle": "如您的訂單到達時已損壞或有誤",
+    "conditionTitle": "退貨條件要求",
+    "nonReturnableTitle": "不可退貨商品",
+    "euTitle": "歐盟14天冷靜期",
+    "returnShippingTitle": "退貨運費",
+    "refundsTitle": "退款（經批准後）",
+    "needHelp": "需要幫助？"
+  },
+  "footer": {
+    "studioDesc": "Cola B背後的工作室 — 以創意重新定義數碼娛樂及AI增強音樂",
+    "aboutColaB": "關於Cola B",
+    "pressKit": "媒體資料包",
+    "contact": "聯絡",
+    "shippingReturns": "運送及退貨",
+    "allRightsReserved": "版權所有。",
+    "privacyPolicy": "私隱政策",
+    "termsOfService": "服務條款"
+  },
+  "common": {
+    "untitled": "未命名",
+    "lifestyle": "生活"
+  }
+}

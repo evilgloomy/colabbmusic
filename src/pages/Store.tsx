@@ -6,12 +6,15 @@ import { ProductCard } from "@/components/store/ProductCard";
 import { fetchProducts } from "@/lib/shopify";
 import { collections, isCoffeeProduct } from "@/lib/collections";
 import { useSEO } from "@/hooks/useSEO";
+import { useTranslation } from "react-i18next";
 import bannerStore from "@/assets/banner-store.jpg";
 
 const StorePage = () => {
+  const { t } = useTranslation();
+
   useSEO({
-    title: "Store — Cola B | Official Merchandise",
-    description: "Shop official Cola B merchandise — apparel, accessories, and limited-edition drops.",
+    title: t("store.pageTitle") + " — Cola B",
+    description: t("store.pageTitle"),
   });
 
   const [activeCollection, setActiveCollection] = useState("all");
@@ -31,28 +34,23 @@ const StorePage = () => {
 
   return (
     <PageLayout>
-      {/* Hero */}
       <section className="relative overflow-hidden">
         <img src={bannerStore} alt="" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-background/40" />
         <div className="relative container mx-auto px-6 py-32 md:py-40">
-          <p className="text-xs font-medium tracking-[0.3em] uppercase text-primary mb-4">Shop</p>
-          <h1 className="text-display-lg font-display font-bold text-foreground mb-6">Store</h1>
+          <p className="text-xs font-medium tracking-[0.3em] uppercase text-primary mb-4">{t("store.shop")}</p>
+          <h1 className="text-display-lg font-display font-bold text-foreground mb-6">{t("store.pageTitle")}</h1>
         </div>
       </section>
 
       <section className="container mx-auto px-6 pt-12 pb-16">
-
-        {/* Collection tabs */}
         <div className="flex flex-wrap gap-2 mb-10">
           {collections.map((col) => (
             <button
               key={col.id}
               onClick={() => setActiveCollection(col.id)}
               className={`px-4 py-2 text-xs font-semibold tracking-[0.12em] uppercase transition-colors ${
-                activeCollection === col.id
-                  ? "bg-foreground text-background"
-                  : "bg-muted text-muted-foreground hover:text-foreground"
+                activeCollection === col.id ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground"
               }`}
             >
               {col.label}
@@ -61,18 +59,12 @@ const StorePage = () => {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-24">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
+          <div className="flex items-center justify-center py-24"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
         ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-24">
-            <p className="text-muted-foreground">No products found in this collection.</p>
-          </div>
+          <div className="text-center py-24"><p className="text-muted-foreground">{t("store.noProducts")}</p></div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
-            {filteredProducts.map((product) => (
-              <ProductCard key={product.node.id} product={product} />
-            ))}
+            {filteredProducts.map((product) => <ProductCard key={product.node.id} product={product} />)}
           </div>
         )}
       </section>

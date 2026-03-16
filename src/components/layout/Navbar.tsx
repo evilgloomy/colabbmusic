@@ -2,47 +2,55 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Instagram } from "lucide-react";
 import { CartDrawer } from "@/components/store/CartDrawer";
+import { useTranslation } from "react-i18next";
 
-const navItems = [
-  { label: "Home", path: "/" },
-  { label: "Music", path: "/music" },
-  { label: "Story", path: "/story" },
-  { label: "Videos", path: "/videos" },
-  { label: "Store", path: "/store" },
-  { label: "Press", path: "/press" },
-  { label: "Chat", path: "/chat" },
-];
+const navKeys = ["home", "music", "story", "videos", "store", "press", "chat"] as const;
+const navPaths = ["/", "/music", "/story", "/videos", "/store", "/press", "/chat"];
 
 export const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const { t, i18n } = useTranslation();
+
+  const toggleLang = () => {
+    const next = i18n.language?.startsWith("zh") ? "en" : "zh-HK";
+    i18n.changeLanguage(next);
+  };
+
+  const langLabel = i18n.language?.startsWith("zh") ? "EN" : "繁";
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass-strong">
       <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-        {/* Desktop nav — left aligned with slash separators */}
+        {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-1">
-          {navItems.map((item, i) => (
-            <span key={item.path} className="flex items-center">
+          {navKeys.map((key, i) => (
+            <span key={key} className="flex items-center">
               <Link
-                to={item.path}
+                to={navPaths[i]}
                 className={`px-3 py-1 text-xs font-semibold tracking-[0.15em] uppercase transition-colors ${
-                  location.pathname === item.path
+                  location.pathname === navPaths[i]
                     ? "text-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {item.label}
+                {t(`nav.${key}`)}
               </Link>
-              {i < navItems.length - 1 && (
+              {i < navKeys.length - 1 && (
                 <span className="text-border text-xs">/</span>
               )}
             </span>
           ))}
         </div>
 
-        {/* Right side: social icons + hamburger */}
+        {/* Right side */}
         <div className="flex items-center gap-4 ml-auto">
+          <button
+            onClick={toggleLang}
+            className="px-2.5 py-1 text-xs font-bold tracking-wider text-muted-foreground hover:text-foreground border border-border/40 hover:border-border rounded transition-colors"
+          >
+            {langLabel}
+          </button>
           <CartDrawer />
           <a
             href="https://www.instagram.com/cola_bb_official/"
@@ -76,18 +84,18 @@ export const Navbar = () => {
       {mobileOpen && (
         <div className="md:hidden glass-strong border-t border-border/40">
           <div className="container mx-auto px-6 py-6 flex flex-col gap-4">
-            {navItems.map((item) => (
+            {navKeys.map((key, i) => (
               <Link
-                key={item.path}
-                to={item.path}
+                key={key}
+                to={navPaths[i]}
                 onClick={() => setMobileOpen(false)}
                 className={`text-sm font-semibold tracking-[0.15em] uppercase transition-colors ${
-                  location.pathname === item.path
+                  location.pathname === navPaths[i]
                     ? "text-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {item.label}
+                {t(`nav.${key}`)}
               </Link>
             ))}
           </div>

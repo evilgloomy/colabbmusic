@@ -1,0 +1,147 @@
+{
+  "nav": {
+    "home": "Home",
+    "music": "Music",
+    "story": "Story",
+    "videos": "Videos",
+    "store": "Store",
+    "press": "Press",
+    "chat": "Chat"
+  },
+  "hero": {
+    "digitalSingerSongwriter": "Digital Singer-Songwriter.",
+    "livingHerMusic": "Living her music, life, and moments.",
+    "listenNow": "Listen Now",
+    "watchVideo": "Watch Video"
+  },
+  "home": {
+    "latestReleases": "Latest Releases",
+    "outNow": "Out Now",
+    "tracks": "tracks",
+    "viewAllLinks": "View All Links →",
+    "insideColasWorld": "Inside Cola's World",
+    "fromHerWorld": "From Her World",
+    "viewAll": "View All",
+    "storiesComingSoon": "Stories coming soon",
+    "latestMusicVideo": "Latest Music Video",
+    "visitTheStore": "Visit the Store",
+    "featured": "Featured",
+    "music": "Music",
+    "viewAllMusic": "View All Music →",
+    "viewAllArrow": "View All →",
+    "watch": "Watch",
+    "featuredVideo": "Featured Video",
+    "shop": "Shop",
+    "store": "Store",
+    "browseMerch": "Browse Cola B's official merchandise and music.",
+    "shopNow": "Shop Now",
+    "aboutTheArtist": "About the Artist",
+    "viewPressKit": "View Press Kit"
+  },
+  "music": {
+    "listenEverywhere": "Listen Everywhere",
+    "pageTitle": "Music",
+    "pageDesc": "Every song is a chapter. Every release is a world.",
+    "streamOn": "Stream on",
+    "discography": "Discography",
+    "albumsAndEPs": "Albums & EPs",
+    "latestReleases": "Latest Releases",
+    "singles": "Singles",
+    "showMore": "Show More",
+    "loading": "Loading…",
+    "noReleases": "No releases found."
+  },
+  "story": {
+    "herWorld": "Her World",
+    "pageTitle": "Story",
+    "pageDesc": "Music, cities, moments, and everything in between. A living archive of Cola B's world.",
+    "all": "all",
+    "categories": {
+      "all": "all",
+      "music": "music",
+      "travel": "travel",
+      "fashion": "fashion",
+      "events": "events",
+      "studio": "studio",
+      "lifestyle": "lifestyle",
+      "humor": "humor"
+    },
+    "noStoriesYet": "Stories from Threads will appear here once synced.",
+    "noCategoryStories": "No stories in this category yet.",
+    "storyNotFound": "Story not found",
+    "backToStories": "← Back to all stories",
+    "allStories": "All Stories",
+    "viewOnThreads": "View on Threads"
+  },
+  "videos": {
+    "visual": "Visual",
+    "pageTitle": "Videos",
+    "pageDesc": "Official music videos from Cola B's VEVO channel.",
+    "noVideos": "No videos found. Check back soon.",
+    "latest": "Latest",
+    "allVideos": "All Videos"
+  },
+  "store": {
+    "shop": "Shop",
+    "pageTitle": "Store",
+    "noProducts": "No products found in this collection."
+  },
+  "press": {
+    "media": "Media",
+    "pageTitle": "Press",
+    "pageDesc": "Official press materials, bios, and media assets for Cola B.",
+    "shortBio": "Short Bio",
+    "biography": "Biography",
+    "extendedBiography": "Extended Biography",
+    "latestRelease": "Latest Release",
+    "pressImages": "Press Images",
+    "pressKit": "Press Kit",
+    "pressKitDesc": "Download the complete press kit including high-resolution images, bio, and release information.",
+    "downloadPressKit": "Download Press Kit",
+    "inquiries": "Inquiries",
+    "inquiriesDesc": "For press inquiries, booking, and collaboration requests.",
+    "contact": "Contact"
+  },
+  "release": {
+    "album": "Album",
+    "single": "Single",
+    "playNow": "Play Now",
+    "tracklist": "Tracklist",
+    "listenEverywhere": "Listen Everywhere",
+    "streamingLinksSoon": "Streaming links coming soon. In the meantime:",
+    "backToMusic": "Back to Music",
+    "releaseNotFound": "Release not found"
+  },
+  "chat": {
+    "loadingChat": "Loading Chat with Cola B…",
+    "aiChat": "AI Chat · Powered by ArtistAgent.AI"
+  },
+  "policies": {
+    "storePolicies": "Store Policies",
+    "returnPolicy": "Return Policy",
+    "pageDesc": "Everything you need to know about returns, refunds, and exchanges.",
+    "allSalesFinal": "All sales are final.",
+    "allSalesFinalDesc": "Because each item is produced and packed individually, we do not accept returns or exchanges for size, fit, or change-of-mind.",
+    "damagedTitle": "If Your Order Arrives Damaged or Incorrect",
+    "conditionTitle": "Condition Requirements",
+    "nonReturnableTitle": "Non-Returnable Items",
+    "euTitle": "EU 14-Day Cooling-Off Period",
+    "returnShippingTitle": "Return Shipping",
+    "refundsTitle": "Refunds (When Approved)",
+    "needHelp": "Need Help?"
+  },
+  "footer": {
+    "studioDesc": "The Studio Behind Cola B. — Creatively redefining digital entertainment and AI-enhanced music",
+    "aboutColaB": "About Cola B",
+    "pressKit": "Press Kit",
+    "contact": "Contact",
+    "shippingReturns": "Shipping & Returns",
+    "allRightsReserved": "All rights reserved.",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service"
+  },
+  "common": {
+    "untitled": "Untitled",
+    "lifestyle": "lifestyle"
+  }
+}

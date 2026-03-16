@@ -1,8 +1,10 @@
 import { Play, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { fetchYouTubeFeed, CHANNELS, type YouTubeVideo } from "@/lib/youtube";
+import { useTranslation } from "react-i18next";
 
 export const FeaturedVideo = () => {
+  const { t } = useTranslation();
   const [video, setVideo] = useState<YouTubeVideo | null>(null);
   const [loading, setLoading] = useState(true);
   const [playing, setPlaying] = useState(false);
@@ -30,8 +32,8 @@ export const FeaturedVideo = () => {
       <div className="container mx-auto px-6 py-24 md:py-32">
         <div className="flex items-end justify-between mb-12">
           <div>
-            <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-3">Watch</p>
-            <h2 className="text-display-md font-display font-bold text-foreground">Featured Video</h2>
+            <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-3">{t("home.watch")}</p>
+            <h2 className="text-display-md font-display font-bold text-foreground">{t("home.featuredVideo")}</h2>
           </div>
         </div>
 
@@ -45,15 +47,8 @@ export const FeaturedVideo = () => {
               title={video.title}
             />
           ) : (
-            <button
-              onClick={() => setPlaying(true)}
-              className="w-full h-full relative group cursor-pointer"
-            >
-              <img
-                src={video.thumbnail}
-                alt={video.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-              />
+            <button onClick={() => setPlaying(true)} className="w-full h-full relative group cursor-pointer">
+              <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
               <div className="absolute inset-0 bg-background/30 group-hover:bg-background/20 transition-colors" />
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-20 h-20 rounded-full border-2 border-foreground/60 flex items-center justify-center group-hover:border-primary group-hover:scale-110 transition-all">
