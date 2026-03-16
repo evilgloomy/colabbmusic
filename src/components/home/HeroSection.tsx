@@ -1,11 +1,14 @@
 import { Link } from "react-router-dom";
 import { Play, Video } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import heroImage from "@/assets/hero-cola-b.png";
 
 export const HeroSection = () => {
+  const { t } = useTranslation();
+
   return (
     <section className="relative min-h-[70vh] flex items-end overflow-hidden">
-      {/* Background gradient — champagne to lavender */}
+      {/* Background gradient */}
       <div
         className="absolute inset-0"
         style={{
@@ -54,10 +57,9 @@ export const HeroSection = () => {
         />
       </div>
 
-      {/* Hero portrait — right side */}
+      {/* Hero portrait */}
       <div className="absolute right-0 top-0 bottom-0 w-full md:w-[60%] flex items-center justify-end">
         <div className="relative h-full w-full">
-          {/* Cyan/purple glow aura behind portrait */}
           <div
             className="absolute inset-0 opacity-50"
             style={{
@@ -77,7 +79,7 @@ export const HeroSection = () => {
         </div>
       </div>
 
-      {/* Content — left-aligned, bottom portion */}
+      {/* Content */}
       <div className="relative container mx-auto px-6 pb-20 md:pb-28 pt-40 z-10">
         <h1
           className="text-hero font-display font-bold text-foreground mb-4 animate-fade-in opacity-0 tracking-[0.08em]"
@@ -89,13 +91,13 @@ export const HeroSection = () => {
           className="text-lg md:text-xl font-display font-medium text-foreground/80 mb-2 animate-fade-in opacity-0"
           style={{ animationDelay: "0.4s" }}
         >
-          Digital Singer-Songwriter.
+          {t("hero.digitalSingerSongwriter")}
         </p>
         <p
           className="text-sm md:text-base text-muted-foreground max-w-md mb-10 animate-fade-in opacity-0"
           style={{ animationDelay: "0.6s" }}
         >
-          Living her music, life, and moments.
+          {t("hero.livingHerMusic")}
         </p>
         <div
           className="flex flex-wrap items-center gap-4 animate-fade-in opacity-0"
@@ -109,23 +111,21 @@ export const HeroSection = () => {
               color: "hsl(240 10% 15%)",
             }}
           >
-            Listen Now <Play className="h-4 w-4" />
+            {t("hero.listenNow")} <Play className="h-4 w-4" />
           </Link>
           <Link
             to="/videos"
             className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full border border-foreground/20 text-foreground text-sm font-semibold tracking-wider uppercase hover:border-foreground/40 transition-all hover:scale-105"
           >
-            Watch Video <Video className="h-4 w-4" />
+            {t("hero.watchVideo")} <Video className="h-4 w-4" />
           </Link>
         </div>
       </div>
 
-      {/* Sparkle decorations */}
+      {/* Decorations */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 animate-fade-in opacity-0" style={{ animationDelay: "1.2s" }}>
         <div className="w-px h-10 bg-gradient-to-b from-transparent to-muted-foreground/30" />
       </div>
-
-      {/* Four-point star SVG decorations */}
       <svg className="absolute right-8 bottom-12 w-5 h-5 text-white/40 animate-pulse-glow" viewBox="0 0 24 24" fill="currentColor">
         <path d="M12 0L14 10L24 12L14 14L12 24L10 14L0 12L10 10Z" />
       </svg>

@@ -1,8 +1,11 @@
 import { Link } from "react-router-dom";
 import { Instagram } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import shibaLogo from "@/assets/shiba-inu-logo.png";
 
 export const Footer = () => {
+  const { t } = useTranslation();
+
   return (
     <footer className="border-t border-border/60 bg-card">
       <div className="container mx-auto px-6 py-12">
@@ -15,7 +18,7 @@ export const Footer = () => {
                 Shiba Inu Media
               </p>
               <p className="text-xs text-muted-foreground mt-1 max-w-xs">
-                The Studio Behind Cola B. — Creatively redefining digital entertainment and AI-enhanced music
+                {t("footer.studioDesc")}
               </p>
             </div>
           </div>
@@ -31,20 +34,20 @@ export const Footer = () => {
 
         {/* Links row */}
         <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground mb-6">
-          <Link to="/story" className="hover:text-foreground transition-colors">About Cola B</Link>
-          <Link to="/press" className="hover:text-foreground transition-colors">Press Kit</Link>
-          <a href="mailto:cola.bb.225@gmail.com" className="hover:text-foreground transition-colors">Contact</a>
-          <Link to="/policies" className="hover:text-foreground transition-colors">Shipping & Returns</Link>
+          <Link to="/story" className="hover:text-foreground transition-colors">{t("footer.aboutColaB")}</Link>
+          <Link to="/press" className="hover:text-foreground transition-colors">{t("footer.pressKit")}</Link>
+          <a href="mailto:cola.bb.225@gmail.com" className="hover:text-foreground transition-colors">{t("footer.contact")}</a>
+          <Link to="/policies" className="hover:text-foreground transition-colors">{t("footer.shippingReturns")}</Link>
         </div>
 
         {/* Bottom row */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-6 border-t border-border/40">
           <p className="text-[11px] text-muted-foreground/60">
-            © {new Date().getFullYear()} Cola B. All rights reserved.
+            © {new Date().getFullYear()} Cola B. {t("footer.allRightsReserved")}
           </p>
           <div className="flex gap-4 text-[11px] text-muted-foreground/60">
-            <span className="hover:text-muted-foreground transition-colors cursor-pointer">Privacy Policy</span>
-            <span className="hover:text-muted-foreground transition-colors cursor-pointer">Terms of Service</span>
+            <span className="hover:text-muted-foreground transition-colors cursor-pointer">{t("footer.privacyPolicy")}</span>
+            <span className="hover:text-muted-foreground transition-colors cursor-pointer">{t("footer.termsOfService")}</span>
           </div>
         </div>
       </div>
