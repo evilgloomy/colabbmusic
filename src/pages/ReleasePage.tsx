@@ -125,8 +125,7 @@ const ReleasePage = () => {
               {videoId && !isPlaying && (
                 <button
                   onClick={() => { setActiveVideoId(videoId); setIsPlaying(true); }}
-                  className="mt-8 inline-flex items-center gap-3 px-8 py-4 rounded-full font-semibold text-sm tracking-wider uppercase transition-all hover:scale-105"
-                  style={{ background: "linear-gradient(135deg, hsl(var(--champagne)) 0%, hsl(var(--primary)) 100%)", color: "hsl(260 25% 14%)" }}>
+                  className="mt-8 inline-flex items-center gap-3 px-8 py-4 font-body font-semibold text-sm tracking-wider uppercase bg-foreground text-background transition-all hover:opacity-90 active:scale-[0.97]">
                   <Play className="h-5 w-5" /> {t("release.playNow")}
                 </button>
               )}
