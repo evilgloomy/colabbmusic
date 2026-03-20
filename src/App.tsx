@@ -16,6 +16,7 @@ import StorePage from "./pages/Store";
 import ProductDetailPage from "./pages/ProductDetail";
 import PoliciesPage from "./pages/Policies";
 import ChatPage from "./pages/ChatPage";
+import AboutColaPage from "./pages/AboutCola";
 import { useCartSync } from "./hooks/useCartSync";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const AppInner = () => {
       <Route path="/product/:handle" element={<ProductDetailPage />} />
       <Route path="/press" element={<PressPage />} />
       <Route path="/chat" element={<ChatPage />} />
+      <Route path="/about-cola" element={<AboutColaPage />} />
       <Route path="/policies" element={<PoliciesPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

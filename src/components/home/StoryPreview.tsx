@@ -2,10 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Play, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchYouTubeFeed, CHANNELS, type YouTubeVideo } from "@/lib/youtube";
 import { useTranslation } from "react-i18next";
-
-const SHOPIFY_STORE_URL = "https://www.colabbshop.com";
 
 interface Story {
   id: string;
@@ -19,115 +16,96 @@ interface Story {
 
 export const StoryPreview = () => {
   const { t } = useTranslation();
-  const [latestVideo, setLatestVideo] = useState<YouTubeVideo | null>(null);
   const [stories, setStories] = useState<Story[]>([]);
 
   useEffect(() => {
-    fetchYouTubeFeed(CHANNELS.VEVO, 1).then((vids) => setLatestVideo(vids[0] || null));
     const fetchStories = async () => {
       const { data } = await supabase
         .from("stories")
         .select("id, ai_title, ai_enhanced_text, category, media_url, media_type, posted_at")
         .order("posted_at", { ascending: false })
-        .limit(3);
+        .limit(4);
       if (data) setStories(data);
     };
     fetchStories();
   }, []);
 
-  return (
-    <section className="bg-background">
-      <div className="container mx-auto px-6 py-20 md:py-28">
-        <h2 className="text-display-md font-display font-bold text-foreground mb-10">
-          {t("home.insideColasWorld")}
-        </h2>
+  if (stories.length === 0) return null;
 
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <div className="rounded-xl overflow-hidden bg-card border border-border/50">
-            <div className="p-5 pb-3 flex items-center justify-between">
-              <p className="text-xs font-bold tracking-[0.2em] uppercase text-muted-foreground">
-                {t("home.fromHerWorld")}
-              </p>
-              <Link to="/story" className="text-xs text-primary hover:underline">
-                {t("home.viewAll")}
-              </Link>
-            </div>
-            <div className="px-5 pb-5 space-y-4">
-              {stories.length > 0 ? (
-                stories.map((story) => (
-                  <Link key={story.id} to={`/story/${story.id}`} className="group flex gap-3 hover:bg-muted/50 rounded-lg p-1 -m-1 transition-colors">
-                    {story.media_url && (
-                      <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-muted relative">
-                        {story.media_type === "VIDEO" ? (
-                          <video src={story.media_url!} className="w-full h-full object-cover" muted autoPlay loop playsInline preload="auto" />
-                        ) : (
-                          <img src={story.media_url!} alt={story.ai_title || t("common.untitled")} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                        )}
-                        {story.media_type === "VIDEO" && (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <Play className="h-3 w-3 text-white drop-shadow" />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-medium tracking-[0.15em] uppercase text-muted-foreground mb-0.5">
-                        {story.category || t("common.lifestyle")}
-                      </p>
-                      <p className="text-sm font-semibold text-foreground truncate">
-                        {story.ai_title || t("common.untitled")}
-                      </p>
-                      <p className="text-xs text-muted-foreground line-clamp-1">
-                        {story.ai_enhanced_text || ""}
-                      </p>
-                    </div>
-                  </Link>
-                ))
+  const featured = stories[0];
+  const rest = stories.slice(1);
+
+  return (
+    <section className="border-t border-border/40">
+      <div className="container mx-auto px-6 py-24 md:py-32">
+        <div className="flex items-end justify-between mb-14">
+          <div>
+            <p className="text-xs font-body font-medium tracking-[0.3em] uppercase text-muted-foreground mb-3">
+              {t("home.fromHerWorld")}
+            </p>
+            <h2 className="text-display-md font-display font-semibold text-foreground">
+              {t("home.insideColasWorld")}
+            </h2>
+          </div>
+          <Link to="/story" className="text-xs font-body font-medium tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors">
+            {t("home.viewAll")} <ChevronRight className="inline h-3 w-3" />
+          </Link>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Featured story — large */}
+          <Link to={`/story/${featured.id}`} className="group block">
+            <div className="aspect-[4/3] overflow-hidden bg-muted mb-4 relative">
+              {featured.media_url ? (
+                featured.media_type === "VIDEO" ? (
+                  <video src={featured.media_url} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700" muted autoPlay loop playsInline preload="auto" />
+                ) : (
+                  <img src={featured.media_url} alt={featured.ai_title || ""} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700" loading="lazy" />
+                )
               ) : (
-                <div className="py-8 text-center">
-                  <p className="text-xs text-muted-foreground">{t("home.storiesComingSoon")}</p>
+                <div className="w-full h-full bg-muted" />
+              )}
+              {featured.media_type === "VIDEO" && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Play className="h-8 w-8 text-white drop-shadow-lg" />
                 </div>
               )}
             </div>
+            <p className="text-[10px] font-body font-medium tracking-[0.2em] uppercase text-muted-foreground mb-1">
+              {featured.category || t("common.lifestyle")}
+            </p>
+            <h3 className="font-display text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+              {featured.ai_title || t("common.untitled")}
+            </h3>
+          </Link>
+
+          {/* Remaining stories — stacked */}
+          <div className="flex flex-col gap-5">
+            {rest.map((story) => (
+              <Link key={story.id} to={`/story/${story.id}`} className="group flex gap-4 items-start">
+                {story.media_url && (
+                  <div className="w-20 h-20 flex-shrink-0 overflow-hidden bg-muted">
+                    {story.media_type === "VIDEO" ? (
+                      <video src={story.media_url} className="w-full h-full object-cover" muted autoPlay loop playsInline preload="auto" />
+                    ) : (
+                      <img src={story.media_url} alt={story.ai_title || ""} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                    )}
+                  </div>
+                )}
+                <div className="min-w-0 pt-0.5">
+                  <p className="text-[10px] font-body font-medium tracking-[0.15em] uppercase text-muted-foreground mb-1">
+                    {story.category || t("common.lifestyle")}
+                  </p>
+                  <p className="text-sm font-display font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
+                    {story.ai_title || t("common.untitled")}
+                  </p>
+                  <p className="text-xs text-muted-foreground line-clamp-1 mt-1 font-body">
+                    {story.ai_enhanced_text || ""}
+                  </p>
+                </div>
+              </Link>
+            ))}
           </div>
-
-          {latestVideo && (
-            <div className="rounded-xl overflow-hidden bg-card border border-border/50">
-              <div className="p-5 pb-3">
-                <p className="text-xs font-bold tracking-[0.2em] uppercase text-muted-foreground">
-                  {t("home.latestMusicVideo")}
-                </p>
-              </div>
-              <div className="px-5 pb-5">
-                <a href={`https://www.youtube.com/watch?v=${latestVideo.videoId}`} target="_blank" rel="noopener noreferrer"
-                  className="aspect-[4/3] rounded-lg overflow-hidden relative group cursor-pointer block">
-                  <img src={latestVideo.thumbnail} alt={latestVideo.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy" />
-                  <div className="absolute inset-0 bg-foreground/20 group-hover:bg-foreground/10 transition-colors" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center group-hover:scale-110 transition-transform border border-white/30">
-                      <Play className="h-6 w-6 text-white ml-0.5" />
-                    </div>
-                  </div>
-                  <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <p className="text-sm font-semibold text-white">{latestVideo.title}</p>
-                  </div>
-                </a>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="mt-8">
-          <a href={SHOPIFY_STORE_URL} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 w-full md:w-auto md:min-w-[400px] mx-auto px-10 py-4 rounded-full text-sm font-bold tracking-[0.15em] uppercase transition-all hover:scale-105 hover:shadow-xl"
-            style={{
-              background: "linear-gradient(135deg, hsl(260 35% 85% / 0.6), hsl(35 50% 85% / 0.6))",
-              backdropFilter: "blur(20px)",
-              border: "1px solid hsl(260 30% 80% / 0.3)",
-              color: "hsl(240 10% 25%)",
-            }}>
-            {t("home.visitTheStore")} <ChevronRight className="h-4 w-4" />
-          </a>
         </div>
       </div>
     </section>

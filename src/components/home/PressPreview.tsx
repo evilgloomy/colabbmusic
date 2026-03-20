@@ -10,15 +10,15 @@ export const PressPreview = () => {
     <section className="border-t border-border/40">
       <div className="container mx-auto px-6 py-24 md:py-32">
         <div className="max-w-2xl mx-auto text-center">
-          <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-6">
+          <p className="text-xs font-body font-medium tracking-[0.3em] uppercase text-muted-foreground mb-6">
             {t("home.aboutTheArtist")}
           </p>
-          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed font-display italic mb-8">
-            "{brand.mediumBio}"
+          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed font-display italic mb-10">
+            "{brand.shortBio}"
           </p>
           <Link
             to="/press"
-            className="inline-block px-8 py-3 border border-foreground/20 text-foreground text-xs font-medium tracking-widest uppercase hover:border-foreground/50 transition-colors"
+            className="inline-block px-8 py-3 border border-foreground/20 text-foreground text-xs font-body font-medium tracking-widest uppercase hover:border-foreground/50 transition-colors active:scale-[0.97]"
           >
             {t("home.viewPressKit")}
           </Link>
