@@ -15,7 +15,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ["Sora", "sans-serif"],
-        display: ["Playfair Display", "serif"],
+        display: ["Sora", "sans-serif"],
         body: ["Sora", "sans-serif"],
       },
       fontSize: {
