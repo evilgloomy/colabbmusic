@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Sora:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap');
 
 @layer base {
   :root {
@@ -68,11 +68,7 @@
     font-family: 'Sora', sans-serif;
   }
 
-  h1, h2, h3 {
-    font-family: 'Playfair Display', serif;
-  }
-
-  h4, h5, h6 {
+  h1, h2, h3, h4, h5, h6 {
     font-family: 'Sora', sans-serif;
   }
 
@@ -84,7 +80,7 @@
 
 @layer utilities {
   .font-display {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Sora', sans-serif;
   }
 
   .font-body {
