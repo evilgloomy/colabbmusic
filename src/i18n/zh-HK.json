@@ -9,10 +9,12 @@
     "chat": "聊天"
   },
   "hero": {
+    "tagline": "Emo Pop 女王",
     "digitalSingerSongwriter": "數碼創作歌手。",
     "livingHerMusic": "用音樂、生活和每一刻，活出自己。",
     "listenNow": "立即收聽",
-    "watchVideo": "觀看影片"
+    "watchVideo": "觀看影片",
+    "exploreStory": "探索故事"
   },
   "home": {
     "latestReleases": "最新發佈",
@@ -131,7 +133,7 @@
     "needHelp": "需要幫助？"
   },
   "footer": {
-    "studioDesc": "Cola B背後的工作室 — 以創意重新定義數碼娛樂及AI增強音樂",
+    "studioDesc": "Cola B背後的獨立創意工作室。",
     "aboutColaB": "關於Cola B",
     "pressKit": "媒體資料包",
     "contact": "聯絡",
@@ -143,5 +145,22 @@
   "common": {
     "untitled": "未命名",
     "lifestyle": "生活"
+  },
+  "about": {
+    "pageTitle": "關於 Cola B",
+    "queenOfEmoPop": "Emo Pop 女王",
+    "artistPositioning": "藝人定位",
+    "biography": "藝人簡介",
+    "timeline": "藝人發展時間線",
+    "positioningSummary": "定位總結",
+    "explorMusic": "探索 Cola B 音樂",
+    "downloadPressKit": "下載媒體資料",
+    "contactCollaborations": "合作與聯絡",
+    "definedBy": "Cola B 的核心特質：",
+    "reflectsNewGen": "她代表著新一代音樂創作者 — 在數位時代中不斷進化的藝人形態。",
+    "2023": "2023 — 起點與出道",
+    "2024": "2024 — 成長與突破",
+    "2025": "2025 — 風格深化",
+    "2026": "2026 — 規模與持續發展"
   }
 }

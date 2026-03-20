@@ -7,17 +7,17 @@ export const Footer = () => {
   const { t } = useTranslation();
 
   return (
-    <footer className="border-t border-border/60 bg-card">
+    <footer className="border-t border-border/40 bg-card/50">
       <div className="container mx-auto px-6 py-12">
         {/* Studio line */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
           <div className="flex items-center gap-4">
-            <img src={shibaLogo} alt="Shiba Inu Media" className="h-14 w-14 object-contain" />
+            <img src={shibaLogo} alt="Shiba Inu Media" className="h-12 w-12 object-contain" />
             <div>
-              <p className="font-display text-sm font-bold tracking-[0.1em] uppercase text-foreground">
+              <p className="font-body text-sm font-bold tracking-[0.1em] uppercase text-foreground">
                 Shiba Inu Media
               </p>
-              <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+              <p className="text-xs text-muted-foreground mt-1 max-w-xs font-body">
                 {t("footer.studioDesc")}
               </p>
             </div>
@@ -33,19 +33,19 @@ export const Footer = () => {
         </div>
 
         {/* Links row */}
-        <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground mb-6">
-          <Link to="/story" className="hover:text-foreground transition-colors">{t("footer.aboutColaB")}</Link>
+        <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground font-body mb-6">
+          <Link to="/about-cola" className="hover:text-foreground transition-colors">{t("footer.aboutColaB")}</Link>
           <Link to="/press" className="hover:text-foreground transition-colors">{t("footer.pressKit")}</Link>
           <a href="mailto:cola.bb.225@gmail.com" className="hover:text-foreground transition-colors">{t("footer.contact")}</a>
           <Link to="/policies" className="hover:text-foreground transition-colors">{t("footer.shippingReturns")}</Link>
         </div>
 
         {/* Bottom row */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-6 border-t border-border/40">
-          <p className="text-[11px] text-muted-foreground/60">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-6 border-t border-border/30">
+          <p className="text-[11px] text-muted-foreground/60 font-body">
             © {new Date().getFullYear()} Cola B. {t("footer.allRightsReserved")}
           </p>
-          <div className="flex gap-4 text-[11px] text-muted-foreground/60">
+          <div className="flex gap-4 text-[11px] text-muted-foreground/60 font-body">
             <span className="hover:text-muted-foreground transition-colors cursor-pointer">{t("footer.privacyPolicy")}</span>
             <span className="hover:text-muted-foreground transition-colors cursor-pointer">{t("footer.termsOfService")}</span>
           </div>

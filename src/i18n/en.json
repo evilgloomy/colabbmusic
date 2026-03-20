@@ -9,10 +9,12 @@
     "chat": "Chat"
   },
   "hero": {
+    "tagline": "Queen of Emo Pop",
     "digitalSingerSongwriter": "Digital Singer-Songwriter.",
     "livingHerMusic": "Living her music, life, and moments.",
     "listenNow": "Listen Now",
-    "watchVideo": "Watch Video"
+    "watchVideo": "Watch Video",
+    "exploreStory": "Explore Story"
   },
   "home": {
     "latestReleases": "Latest Releases",
@@ -131,7 +133,7 @@
     "needHelp": "Need Help?"
   },
   "footer": {
-    "studioDesc": "The Studio Behind Cola B. — Creatively redefining digital entertainment and AI-enhanced music",
+    "studioDesc": "The independent creative studio behind Cola B.",
     "aboutColaB": "About Cola B",
     "pressKit": "Press Kit",
     "contact": "Contact",
@@ -143,5 +145,22 @@
   "common": {
     "untitled": "Untitled",
     "lifestyle": "lifestyle"
+  },
+  "about": {
+    "pageTitle": "About Cola B",
+    "queenOfEmoPop": "Queen of Emo Pop",
+    "artistPositioning": "Artist Positioning",
+    "biography": "Biography",
+    "timeline": "Artist Development Timeline",
+    "positioningSummary": "Positioning Summary",
+    "explorMusic": "Explore Cola B's Music",
+    "downloadPressKit": "Download Press Kit",
+    "contactCollaborations": "Contact / Collaborations",
+    "definedBy": "Cola B is defined by:",
+    "reflectsNewGen": "Her work reflects a new generation of artists — where music, identity, and digital presence evolve together.",
+    "2023": "2023 — Foundation & Debut",
+    "2024": "2024 — Breakthrough & Expansion",
+    "2025": "2025 — Identity & Evolution",
+    "2026": "2026 — Consistency & Scale"
   }
 }
