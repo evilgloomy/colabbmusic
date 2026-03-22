@@ -33,12 +33,12 @@ export const ProductCard = ({ product }: ProductCardProps) => {
 
   return (
     <Link to={`/product/${node.handle}`} className="group block">
-      <div className="aspect-square overflow-hidden bg-muted mb-4 relative">
+      <div className="aspect-[3/4] overflow-hidden bg-card mb-4 relative">
         {image ? (
           <img
             src={image.url}
             alt={image.altText || node.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700"
             loading="lazy"
           />
         ) : (
@@ -55,14 +55,14 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           <ShoppingCart className="h-4 w-4" />
         </button>
       </div>
-      <h3 className="text-sm font-semibold tracking-wide uppercase text-foreground mb-1 line-clamp-2">
+      <h3 className="text-xs font-semibold tracking-[0.1em] uppercase text-foreground mb-1 line-clamp-2">
         {node.title}
       </h3>
       <p className="text-sm text-muted-foreground">
         {price.currencyCode} ${parseFloat(price.amount).toFixed(2)}
       </p>
       {firstVariant && !firstVariant.availableForSale && (
-        <p className="text-xs text-destructive mt-1 uppercase tracking-wider">Sold out</p>
+        <p className="text-[10px] text-destructive mt-1 uppercase tracking-wider">Sold out</p>
       )}
     </Link>
   );
