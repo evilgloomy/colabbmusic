@@ -73,7 +73,8 @@
     "storyNotFound": "Story not found",
     "backToStories": "← Back to all stories",
     "allStories": "All Stories",
-    "viewOnThreads": "View on Threads"
+    "viewOnThreads": "View on Threads",
+    "archive": "Archive"
   },
   "videos": {
     "visual": "Visual",
