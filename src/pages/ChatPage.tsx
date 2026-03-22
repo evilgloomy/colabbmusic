@@ -47,12 +47,24 @@ const ChatPage = () => {
     setPageLoading(true);
     try {
       const { data, error: subErr } = await artistAgent.functions.invoke('check-subscription', { body: {} });
-      const subData = data || {};
-      if (subErr && !subData.subscription_tier) {
-        setSubscriptionStatus({ subscribed: false });
-      } else {
-        setSubscriptionStatus({ subscribed: subData.subscribed === true, subscription_tier: subData.subscription_tier });
+      // On 500, supabase-js may put the JSON body inside the error object
+      let subData = data;
+      if (!subData && subErr) {
+        try {
+          // FunctionsHttpError stores the response; try to extract JSON
+          const errContext = (subErr as any)?.context;
+          if (errContext && typeof errContext.json === 'function') {
+            subData = await errContext.json();
+          }
+        } catch {
+          // ignore parse failures
+        }
       }
+      subData = subData || {};
+      setSubscriptionStatus({
+        subscribed: subData.subscribed === true,
+        subscription_tier: subData.subscription_tier || 'Free',
+      });
     } catch (err) {
       console.error('Subscription check failed:', err);
       setSubscriptionStatus({ subscribed: false });
