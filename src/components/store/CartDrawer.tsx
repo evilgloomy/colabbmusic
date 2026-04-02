@@ -18,6 +18,17 @@ export const CartDrawer = () => {
   const handleCheckout = () => {
     const checkoutUrl = getCheckoutUrl();
     if (checkoutUrl) {
+      const currency = items[0]?.price?.currencyCode || "USD";
+      trackInitiateCheckout({
+        items: items.map((i) => ({
+          id: i.product.node.id,
+          title: i.product.node.title,
+          price: i.price.amount,
+          quantity: i.quantity,
+        })),
+        totalValue: totalPrice,
+        currency,
+      });
       window.open(checkoutUrl, '_blank');
       setIsOpen(false);
     }

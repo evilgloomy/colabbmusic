@@ -52,6 +52,14 @@ export const useCartStore = create<CartStore>()(
           if (!cartId) {
             const result = await createShopifyCart({ variantId: item.variantId, quantity: item.quantity });
             if (result) {
+              trackAddToCart({
+                id: item.product.node.id,
+                title: item.product.node.title,
+                variantTitle: item.variantTitle,
+                price: item.price.amount,
+                currency: item.price.currencyCode,
+                quantity: item.quantity,
+              });
               set({
                 cartId: result.cartId,
                 checkoutUrl: result.checkoutUrl,
