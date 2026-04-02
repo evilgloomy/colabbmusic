@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, ShoppingCart, ChevronLeft } from "lucide-react";
@@ -10,6 +10,7 @@ import type { ShopifyProduct } from "@/lib/shopify";
 import { useCartStore } from "@/stores/cartStore";
 import { toast } from "sonner";
 import { useSEO, SITE_URL } from "@/hooks/useSEO";
+import { trackViewContent } from "@/lib/analytics";
 
 const ProductDetailPage = () => {
   const { handle } = useParams<{ handle: string }>();
@@ -48,6 +49,20 @@ const ProductDetailPage = () => {
     image: product?.images?.edges?.[0]?.node?.url,
     jsonLd,
   });
+
+  // Track ViewContent when product loads
+  const trackedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (product && trackedRef.current !== product.id) {
+      trackedRef.current = product.id;
+      trackViewContent({
+        id: product.id,
+        title: product.title,
+        price: product.priceRange.minVariantPrice.amount,
+        currency: product.priceRange.minVariantPrice.currencyCode,
+      });
+    }
+  }, [product]);
 
   if (isLoading) {
     return (
