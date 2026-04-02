@@ -50,6 +50,20 @@ const ProductDetailPage = () => {
     jsonLd,
   });
 
+  // Track ViewContent when product loads
+  const trackedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (product && trackedRef.current !== product.id) {
+      trackedRef.current = product.id;
+      trackViewContent({
+        id: product.id,
+        title: product.title,
+        price: product.priceRange.minVariantPrice.amount,
+        currency: product.priceRange.minVariantPrice.currencyCode,
+      });
+    }
+  }, [product]);
+
   if (isLoading) {
     return (
       <PageLayout>
