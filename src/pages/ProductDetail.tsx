@@ -10,6 +10,8 @@ import type { ShopifyProduct } from "@/lib/shopify";
 import { useCartStore } from "@/stores/cartStore";
 import { toast } from "sonner";
 import { useSEO, SITE_URL } from "@/hooks/useSEO";
+import { trackViewContent } from "@/lib/analytics";
+import { useEffect, useRef } from "react";
 
 const ProductDetailPage = () => {
   const { handle } = useParams<{ handle: string }>();

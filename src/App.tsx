@@ -18,11 +18,13 @@ import PoliciesPage from "./pages/Policies";
 import ChatPage from "./pages/ChatPage";
 import AboutColaPage from "./pages/AboutCola";
 import { useCartSync } from "./hooks/useCartSync";
+import { usePageTracking } from "./hooks/usePageTracking";
 
 const queryClient = new QueryClient();
 
 const AppInner = () => {
   useCartSync();
+  usePageTracking();
   return (
     <Routes>
       <Route path="/" element={<Index />} />

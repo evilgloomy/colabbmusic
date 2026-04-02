@@ -8,6 +8,7 @@ import {
   removeLineFromShopifyCart,
   fetchCartStatus,
 } from '@/lib/shopify';
+import { trackAddToCart } from '@/lib/analytics';
 
 export interface CartItem {
   lineId: string | null;
