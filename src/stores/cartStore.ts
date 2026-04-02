@@ -71,6 +71,14 @@ export const useCartStore = create<CartStore>()(
             if (!existingItem.lineId) return;
             const result = await updateShopifyCartLine(cartId, existingItem.lineId, newQuantity);
             if (result.success) {
+              trackAddToCart({
+                id: item.product.node.id,
+                title: item.product.node.title,
+                variantTitle: item.variantTitle,
+                price: item.price.amount,
+                currency: item.price.currencyCode,
+                quantity: item.quantity,
+              });
               set({ items: get().items.map(i => i.variantId === item.variantId ? { ...i, quantity: newQuantity } : i) });
             } else if (result.cartNotFound) {
               clearCart();
@@ -78,6 +86,14 @@ export const useCartStore = create<CartStore>()(
           } else {
             const result = await addLineToShopifyCart(cartId, { variantId: item.variantId, quantity: item.quantity });
             if (result.success) {
+              trackAddToCart({
+                id: item.product.node.id,
+                title: item.product.node.title,
+                variantTitle: item.variantTitle,
+                price: item.price.amount,
+                currency: item.price.currencyCode,
+                quantity: item.quantity,
+              });
               set({ items: [...get().items, { ...item, lineId: result.lineId ?? null }] });
             } else if (result.cartNotFound) {
               clearCart();
