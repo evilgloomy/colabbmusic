@@ -13,4 +13,5 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://colabbmusic.lovable.app/sitemap.xml
+Sitemap: https://tfcrxvnfuagmqwkxoyei.supabase.co/functions/v1/sitemap
+Sitemap: https://colabbmusic.com/sitemap.xml

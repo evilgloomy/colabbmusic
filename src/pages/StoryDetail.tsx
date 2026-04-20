@@ -42,6 +42,7 @@ const StoryDetailPage = () => {
 
   const jsonLd = useMemo(() => {
     if (!story) return undefined;
+    const keywords = [story.category, story.location].filter(Boolean) as string[];
     return {
       "@context": "https://schema.org",
       "@type": "Article",
@@ -49,16 +50,25 @@ const StoryDetailPage = () => {
       description: story.ai_enhanced_text || "",
       image: story.media_url || undefined,
       datePublished: story.posted_at || undefined,
+      dateModified: story.posted_at || undefined,
       author: { "@type": "Person", name: "Cola B" },
+      publisher: { "@type": "Organization", name: "Cola B", logo: { "@type": "ImageObject", url: `${SITE_URL}/favicon.ico` } },
+      mainEntityOfPage: { "@type": "WebPage", "@id": `${SITE_URL}/story/${story.id}` },
+      articleSection: story.category || undefined,
+      keywords: keywords.length ? keywords.join(", ") : undefined,
       url: `${SITE_URL}/story/${story.id}`,
     };
   }, [story]);
 
   useSEO({
     title: story ? `${story.ai_title || "Story"} — Cola B` : undefined,
-    description: story?.ai_enhanced_text || undefined,
+    description: story?.ai_enhanced_text?.slice(0, 160) || undefined,
     image: story?.media_url,
     type: "article",
+    publishedTime: story?.posted_at || undefined,
+    author: "Cola B",
+    section: story?.category || undefined,
+    keywords: story ? [story.category, story.location].filter(Boolean) as string[] : undefined,
     jsonLd,
   });
 
