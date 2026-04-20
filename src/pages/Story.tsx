@@ -3,8 +3,9 @@ import { Link } from "react-router-dom";
 import { Play } from "lucide-react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { useSEO } from "@/hooks/useSEO";
+import { useSEO, SITE_URL } from "@/hooks/useSEO";
 import { useTranslation } from "react-i18next";
+import { useMemo } from "react";
 import bannerStory from "@/assets/banner-story.jpg";
 
 interface Story {
@@ -26,14 +27,30 @@ const StoryPage = () => {
   const { t, i18n } = useTranslation();
   const locale = i18n.language?.startsWith("zh") ? "zh-HK" : "en-US";
 
-  useSEO({
-    title: t("story.pageTitle") + " — Cola B",
-    description: t("story.pageDesc"),
-  });
-
   const [filter, setFilter] = useState<string>("all");
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const itemListJsonLd = useMemo(() => {
+    const items = stories.filter((s) => s.media_url).slice(0, 30);
+    if (!items.length) return undefined;
+    return {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      itemListElement: items.map((s, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        url: `${SITE_URL}/story/${s.id}`,
+        name: s.ai_title || "Story",
+      })),
+    };
+  }, [stories]);
+
+  useSEO({
+    title: t("story.pageTitle") + " — Cola B",
+    description: t("story.pageDesc"),
+    jsonLd: itemListJsonLd,
+  });
 
   useEffect(() => {
     const fetchStories = async () => {

@@ -13,6 +13,10 @@ interface SEOOptions {
   url?: string;
   type?: string;
   jsonLd?: Record<string, unknown>;
+  publishedTime?: string;
+  author?: string;
+  section?: string;
+  keywords?: string[];
 }
 
 function setMeta(attr: "property" | "name", key: string, content: string): () => void {
@@ -61,6 +65,10 @@ export function useSEO({
   url,
   type = "website",
   jsonLd,
+  publishedTime,
+  author,
+  section,
+  keywords,
 }: SEOOptions = {}) {
   useEffect(() => {
     const fullTitle = title || DEFAULT_TITLE;
@@ -83,6 +91,14 @@ export function useSEO({
       setCanonical(canonical),
     ];
 
+    if (type === "article") {
+      if (publishedTime) cleanups.push(setMeta("property", "article:published_time", publishedTime));
+      if (author) cleanups.push(setMeta("property", "article:author", author));
+      if (section) cleanups.push(setMeta("property", "article:section", section));
+      if (keywords?.length) cleanups.push(setMeta("property", "article:tag", keywords.join(", ")));
+    }
+    if (keywords?.length) cleanups.push(setMeta("name", "keywords", keywords.join(", ")));
+
     if (jsonLd) {
       cleanups.push(setJsonLd(jsonLd));
     }
@@ -91,7 +107,7 @@ export function useSEO({
       document.title = DEFAULT_TITLE;
       cleanups.forEach((fn) => fn());
     };
-  }, [title, description, image, url, type, jsonLd]);
+  }, [title, description, image, url, type, jsonLd, publishedTime, author, section, keywords]);
 }
 
 export { SITE_NAME, SITE_URL };
