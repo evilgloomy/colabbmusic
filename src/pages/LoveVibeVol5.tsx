@@ -218,6 +218,29 @@ export default function LoveVibeVol5() {
           ))}
         </section>
 
+        <section className="section">
+          <p className="sec-label">Released Volumes — Listen on Spotify</p>
+          <p className="series-intro">Vols. 1–4 of the LOVEVIBE series are out now.</p>
+          {releasedAlbums.map(a => (
+            <div key={a.vol} className="spotify-block">
+              <div className="spotify-header">
+                <span className="spotify-tag">{a.vol}</span>
+                <span className="spotify-title">{a.title}</span>
+              </div>
+              <iframe
+                className="spotify-iframe"
+                title={`${a.vol} — ${a.title}`}
+                src={`https://open.spotify.com/embed/album/${a.spotifyId}?utm_source=generator&theme=0`}
+                width="100%"
+                height="352"
+                frameBorder="0"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                loading="lazy"
+              />
+            </div>
+          ))}
+        </section>
+
         <footer className="footer">
           <p>© 2025 Cola B / Shiba Inu Records — Confidential. For A&amp;R review only. Do not distribute.</p>
         </footer>
