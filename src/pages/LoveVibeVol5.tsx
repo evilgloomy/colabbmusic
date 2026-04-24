@@ -206,40 +206,35 @@ export default function LoveVibeVol5() {
         <section className="section">
           <p className="sec-label">The LoveVibe Series — 完整五部曲</p>
           <p className="series-intro">LOVEVIBE 係 Cola B 一個橫跨五張作品嘅系列企劃，完整描寫一段感情由開始萌芽，到互相思念、投入、拉扯、崩解，最後走向分離嘅情緒軌跡。呢個系列唔只係幾張主題相關嘅專輯，而係一條有連續性、有情感推進、有明確章節感嘅長篇愛情故事。</p>
-          {series.map(v => (
-            <div key={v.vol} className={`vol-block${v.active ? " active" : ""}`}>
-              <div className="vol-header">
-                <span className="vol-tag">{v.vol}</span>
-                <span className="vol-title">{v.title}</span>
+          {series.map(v => {
+            const album = releasedAlbums.find(a => a.vol === v.vol);
+            return (
+              <div key={v.vol} className={`vol-block${v.active ? " active" : ""}`}>
+                <div className="vol-header">
+                  <span className="vol-tag">{v.vol}</span>
+                  <span className="vol-title">{v.title}</span>
+                </div>
+                <p className="vol-zh">{v.zh}</p>
+                <p className="vol-story">{v.story}</p>
+                {album && (
+                  <div className="spotify-block" style={{ marginTop: "1.5rem" }}>
+                    <iframe
+                      className="spotify-iframe"
+                      title={`${album.vol} — ${album.title}`}
+                      src={`https://open.spotify.com/embed/album/${album.spotifyId}?utm_source=generator&theme=0`}
+                      width="100%"
+                      height="352"
+                      frameBorder="0"
+                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
               </div>
-              <p className="vol-zh">{v.zh}</p>
-              <p className="vol-story">{v.story}</p>
-            </div>
-          ))}
+            );
+          })}
         </section>
 
-        <section className="section">
-          <p className="sec-label">Released Volumes — Listen on Spotify</p>
-          <p className="series-intro">Vols. 1–4 of the LOVEVIBE series are out now.</p>
-          {releasedAlbums.map(a => (
-            <div key={a.vol} className="spotify-block">
-              <div className="spotify-header">
-                <span className="spotify-tag">{a.vol}</span>
-                <span className="spotify-title">{a.title}</span>
-              </div>
-              <iframe
-                className="spotify-iframe"
-                title={`${a.vol} — ${a.title}`}
-                src={`https://open.spotify.com/embed/album/${a.spotifyId}?utm_source=generator&theme=0`}
-                width="100%"
-                height="352"
-                frameBorder="0"
-                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                loading="lazy"
-              />
-            </div>
-          ))}
-        </section>
 
         <footer className="footer">
           <p>© 2025 Cola B / Shiba Inu Records — Confidential. For A&amp;R review only. Do not distribute.</p>
