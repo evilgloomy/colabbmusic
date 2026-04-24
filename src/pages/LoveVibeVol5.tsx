@@ -95,6 +95,11 @@ const css = `
   .vol-zh { color: #6a5c40; font-size: 12px; font-family: sans-serif; margin-bottom: 1rem; font-style: italic; }
   .vol-story { color: #a09070; font-size: 14px; line-height: 1.95; }
   .footer { margin-top: 4rem; padding-top: 2rem; border-top: 1px solid #13100a; text-align: center; color: #2a2010; font-size: 11px; font-family: sans-serif; letter-spacing: 0.5px; }
+  .spotify-block { margin-bottom: 2rem; }
+  .spotify-header { display: flex; align-items: baseline; gap: 1.25rem; margin-bottom: 0.75rem; }
+  .spotify-tag { color: #3e3420; font-size: 10px; letter-spacing: 2px; font-family: sans-serif; text-transform: uppercase; }
+  .spotify-title { font-size: 22px; color: #e4d8c0; font-weight: 400; }
+  .spotify-iframe { border-radius: 2px; display: block; width: 100%; }
 `;
 
 export default function LoveVibeVol5() {
