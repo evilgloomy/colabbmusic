@@ -164,8 +164,11 @@ export default function LoveVibeVol5() {
     } else setErr(true);
   };
 
-  const embedUrl = (url) =>
-    `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23c8a070&auto_play=true&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false&visual=true`;
+  const embedUrl = (url) => {
+    const [base, token] = url.split("/s-");
+    const secretParam = token ? `&secret_token=s-${token}` : "";
+    return `https://w.soundcloud.com/player/?url=${encodeURIComponent(base)}${secretParam}&color=%23c8a070&auto_play=true&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false&visual=true`;
+  };
 
   if (!open)
     return (
