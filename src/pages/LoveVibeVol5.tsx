@@ -1,16 +1,16 @@
 import { useState, useEffect } from "react";
 
 const tracks = [
-  { num: "01", title: "已讀不回", sub: "", url: "https://soundcloud.com/coke-wang-703401983/cola-b-yi-du-bu-hui-1/s-kHSruox3LPE" },
-  { num: "02", title: "越來越冷淡", sub: "Shivering Version", url: "https://soundcloud.com/coke-wang-703401983/cola-b-yue-lai-yue-leng-dan-shivering-version-2/s-GpZsebHg0IX" },
-  { num: "03", title: "重重疊疊", sub: "", url: "https://soundcloud.com/coke-wang-703401983/colabzhong-zhong-die-die-3/s-q2CVk9ozLSk" },
-  { num: "04", title: "Slowburn", sub: "", url: "https://soundcloud.com/coke-wang-703401983/cola-b-slowburn-4/s-YIaVQG2BNQL" },
-  { num: "05", title: "Agony 愛過你", sub: "midnight", url: "https://soundcloud.com/coke-wang-703401983/cola-b-agony-ai-guo-ni-5/s-qEcHlTGA9xT" },
-  { num: "06", title: "Despair", sub: "3AM", url: "https://soundcloud.com/coke-wang-703401983/cola-b-despair-6/s-WeErIu0n03x" },
-  { num: "07", title: "Pain", sub: "4AM", url: "https://soundcloud.com/coke-wang-703401983/cola-b-pain-7/s-lylwqaT5cJo" },
-  { num: "08", title: "惡作劇", sub: "reflection after impact", url: "https://soundcloud.com/coke-wang-703401983/cola-b-e-zuo-ju-8/s-0g07qnUDUtf" },
-  { num: "09", title: "Decision", sub: "cinematic tension / internal weight", url: "https://soundcloud.com/coke-wang-703401983/cola-b-decision-9/s-xWfbJ4MSoMh" },
-  { num: "10", title: "Restraint", sub: "controlled closure", url: "https://soundcloud.com/coke-wang-703401983/cola-b-restraint-10/s-FWhyjfKtmLF" },
+  { num: "01", title: "已讀不回", sub: "", url: "https://soundcloud.com/coke-wang-703401983/cola-b-yi-du-bu-hui-1?secret_token=s-kHSruox3LPE" },
+  { num: "02", title: "越來越冷淡", sub: "Shivering Version", url: "https://soundcloud.com/coke-wang-703401983/cola-b-yue-lai-yue-leng-dan-shivering-version-2?secret_token=s-GpZsebHg0IX" },
+  { num: "03", title: "重重疊疊", sub: "", url: "https://soundcloud.com/coke-wang-703401983/colabzhong-zhong-die-die-3?secret_token=s-q2CVk9ozLSk" },
+  { num: "04", title: "Slowburn", sub: "", url: "https://soundcloud.com/coke-wang-703401983/cola-b-slowburn-4?secret_token=s-YIaVQG2BNQL" },
+  { num: "05", title: "Agony 愛過你", sub: "midnight", url: "https://soundcloud.com/coke-wang-703401983/cola-b-agony-ai-guo-ni-5?secret_token=s-qEcHlTGA9xT" },
+  { num: "06", title: "Despair", sub: "3AM", url: "https://soundcloud.com/coke-wang-703401983/cola-b-despair-6?secret_token=s-WeErIu0n03x" },
+  { num: "07", title: "Pain", sub: "4AM", url: "https://soundcloud.com/coke-wang-703401983/cola-b-pain-7?secret_token=s-lylwqaT5cJo" },
+  { num: "08", title: "惡作劇", sub: "reflection after impact", url: "https://soundcloud.com/coke-wang-703401983/cola-b-e-zuo-ju-8?secret_token=s-0g07qnUDUtf" },
+  { num: "09", title: "Decision", sub: "cinematic tension / internal weight", url: "https://soundcloud.com/coke-wang-703401983/cola-b-decision-9?secret_token=s-xWfbJ4MSoMh" },
+  { num: "10", title: "Restraint", sub: "controlled closure", url: "https://soundcloud.com/coke-wang-703401983/cola-b-restraint-10?secret_token=s-FWhyjfKtmLF" },
 ];
 
 const series = [
