@@ -10,7 +10,8 @@ const tracks = [
   { num: "07", title: "Pain", sub: "4AM", url: "https://soundcloud.com/coke-wang-703401983/cola-b-pain-7?secret_token=s-lylwqaT5cJo" },
   { num: "08", title: "惡作劇", sub: "reflection after impact", url: "https://soundcloud.com/coke-wang-703401983/cola-b-e-zuo-ju-8?secret_token=s-0g07qnUDUtf" },
   { num: "09", title: "Decision", sub: "cinematic tension / internal weight", url: "https://soundcloud.com/coke-wang-703401983/cola-b-decision-9?secret_token=s-xWfbJ4MSoMh" },
-  { num: "10", title: "Restraint", sub: "controlled closure", url: "https://soundcloud.com/coke-wang-703401983/cola-b-restraint-10?secret_token=s-FWhyjfKtmLF" 
+  { num: "10", title: "Restraint", sub: "controlled closure", url: "https://soundcloud.com/coke-wang-703401983/cola-b-restraint-10?secret_token=s-FWhyjfKtmLF" },
+];
 
 const series = [
   {
