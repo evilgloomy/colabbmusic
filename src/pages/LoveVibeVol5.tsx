@@ -13,6 +13,13 @@ const tracks = [
   { num: "10", title: "Restraint", sub: "controlled closure", url: "https://soundcloud.com/coke-wang-703401983/cola-b-restraint-10?secret_token=s-FWhyjfKtmLF" },
 ];
 
+const releasedAlbums = [
+  { vol: "Vol. 1", title: "LOVEVIBE", spotifyId: "5P2B3GVhkJrfApyrmyPwvx" },
+  { vol: "Vol. 2", title: "罣", spotifyId: "71nfEwVUkQ5ptIUQrRwULU" },
+  { vol: "Vol. 3", title: "For U", spotifyId: "7tN7Oeewq3vKGxNOST7R3v" },
+  { vol: "Vol. 4", title: "回", spotifyId: "19P4D7TAxBpW9xmN1OTBrr" },
+];
+
 const series = [
   {
     vol: "Vol. 1", title: "LOVEVIBE",
