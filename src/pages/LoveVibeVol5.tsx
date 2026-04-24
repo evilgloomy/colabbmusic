@@ -13,6 +13,13 @@ const tracks = [
   { num: "10", title: "Restraint", sub: "controlled closure", url: "https://soundcloud.com/coke-wang-703401983/cola-b-restraint-10?secret_token=s-FWhyjfKtmLF" },
 ];
 
+const releasedAlbums = [
+  { vol: "Vol. 1", title: "LOVEVIBE", spotifyId: "5P2B3GVhkJrfApyrmyPwvx" },
+  { vol: "Vol. 2", title: "罣", spotifyId: "71nfEwVUkQ5ptIUQrRwULU" },
+  { vol: "Vol. 3", title: "For U", spotifyId: "7tN7Oeewq3vKGxNOST7R3v" },
+  { vol: "Vol. 4", title: "回", spotifyId: "19P4D7TAxBpW9xmN1OTBrr" },
+];
+
 const series = [
   {
     vol: "Vol. 1", title: "LOVEVIBE",
@@ -88,6 +95,11 @@ const css = `
   .vol-zh { color: #6a5c40; font-size: 12px; font-family: sans-serif; margin-bottom: 1rem; font-style: italic; }
   .vol-story { color: #a09070; font-size: 14px; line-height: 1.95; }
   .footer { margin-top: 4rem; padding-top: 2rem; border-top: 1px solid #13100a; text-align: center; color: #2a2010; font-size: 11px; font-family: sans-serif; letter-spacing: 0.5px; }
+  .spotify-block { margin-bottom: 2rem; }
+  .spotify-header { display: flex; align-items: baseline; gap: 1.25rem; margin-bottom: 0.75rem; }
+  .spotify-tag { color: #3e3420; font-size: 10px; letter-spacing: 2px; font-family: sans-serif; text-transform: uppercase; }
+  .spotify-title { font-size: 22px; color: #e4d8c0; font-weight: 400; }
+  .spotify-iframe { border-radius: 2px; display: block; width: 100%; }
 `;
 
 export default function LoveVibeVol5() {
@@ -202,6 +214,29 @@ export default function LoveVibeVol5() {
               </div>
               <p className="vol-zh">{v.zh}</p>
               <p className="vol-story">{v.story}</p>
+            </div>
+          ))}
+        </section>
+
+        <section className="section">
+          <p className="sec-label">Released Volumes — Listen on Spotify</p>
+          <p className="series-intro">Vols. 1–4 of the LOVEVIBE series are out now.</p>
+          {releasedAlbums.map(a => (
+            <div key={a.vol} className="spotify-block">
+              <div className="spotify-header">
+                <span className="spotify-tag">{a.vol}</span>
+                <span className="spotify-title">{a.title}</span>
+              </div>
+              <iframe
+                className="spotify-iframe"
+                title={`${a.vol} — ${a.title}`}
+                src={`https://open.spotify.com/embed/album/${a.spotifyId}?utm_source=generator&theme=0`}
+                width="100%"
+                height="352"
+                frameBorder="0"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                loading="lazy"
+              />
             </div>
           ))}
         </section>
