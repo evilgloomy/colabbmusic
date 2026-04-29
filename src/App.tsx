@@ -18,6 +18,8 @@ import PoliciesPage from "./pages/Policies";
 import ChatPage from "./pages/ChatPage";
 import AboutColaPage from "./pages/AboutCola";
 import LoveVibeVol5 from "./pages/LoveVibeVol5";
+import PrivacyPage from "./pages/Privacy";
+import TermsPage from "./pages/Terms";
 import { useCartSync } from "./hooks/useCartSync";
 import { usePageTracking } from "./hooks/usePageTracking";
 
@@ -41,6 +43,8 @@ const AppInner = () => {
       <Route path="/about-cola" element={<AboutColaPage />} />
       <Route path="/policies" element={<PoliciesPage />} />
       <Route path="/lovevibevol5" element={<LoveVibeVol5 />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
