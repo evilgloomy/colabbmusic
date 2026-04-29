@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 
 const SITE_NAME = "Cola B";
-const SITE_URL = "https://colabbmusic.lovable.app";
+const SITE_URL = "https://colabbmusic.com";
 const DEFAULT_TITLE = "Cola B — Official Site";
 const DEFAULT_DESCRIPTION = "The official home of Cola B — latest music, videos, story, and exclusive merchandise.";
-const DEFAULT_IMAGE = "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/cd0e128e-192a-4352-bd66-093c6cc69e97/id-preview-8d1a5971--48c39440-c9aa-442b-8c62-ac6e4310a589.lovable.app-1773112558810.png";
+const DEFAULT_IMAGE = `${SITE_URL}/og-image.jpg`;
 
 interface SEOOptions {
   title?: string;
@@ -17,6 +17,7 @@ interface SEOOptions {
   author?: string;
   section?: string;
   keywords?: string[];
+  noindex?: boolean;
 }
 
 function setMeta(attr: "property" | "name", key: string, content: string): () => void {
@@ -50,6 +51,15 @@ function setCanonical(href: string): () => void {
   };
 }
 
+function setHreflang(lang: string, href: string): () => void {
+  const el = document.createElement("link");
+  el.setAttribute("rel", "alternate");
+  el.setAttribute("hreflang", lang);
+  el.setAttribute("href", href);
+  document.head.appendChild(el);
+  return () => el.remove();
+}
+
 function setJsonLd(data: Record<string, unknown>): () => void {
   const el = document.createElement("script");
   el.setAttribute("type", "application/ld+json");
@@ -69,12 +79,14 @@ export function useSEO({
   author,
   section,
   keywords,
+  noindex,
 }: SEOOptions = {}) {
   useEffect(() => {
     const fullTitle = title || DEFAULT_TITLE;
     const desc = description || DEFAULT_DESCRIPTION;
     const img = image || DEFAULT_IMAGE;
-    const canonical = url || `${SITE_URL}${window.location.pathname}`;
+    const path = window.location.pathname;
+    const canonical = url || `${SITE_URL}${path}`;
 
     document.title = fullTitle;
 
@@ -89,7 +101,15 @@ export function useSEO({
       setMeta("name", "twitter:image", img),
       setMeta("name", "description", desc),
       setCanonical(canonical),
+      // hreflang alternates (query-param strategy)
+      setHreflang("en", `${SITE_URL}${path}?lang=en`),
+      setHreflang("zh-HK", `${SITE_URL}${path}?lang=zh-HK`),
+      setHreflang("x-default", `${SITE_URL}${path}`),
     ];
+
+    if (noindex) {
+      cleanups.push(setMeta("name", "robots", "noindex,nofollow"));
+    }
 
     if (type === "article") {
       if (publishedTime) cleanups.push(setMeta("property", "article:published_time", publishedTime));
@@ -107,7 +127,7 @@ export function useSEO({
       document.title = DEFAULT_TITLE;
       cleanups.forEach((fn) => fn());
     };
-  }, [title, description, image, url, type, jsonLd, publishedTime, author, section, keywords]);
+  }, [title, description, image, url, type, jsonLd, publishedTime, author, section, keywords, noindex]);
 }
 
 export { SITE_NAME, SITE_URL };
