@@ -59,6 +59,25 @@ export const brand = {
     "Shiba Inu Media is the independent creative studio behind Cola B — handling music production, visual direction, brand strategy, and digital world-building.",
 };
 
+// ─── Social & Streaming Links ──────────────────────────────────
+// Centralized URLs for nav, footer, share targets, and JSON-LD `sameAs`.
+// X (Twitter) is intentionally excluded per brand policy.
+
+export const socialLinks = {
+  spotify: "https://open.spotify.com/artist/00rDJJmfKiMqxsGOuJmlzz",
+  appleMusic: "https://music.apple.com/artist/cola-b/1663793217",
+  youtube: "https://www.youtube.com/@Cola_BB",
+  youtubeMusic: "https://music.youtube.com/channel/UCcola-bb",
+  tiktok: "https://www.tiktok.com/@cola_bb_official",
+  instagram: "https://www.instagram.com/cola_bb_official/",
+  facebook: "https://www.facebook.com/cokebb225",
+  threads: "https://www.threads.net/@cola_bb_official",
+  soundcloud: "https://soundcloud.com/cola-bb",
+  bandcamp: "",
+} as const;
+
+export type SocialKey = keyof typeof socialLinks;
+
 // ─── Releases ──────────────────────────────────────────────────
 // Releases are now fetched from the database via fetchReleases() in src/lib/youtube.ts
 // Static placeholder releases have been removed.
