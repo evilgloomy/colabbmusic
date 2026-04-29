@@ -10,6 +10,7 @@ import type { ShopifyProduct } from "@/lib/shopify";
 import { useCartStore } from "@/stores/cartStore";
 import { toast } from "sonner";
 import { useSEO, SITE_URL } from "@/hooks/useSEO";
+import { buildBreadcrumb } from "@/components/seo/JsonLd";
 import { trackViewContent } from "@/lib/analytics";
 
 const ProductDetailPage = () => {
