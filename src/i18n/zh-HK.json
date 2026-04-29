@@ -14,7 +14,8 @@
     "livingHerMusic": "用音樂、生活和每一刻，活出自己。",
     "listenNow": "立即收聽",
     "watchVideo": "觀看影片",
-    "exploreStory": "探索故事"
+    "exploreStory": "探索故事",
+    "portraitAlt": "Cola B — Emo Pop 女王"
   },
   "home": {
     "latestReleases": "最新發佈",
@@ -135,6 +136,7 @@
   },
   "footer": {
     "studioDesc": "Cola B背後的獨立創意工作室。",
+    "studioLogoAlt": "Shiba Inu Media",
     "aboutColaB": "關於Cola B",
     "pressKit": "媒體資料包",
     "contact": "聯絡",
@@ -142,6 +144,13 @@
     "allRightsReserved": "版權所有。",
     "privacyPolicy": "私隱政策",
     "termsOfService": "服務條款"
+  },
+  "consent": {
+    "title": "Cookie 同意",
+    "message": "我哋使用 cookies 作分析用途，以改善你嘅瀏覽體驗。",
+    "accept": "接受",
+    "reject": "拒絕",
+    "learnMore": "了解更多"
   },
   "common": {
     "untitled": "未命名",

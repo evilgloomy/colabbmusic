@@ -14,7 +14,8 @@
     "livingHerMusic": "Living her music, life, and moments.",
     "listenNow": "Listen Now",
     "watchVideo": "Watch Video",
-    "exploreStory": "Explore Story"
+    "exploreStory": "Explore Story",
+    "portraitAlt": "Cola B — Queen of Emo Pop"
   },
   "home": {
     "latestReleases": "Latest Releases",
@@ -135,6 +136,7 @@
   },
   "footer": {
     "studioDesc": "The independent creative studio behind Cola B.",
+    "studioLogoAlt": "Shiba Inu Media",
     "aboutColaB": "About Cola B",
     "pressKit": "Press Kit",
     "contact": "Contact",
@@ -142,6 +144,13 @@
     "allRightsReserved": "All rights reserved.",
     "privacyPolicy": "Privacy Policy",
     "termsOfService": "Terms of Service"
+  },
+  "consent": {
+    "title": "Cookie consent",
+    "message": "We use cookies for analytics and to improve your experience on the site.",
+    "accept": "Accept",
+    "reject": "Reject",
+    "learnMore": "Learn more"
   },
   "common": {
     "untitled": "Untitled",
