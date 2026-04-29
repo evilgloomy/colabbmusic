@@ -1,10 +1,12 @@
 User-agent: Googlebot
 Allow: /
 Disallow: /lovevibevol5
+Disallow: /chat
 
 User-agent: Bingbot
 Allow: /
 Disallow: /lovevibevol5
+Disallow: /chat
 
 User-agent: Twitterbot
 Allow: /
@@ -17,6 +19,7 @@ Disallow: /lovevibevol5
 User-agent: *
 Allow: /
 Disallow: /lovevibevol5
+Disallow: /chat
 
-Sitemap: https://tfcrxvnfuagmqwkxoyei.supabase.co/functions/v1/sitemap
 Sitemap: https://colabbmusic.com/sitemap.xml
+Sitemap: https://tfcrxvnfuagmqwkxoyei.supabase.co/functions/v1/sitemap
