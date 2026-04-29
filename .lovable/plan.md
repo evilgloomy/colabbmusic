@@ -1,73 +1,105 @@
-# EPIC 2 — SEO Depth (Tickets 201, 202, 203)
+# EPIC 3 — Fan capture & streaming funnel (Tickets 301–305)
 
-## TICKET-201 — JSON-LD structured data
+## TICKET-301 — Newsletter signup
 
-Several pages already inject `jsonLd` via `useSEO`, but the implementation is ad-hoc and missing on key surfaces. We'll standardize and extend.
+**DB migration** (`subscribers` table):
+- `id uuid pk default gen_random_uuid()`
+- `email text not null unique` (case-insensitive via `citext`-style lower() check or store lowercased)
+- `source text` (e.g. `footer`, `exit_modal`, `release_page`)
+- `locale text` (`en` / `zh-HK`)
+- `ip_hash text` (sha256 of IP — for soft abuse heuristics, not for tracking)
+- `created_at timestamptz default now()`
+- RLS enabled, **no public insert/select policies** — all writes go through the edge function with the service role.
 
-**New helper**: `src/components/seo/JsonLd.tsx`
-- Tiny component: `<JsonLd data={obj} />` renders a `<script type="application/ld+json">` and supports an array of graphs (so a page can emit Product + BreadcrumbList together).
-- Also export `buildBreadcrumb(items: { name; url }[])` helper.
+**Edge function** `supabase/functions/subscribe/index.ts`:
+- Public (verify_jwt off). CORS open.
+- Validate body with zod: `{ email, source?, locale? }`.
+- Lowercase + trim email; reject obviously malformed.
+- Soft per-IP throttle: count rows in last 60 s where `ip_hash` matches; if >5, return 429. (Per the no-backend-rate-limiting rule, this is a lightweight ad-hoc heuristic only — not a true rate limiter.)
+- Insert. On unique-violation (Postgres `23505`) return `{ ok: true, alreadySubscribed: true }` so the UI shows a friendly "you're already on the list" toast.
+- ESP forwarding: optional. If `MAILCHIMP_API_KEY` + `MAILCHIMP_LIST_ID` env vars exist, POST to Mailchimp Members endpoint. Failures are logged but never block the success response (Supabase row is the source of truth). No new secret request unless the user wants ESP sync — the function gracefully no-ops when secrets are absent.
 
-**Hook update**: `src/hooks/useSEO.ts`
-- Change `jsonLd` option to accept `Record<string, unknown> | Record<string, unknown>[]` so callers can attach BreadcrumbList alongside the page's primary entity.
+**Component** `src/components/marketing/EmailSignup.tsx`:
+- Props: `source: string`, optional `variant: "inline" | "stacked"`, optional `headline`/`subhead`.
+- shadcn `Input` + `Button`, loading spinner, sonner toast for success / already-subscribed / error.
+- Calls `supabase.functions.invoke("subscribe", { body: { email, source, locale } })`.
+- Fully i18n'd via existing `react-i18next` (new keys under `newsletter.*` in `en.json` and `zh-HK.json`).
 
-**Per-page graphs**:
-- `src/pages/Index.tsx` (currently has none): emit `MusicGroup` with `name: "Cola B"`, `image: og-image`, `url: SITE_URL`, `sameAs: [Spotify artist, Apple Music artist, YouTube @Cola_BB, Instagram, Facebook, TikTok, Threads, SoundCloud]` (URLs sourced from `mem://brand/official-presence`). Add WebSite graph with `potentialAction` SearchAction. No breadcrumb on home.
-- `src/pages/ReleasePage.tsx` (already has MusicAlbum/MusicRecording): enrich with `track` array built from `tracks` state (each `MusicRecording` with `name` + `duration` ISO 8601), add `inAlbum` for singles, add BreadcrumbList Home › Music › {title}.
-- `src/pages/ProductDetail.tsx` (already has Product/Offer): add `brand: { "@type": "Brand", name: "Cola B" }`, dynamic `availability` from `selectedVariant.availableForSale`, `sku: selectedVariant.id`, `itemCondition: NewCondition`. Add BreadcrumbList Home › Store › {title}.
-- `src/pages/StoryDetail.tsx` (already has Article): add BreadcrumbList Home › Story › {title}.
-- Optionally also inject BreadcrumbList on `Music`, `Store`, `Story`, `Videos`, `Press` index pages.
+**Integration**:
+- `Footer.tsx`: insert `<EmailSignup source="footer" variant="stacked" />` as a new top section above the studio block, separated by a divider. Editorial styling — porcelain bg, charcoal text, no rounded corners (per core memory).
 
-## TICKET-202 — Dynamic sitemap
+Optional exit-intent modal is left as a follow-up ticket (not built in this epic).
 
-An edge function `supabase/functions/sitemap/index.ts` already exists and emits static routes + stories + releases. Gaps: no Shopify products, robots.txt lists two sitemaps, static `public/sitemap.xml` is stale and wins on the apex domain.
+## TICKET-302 — Smart-link release page (without pre-save in v1)
 
-**Changes**:
-- `supabase/functions/sitemap/index.ts`: add Shopify Storefront API fetch (paginated `products(first: 250)` with `handle` + `updatedAt`) using `SHOPIFY_STOREFRONT_ACCESS_TOKEN` and `shopify--get_shop_permanent_domain` value (hardcode the resolved `*.myshopify.com` domain as a constant — Storefront token is already in secrets). Emit `/product/:handle` URLs with `lastmod`. Add `/privacy`, `/terms` to STATIC_ROUTES. Skip `/lovevibevol5` (noindex).
-- `public/sitemap.xml`: delete (stale, missing dynamic content). Lovable/Vite will then 404 on `/sitemap.xml` at the apex — so we need a redirect.
-- `public/_redirects` (new, Lovable-supported): add `/sitemap.xml https://tfcrxvnfuagmqwkxoyei.supabase.co/functions/v1/sitemap 200` so the canonical sitemap URL proxies the edge function.
-- `public/robots.txt`: collapse to a single `Sitemap: https://colabbmusic.com/sitemap.xml` line (drop the supabase URL).
+**Schema**: `streaming_links` table already exists with `(release_id, platform, url)` rows. No schema change needed — we just enrich how existing rows render plus add a few static fallbacks.
 
-**Acceptance**: `curl https://colabbmusic.com/sitemap.xml` returns XML with every release, story, and Shopify product.
+**`src/lib/streaming.ts`**:
+- Extend `PLATFORM_INFO` to cover the full DSP set: spotify, apple_music, youtube, youtube_music, amazon_music, tidal, deezer, soundcloud, bandcamp, pandora. Each entry: `{ label, color, icon (SVG path) }`. Add a `displayOrder` so buttons render in a consistent priority sequence (Spotify → Apple → YouTube Music → Amazon → Tidal → Deezer → SoundCloud → Bandcamp → others).
+- Helper `parseSpotifyEmbedUrl(url)` → returns embed URL for Spotify oEmbed (`https://open.spotify.com/embed/...`).
+- Helper `parseAppleMusicEmbedUrl(url)` → returns Apple Music embed URL.
 
-## TICKET-203 — Per-page SEO consistency sweep
+**`src/pages/ReleasePage.tsx`**:
+- Replace the existing 3-column platform grid with a vertical "smart-link" stack styled like a linktree: full-width branded buttons, each tinted with its platform color, in `displayOrder`. Each button click calls `trackReleaseClick({ release_id, platform })`.
+- Above the buttons, embed a Spotify iframe (if a Spotify link is present) and an Apple Music iframe (if an Apple link is present). Lazy-loaded.
+- New analytics helper `trackReleaseClick` in `src/lib/analytics.ts` emitting `gtag("event", "release_click", { release_id, platform })`.
+- **Pre-save deferred**: Spotify pre-save and Apple MusicKit pre-add require app registration (Spotify Developer Dashboard + Apple Developer + MusicKit JWT signing) plus an OAuth callback edge function. That is genuinely 1+ day of integration work and needs credentials we don't have yet. Ship the smart-link + embeds now; create a follow-up ticket "TICKET-302b — pre-save flow" once the user registers the apps. The plan documents the exact gap; nothing fake or placeholder is shipped.
 
-**Title pattern**: standardize on `"{Page} | Cola B — Queen of Emo Pop"` (home is `"Cola B — Queen of Emo Pop | Official Site"`).
-- `index.html` line 7: update default `<title>`.
-- `src/hooks/useSEO.ts`: change `DEFAULT_TITLE` and add internal helper that, when caller passes a bare page title, formats as `{title} | Cola B — Queen of Emo Pop`. Keep an `exactTitle?: boolean` escape hatch.
-- Audit every page in `src/pages/` and ensure `useSEO({ title, description, image })` is called with all three. Files needing additions/updates: `Music.tsx`, `Videos.tsx`, `Store.tsx`, `Story.tsx`, `Press.tsx`, `AboutCola.tsx`, `ChatPage.tsx`, `Policies.tsx`, `Privacy.tsx`, `Terms.tsx`, `NotFound.tsx`.
+## TICKET-303 — Spotify Follow widget on home
 
-**H1 on home**: `src/components/home/HeroSection.tsx` line 34 currently shows `"COLA B"` only. Keep the visual wordmark but:
-- Wrap the visible "COLA B" in a `<span aria-hidden="true">` and add an `<h1 className="sr-only">Cola B — Queen of Emo Pop. Official music, videos, story, and merch.</h1>` above it.
+- New `src/components/home/SpotifyFollow.tsx` — minimal section using Spotify's official artist iframe embed (`https://open.spotify.com/embed/artist/00rDJJmfKiMqxsGOuJmlzz?utm_source=generator&theme=0`) sized to compact (152px tall). Editorial heading "Follow on Spotify".
+- Mount in `src/pages/Index.tsx` between `<HeroSection />` and `<CurrentEra />`.
+- The iframe inherently provides the follow CTA — no extra JS needed.
 
-**Brand tagline alignment**: `src/data/content.ts` `brand.tagline` currently reads "Singer-songwriter. Cultural personality…". Update to align with the "Queen of Emo Pop" positioning already in core memory.
+## TICKET-304 — Centralized social/streaming icons
+
+- `src/data/content.ts`: add a new `socialLinks` block exporting `{ spotify, appleMusic, youtube, youtubeMusic, tiktok, instagram, facebook, threads, soundcloud, bandcamp }`. URLs sourced from `mem://brand/official-presence` (X intentionally omitted — core memory rule).
+- New shared SVG-icon map in `src/lib/socialIcons.tsx` (or extend `streaming.ts`) so the same brand SVGs render in nav, footer, and any future surface.
+- `Footer.tsx`: replace the two-icon row with a full strip of platform icons; each link `target="_blank" rel="noopener noreferrer"` and calls `trackSocialClick(platform)`.
+- `Navbar.tsx`: keep nav minimal — render only Instagram + Spotify on desktop, drop Facebook from the bar.
+- New analytics helper `trackSocialClick(platform)` → `gtag("event", "social_click", { platform })` and FB Pixel `Lead` (light).
+
+## TICKET-305 — Share buttons
+
+- New component `src/components/share/ShareButtons.tsx`:
+  - On mount, feature-detect `navigator.share`. Mobile (touch + share API present) → single "Share" button that opens native sheet via `navigator.share({ title, text, url })`.
+  - Desktop / no native share → inline row with X (Twitter), WhatsApp, Telegram, Facebook, Copy Link buttons. Each calls `trackShareClick(platform)`.
+  - Note: per core memory rule "Never link to 'X' (Twitter)". For the user's own brand pages we exclude X from social links — but for **share targets**, X/Twitter is a destination users may want to share to. Plan: **omit X here too** to be consistent with the brand rule. Keep WhatsApp, Telegram, Facebook, Copy Link, Email as fallbacks. Will confirm in implementation if user wants X added back as a share-only target.
+- Embed in `ReleasePage.tsx` (under the smart-link buttons) and `StoryDetail.tsx` (under the article body).
+- New analytics helper `trackShareClick(platform, contentType, contentId)`.
 
 ## Files touched
 
 ```text
-new:    src/components/seo/JsonLd.tsx
-new:    public/_redirects
-delete: public/sitemap.xml
-edit:   src/hooks/useSEO.ts
+new:    supabase/migrations/<ts>_create_subscribers.sql
+new:    supabase/functions/subscribe/index.ts
+new:    src/components/marketing/EmailSignup.tsx
+new:    src/components/home/SpotifyFollow.tsx
+new:    src/components/share/ShareButtons.tsx
+new:    src/lib/socialIcons.tsx
+edit:   src/components/layout/Footer.tsx
+edit:   src/components/layout/Navbar.tsx
 edit:   src/pages/Index.tsx
 edit:   src/pages/ReleasePage.tsx
-edit:   src/pages/ProductDetail.tsx
 edit:   src/pages/StoryDetail.tsx
-edit:   src/pages/Music.tsx, Videos.tsx, Store.tsx, Story.tsx, Press.tsx,
-        AboutCola.tsx, ChatPage.tsx, Policies.tsx, Privacy.tsx,
-        Terms.tsx, NotFound.tsx
-edit:   src/components/home/HeroSection.tsx
+edit:   src/lib/streaming.ts
+edit:   src/lib/analytics.ts
 edit:   src/data/content.ts
-edit:   index.html
-edit:   public/robots.txt
-edit:   supabase/functions/sitemap/index.ts
+edit:   src/i18n/en.json, src/i18n/zh-HK.json
 ```
+
+## Out of scope for this epic (explicit deferrals)
+
+- **Spotify pre-save / Apple MusicKit pre-add** (TICKET-302 second half): requires Spotify Developer app + Apple Developer + MusicKit token-signing edge function. Will be a follow-up ticket once you've registered those apps and shared the credentials.
+- **Exit-intent modal with acoustic-download lead magnet** (mentioned as optional in TICKET-301): deferred — needs the actual audio file and a signed-URL delivery flow.
+- **ESP integration**: function is built to forward to Mailchimp if `MAILCHIMP_API_KEY` + `MAILCHIMP_LIST_ID` env vars exist. We won't request those secrets unless you confirm you want to sync to a specific ESP.
 
 ## Acceptance checklist
 
-- Google Rich Results Test passes on `/`, `/release/:id`, `/product/:handle`, `/story/:id` with no errors and the expected entity types detected.
-- `https://colabbmusic.com/sitemap.xml` returns one XML document containing every release, story, and Shopify product handle.
-- `view-source` of every page in `src/pages/` shows non-default `<title>`, meta description, og:image, and at least one JSON-LD block.
-- Home page DOM contains exactly one visible/AT-readable `<h1>` with descriptive keyword text.
+- Submitting an email in the footer creates a row in `subscribers`; resubmitting the same email shows "you're already subscribed".
+- Release page renders branded streaming buttons in a consistent order, embeds a Spotify (and Apple if present) player, and emits `release_click` GA events on click.
+- Home page shows a Spotify follow widget between hero and current era.
+- Footer shows the full platform strip; nav shows Instagram + Spotify; all external links open in new tabs and emit `social_click`.
+- Release and story pages have a Share component — native sheet on mobile, button row on desktop — emitting `share_click`.
 
 Approve to implement.
