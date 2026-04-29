@@ -59,6 +59,7 @@ const Index = () => {
   return (
     <PageLayout>
       <HeroSection />
+      <SpotifyFollow />
       <CurrentEra />
       <FeaturedMusic />
       <StoryPreview />
