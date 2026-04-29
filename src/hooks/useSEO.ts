@@ -2,9 +2,12 @@ import { useEffect } from "react";
 
 const SITE_NAME = "Cola B";
 const SITE_URL = "https://colabbmusic.com";
-const DEFAULT_TITLE = "Cola B — Official Site";
+const BRAND_SUFFIX = "Cola B — Queen of Emo Pop";
+const DEFAULT_TITLE = "Cola B — Queen of Emo Pop | Official Site";
 const DEFAULT_DESCRIPTION = "The official home of Cola B — latest music, videos, story, and exclusive merchandise.";
 const DEFAULT_IMAGE = `${SITE_URL}/og-image.jpg`;
+
+type JsonLdGraph = Record<string, unknown>;
 
 interface SEOOptions {
   title?: string;
@@ -12,12 +15,24 @@ interface SEOOptions {
   image?: string | null;
   url?: string;
   type?: string;
-  jsonLd?: Record<string, unknown>;
+  jsonLd?: JsonLdGraph | JsonLdGraph[];
   publishedTime?: string;
   author?: string;
   section?: string;
   keywords?: string[];
   noindex?: boolean;
+  /**
+   * If true, use `title` exactly as provided. Otherwise, the hook formats it as
+   * `{title} | Cola B — Queen of Emo Pop` (unless the title already contains "Cola B").
+   */
+  exactTitle?: boolean;
+}
+
+function formatTitle(raw: string | undefined, exact: boolean | undefined): string {
+  if (!raw) return DEFAULT_TITLE;
+  if (exact) return raw;
+  if (raw.includes("Cola B")) return raw;
+  return `${raw} | ${BRAND_SUFFIX}`;
 }
 
 function setMeta(attr: "property" | "name", key: string, content: string): () => void {
@@ -60,7 +75,7 @@ function setHreflang(lang: string, href: string): () => void {
   return () => el.remove();
 }
 
-function setJsonLd(data: Record<string, unknown>): () => void {
+function setJsonLd(data: JsonLdGraph): () => void {
   const el = document.createElement("script");
   el.setAttribute("type", "application/ld+json");
   el.textContent = JSON.stringify(data);
@@ -80,9 +95,10 @@ export function useSEO({
   section,
   keywords,
   noindex,
+  exactTitle,
 }: SEOOptions = {}) {
   useEffect(() => {
-    const fullTitle = title || DEFAULT_TITLE;
+    const fullTitle = formatTitle(title, exactTitle);
     const desc = description || DEFAULT_DESCRIPTION;
     const img = image || DEFAULT_IMAGE;
     const path = window.location.pathname;
@@ -101,7 +117,6 @@ export function useSEO({
       setMeta("name", "twitter:image", img),
       setMeta("name", "description", desc),
       setCanonical(canonical),
-      // hreflang alternates (query-param strategy)
       setHreflang("en", `${SITE_URL}${path}?lang=en`),
       setHreflang("zh-HK", `${SITE_URL}${path}?lang=zh-HK`),
       setHreflang("x-default", `${SITE_URL}${path}`),
@@ -120,14 +135,15 @@ export function useSEO({
     if (keywords?.length) cleanups.push(setMeta("name", "keywords", keywords.join(", ")));
 
     if (jsonLd) {
-      cleanups.push(setJsonLd(jsonLd));
+      const graphs = Array.isArray(jsonLd) ? jsonLd : [jsonLd];
+      graphs.forEach((g) => cleanups.push(setJsonLd(g)));
     }
 
     return () => {
       document.title = DEFAULT_TITLE;
       cleanups.forEach((fn) => fn());
     };
-  }, [title, description, image, url, type, jsonLd, publishedTime, author, section, keywords, noindex]);
+  }, [title, description, image, url, type, jsonLd, publishedTime, author, section, keywords, noindex, exactTitle]);
 }
 
-export { SITE_NAME, SITE_URL };
+export { SITE_NAME, SITE_URL, BRAND_SUFFIX };
