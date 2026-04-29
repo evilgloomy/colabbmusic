@@ -9,6 +9,7 @@ import { artistAgent } from '@/lib/artistAgent';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useSEO } from '@/hooks/useSEO';
 
 interface Message {
   id: string;
