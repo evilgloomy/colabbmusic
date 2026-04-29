@@ -4,6 +4,7 @@ import { ArrowLeft, ExternalLink, MapPin, Calendar } from "lucide-react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useSEO, SITE_URL } from "@/hooks/useSEO";
+import { buildBreadcrumb } from "@/components/seo/JsonLd";
 import { useTranslation } from "react-i18next";
 
 interface Story {
@@ -43,7 +44,7 @@ const StoryDetailPage = () => {
   const jsonLd = useMemo(() => {
     if (!story) return undefined;
     const keywords = [story.category, story.location].filter(Boolean) as string[];
-    return {
+    const article = {
       "@context": "https://schema.org",
       "@type": "Article",
       headline: story.ai_title || "Story",
@@ -58,6 +59,15 @@ const StoryDetailPage = () => {
       keywords: keywords.length ? keywords.join(", ") : undefined,
       url: `${SITE_URL}/story/${story.id}`,
     };
+    const breadcrumb = buildBreadcrumb(
+      [
+        { name: "Home", url: "/" },
+        { name: "Story", url: "/story" },
+        { name: story.ai_title || "Story", url: `/story/${story.id}` },
+      ],
+      SITE_URL,
+    );
+    return [article, breadcrumb];
   }, [story]);
 
   useSEO({

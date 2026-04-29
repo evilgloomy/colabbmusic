@@ -1,7 +1,13 @@
 import { Link } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
+import { useSEO } from "@/hooks/useSEO";
 
 const NotFound = () => {
+  useSEO({
+    title: "Page Not Found",
+    description: "The page you're looking for doesn't exist. Return to the Cola B home page to keep exploring.",
+    noindex: true,
+  });
   return (
     <PageLayout>
       <div className="min-h-[60vh] flex items-center justify-center">

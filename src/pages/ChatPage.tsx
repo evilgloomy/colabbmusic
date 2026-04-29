@@ -9,6 +9,7 @@ import { artistAgent } from '@/lib/artistAgent';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useSEO } from '@/hooks/useSEO';
 
 interface Message {
   id: string;
@@ -19,6 +20,11 @@ interface Message {
 
 const ChatPage = () => {
   const { t } = useTranslation();
+  useSEO({
+    title: "Chat with Cola B",
+    description: "Talk to Cola B's AI companion — premium subscriber-only conversations.",
+    noindex: true,
+  });
   const { user, session, loading: authLoading, signOut } = useArtistAgentAuth();
   const [character, setCharacter] = useState<any>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
