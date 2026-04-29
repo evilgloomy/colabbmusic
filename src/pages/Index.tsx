@@ -1,5 +1,6 @@
 import { PageLayout } from "@/components/layout/PageLayout";
 import { HeroSection } from "@/components/home/HeroSection";
+import { SpotifyFollow } from "@/components/home/SpotifyFollow";
 import { CurrentEra } from "@/components/home/CurrentEra";
 import { FeaturedMusic } from "@/components/home/FeaturedMusic";
 import { StoryPreview } from "@/components/home/StoryPreview";
@@ -58,6 +59,7 @@ const Index = () => {
   return (
     <PageLayout>
       <HeroSection />
+      <SpotifyFollow />
       <CurrentEra />
       <FeaturedMusic />
       <StoryPreview />
