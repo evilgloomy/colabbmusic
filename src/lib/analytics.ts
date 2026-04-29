@@ -188,3 +188,33 @@ export function trackInitiateCheckout(params: {
     })),
   });
 }
+
+/* ---------- Streaming click ---------- */
+export function trackReleaseClick(params: { release_id: string; platform: string; title?: string }) {
+  gtag("event", "release_click", {
+    release_id: params.release_id,
+    platform: params.platform,
+    release_title: params.title,
+  });
+}
+
+/* ---------- Social click ---------- */
+export function trackSocialClick(platform: string, location?: string) {
+  gtag("event", "social_click", { platform, location });
+}
+
+/* ---------- Share click ---------- */
+export function trackShareClick(platform: string, contentType: string, contentId: string) {
+  gtag("event", "share", {
+    method: platform,
+    content_type: contentType,
+    item_id: contentId,
+  });
+}
+
+/* ---------- Newsletter signup ---------- */
+export function trackNewsletterSignup(source: string) {
+  fbq("track", "Lead", { source });
+  gtag("event", "newsletter_signup", { source });
+}
+
