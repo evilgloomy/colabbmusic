@@ -6,7 +6,15 @@ import { fetchStreamingLinks, PLATFORM_INFO, type StreamingLink } from "@/lib/st
 import { fetchReleaseTracks, type YouTubeRelease, type ReleaseTrack } from "@/lib/youtube";
 import { ArrowLeft, Play, Pause, ExternalLink, Music } from "lucide-react";
 import { useSEO, SITE_URL } from "@/hooks/useSEO";
+import { buildBreadcrumb } from "@/components/seo/JsonLd";
 import { useTranslation } from "react-i18next";
+
+function secondsToISODuration(s?: number | null): string | undefined {
+  if (!s || s <= 0) return undefined;
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `PT${m}M${sec}S`;
+}
 
 const ReleasePage = () => {
   const { t } = useTranslation();
