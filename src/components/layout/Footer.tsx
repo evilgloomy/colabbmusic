@@ -12,7 +12,7 @@ export const Footer = () => {
         {/* Studio line */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
           <div className="flex items-center gap-4">
-            <img src={shibaLogo} alt="Shiba Inu Media" className="h-12 w-12 object-contain" />
+            <img src={shibaLogo} alt={t("footer.studioLogoAlt")} className="h-12 w-12 object-contain" />
             <div>
               <p className="font-body text-sm font-bold tracking-[0.1em] uppercase text-foreground">
                 Shiba Inu Media
@@ -46,8 +46,8 @@ export const Footer = () => {
             © {new Date().getFullYear()} Cola B. {t("footer.allRightsReserved")}
           </p>
           <div className="flex gap-4 text-[11px] text-muted-foreground/60 font-body">
-            <span className="hover:text-muted-foreground transition-colors cursor-pointer">{t("footer.privacyPolicy")}</span>
-            <span className="hover:text-muted-foreground transition-colors cursor-pointer">{t("footer.termsOfService")}</span>
+            <Link to="/privacy" className="hover:text-muted-foreground transition-colors">{t("footer.privacyPolicy")}</Link>
+            <Link to="/terms" className="hover:text-muted-foreground transition-colors">{t("footer.termsOfService")}</Link>
           </div>
         </div>
       </div>

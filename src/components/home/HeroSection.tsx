@@ -20,7 +20,7 @@ export const HeroSection = () => {
       <div className="absolute right-0 top-0 bottom-0 w-full md:w-[55%]">
         <img
           src={heroImage}
-          alt="Cola B — Queen of Emo Pop"
+          alt={t("hero.portraitAlt")}
           className="h-full w-full object-cover object-top"
           style={{
             maskImage: "linear-gradient(to left, black 30%, transparent 90%)",

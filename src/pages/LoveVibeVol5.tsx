@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSEO } from "@/hooks/useSEO";
 
 const tracks = [
   { num: "01", title: "已讀不回", sub: "", url: "https://soundcloud.com/coke-wang-703401983/cola-b-yi-du-bu-hui-1?secret_token=s-kHSruox3LPE" },
@@ -108,18 +109,11 @@ export default function LoveVibeVol5() {
   const [err, setErr] = useState(false);
   const [activeTrack, setActiveTrack] = useState(0);
 
-  useEffect(() => {
-    const prevTitle = document.title;
-    document.title = "離 — LoveVibe Vol. 5 (Private)";
-    const meta = document.createElement("meta");
-    meta.name = "robots";
-    meta.content = "noindex, nofollow";
-    document.head.appendChild(meta);
-    return () => {
-      document.title = prevTitle;
-      document.head.removeChild(meta);
-    };
-  }, []);
+  useSEO({
+    title: "離 — LoveVibe Vol. 5 (Private)",
+    description: "Private preview — LoveVibe Vol. 5.",
+    noindex: true,
+  });
 
   const tryUnlock = () => {
     if (pw.trim().toLowerCase() === PASSWORD) { setOpen(true); setErr(false); }
