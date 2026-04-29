@@ -31,12 +31,14 @@ export const HeroSection = () => {
 
       {/* Content — left aligned, minimal */}
       <div className="relative container mx-auto px-6 pb-24 md:pb-32 pt-48 z-10">
-        <h1
+        <h1 className="sr-only">Cola B — Queen of Emo Pop. Official music, videos, story, and merch.</h1>
+        <p
+          aria-hidden="true"
           className="text-hero font-display font-bold text-foreground mb-6 animate-fade-in opacity-0"
           style={{ animationDelay: "0.2s", lineHeight: "1.05" }}
         >
           COLA B
-        </h1>
+        </p>
         <p
           className="text-lg md:text-xl font-body font-medium text-foreground/70 mb-12 animate-fade-in opacity-0 max-w-md"
           style={{ animationDelay: "0.5s" }}
