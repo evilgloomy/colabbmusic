@@ -42,21 +42,41 @@ const ReleasePage = () => {
 
   const jsonLd = useMemo(() => {
     if (!release) return undefined;
-    return {
+    const isAlbum = !!(release.track_count && release.track_count > 1);
+    const trackList = tracks.length
+      ? tracks.map((t) => ({
+          "@type": "MusicRecording",
+          name: t.title,
+          duration: secondsToISODuration(t.duration_seconds),
+          position: t.track_number,
+        }))
+      : undefined;
+    const primary = {
       "@context": "https://schema.org",
-      "@type": release.track_count && release.track_count > 1 ? "MusicAlbum" : "MusicRecording",
+      "@type": isAlbum ? "MusicAlbum" : "MusicRecording",
       name: release.title,
-      byArtist: { "@type": "MusicGroup", name: "Cola B" },
+      byArtist: { "@type": "MusicGroup", name: "Cola B", url: SITE_URL },
       datePublished: release.release_date || release.year,
       image: release.thumbnail_url,
       url: `${SITE_URL}/release/${release.id}`,
+      ...(isAlbum && trackList ? { numTracks: tracks.length, track: trackList } : {}),
     };
-  }, [release]);
+    const breadcrumb = buildBreadcrumb(
+      [
+        { name: "Home", url: "/" },
+        { name: "Music", url: "/music" },
+        { name: release.title, url: `/release/${release.id}` },
+      ],
+      SITE_URL,
+    );
+    return [primary, breadcrumb];
+  }, [release, tracks]);
 
   useSEO({
     title: release ? `${release.title} — Cola B` : "Release — Cola B",
     description: release ? `Listen to ${release.title} by Cola B. ${release.year || ""}` : "Listen to Cola B on all platforms.",
     image: release?.thumbnail_url,
+    exactTitle: !!release,
     jsonLd,
   });
 
