@@ -28,26 +28,42 @@ const ProductDetailPage = () => {
 
   const jsonLd = useMemo(() => {
     if (!product) return undefined;
-    return {
+    const firstVariant = product.variants?.edges?.[0]?.node;
+    const anyAvailable = product.variants?.edges?.some((e) => e.node?.availableForSale) ?? true;
+    const productGraph = {
       "@context": "https://schema.org",
       "@type": "Product",
       name: product.title,
       description: product.description,
-      image: product.images?.edges?.[0]?.node?.url,
+      image: product.images?.edges?.map((e) => e.node.url).filter(Boolean) || [],
       url: `${SITE_URL}/product/${product.handle}`,
+      sku: firstVariant?.id,
+      brand: { "@type": "Brand", name: "Cola B" },
       offers: {
         "@type": "Offer",
         price: product.priceRange?.minVariantPrice?.amount,
         priceCurrency: product.priceRange?.minVariantPrice?.currencyCode,
-        availability: "https://schema.org/InStock",
+        availability: anyAvailable ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        itemCondition: "https://schema.org/NewCondition",
+        url: `${SITE_URL}/product/${product.handle}`,
       },
     };
+    const breadcrumb = buildBreadcrumb(
+      [
+        { name: "Home", url: "/" },
+        { name: "Store", url: "/store" },
+        { name: product.title, url: `/product/${product.handle}` },
+      ],
+      SITE_URL,
+    );
+    return [productGraph, breadcrumb];
   }, [product]);
 
   useSEO({
     title: product ? `${product.title} — Cola B Store` : "Product — Cola B Store",
     description: product?.description || "Official Cola B merchandise.",
     image: product?.images?.edges?.[0]?.node?.url,
+    exactTitle: !!product,
     jsonLd,
   });
 
