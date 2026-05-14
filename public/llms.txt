@@ -1,0 +1,21 @@
+# Cola B
+
+> Official site of Cola B — the Queen of Emo Pop. Music, videos, story, press, and exclusive merchandise.
+
+Cola B is an emo-pop recording artist. This site is her official headquarters, covering her discography, music videos, editorial story posts, press coverage, and direct-to-fan merchandise.
+
+## Pages
+
+- [Home](/): Latest releases, featured video, current era highlights.
+- [Music](/music): Full discography with streaming links to Spotify, Apple Music, YouTube, and more.
+- [Videos](/videos): Official music videos and visual content from the VEVO channel.
+- [Store](/store): Official Cola B merchandise — apparel, vinyl, accessories, and limited drops.
+- [Story](/story): Editorial posts, behind-the-scenes notes, and updates from the artist.
+- [Press](/press): Press coverage, features, and media mentions.
+- [About](/about): Artist biography, history, and project background.
+
+## Optional
+
+- [Privacy](/privacy): Privacy policy.
+- [Terms](/terms): Terms of service.
+- [Policies](/policies): Shipping, returns, and store policies.
