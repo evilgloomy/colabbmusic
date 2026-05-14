@@ -12,7 +12,8 @@ const VideosPage = () => {
 
   useSEO({
     title: t("videos.pageTitle") + " — Cola B",
-    description: t("videos.pageDesc"),
+    description:
+      "Watch every official Cola B music video and visual release from her VEVO channel — full-length premieres, live sessions, and behind-the-scenes cuts.",
   });
 
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
