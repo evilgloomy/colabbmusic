@@ -22,4 +22,3 @@ Disallow: /lovevibevol5
 Disallow: /chat
 
 Sitemap: https://colabbmusic.com/sitemap.xml
-Sitemap: https://tfcrxvnfuagmqwkxoyei.supabase.co/functions/v1/sitemap

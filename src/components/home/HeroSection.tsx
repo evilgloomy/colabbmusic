@@ -21,6 +21,10 @@ export const HeroSection = () => {
         <img
           src={heroImage}
           alt={t("hero.portraitAlt")}
+          width={1920}
+          height={812}
+          fetchPriority="high"
+          decoding="async"
           className="h-full w-full object-cover object-top"
           style={{
             maskImage: "linear-gradient(to left, black 30%, transparent 90%)",
