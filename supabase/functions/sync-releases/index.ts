@@ -578,10 +578,12 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Admin-only: require service-role bearer token
+  // Admin-only: require service-role bearer token OR cron secret
   const auth = req.headers.get('Authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
-  if (!token || token !== Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) {
+  const cronSecret = Deno.env.get('CRON_SECRET');
+  const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!token || (token !== serviceRole && (!cronSecret || token !== cronSecret))) {
     return new Response(JSON.stringify({ success: false, error: 'unauthorized' }), {
       status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
