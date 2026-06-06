@@ -1,21 +1,16 @@
-## Problem
+## Goal
+Update every Spotify artist link/ID for Cola B to the new artist: `3LrZ1mrMzMFm5forQrdBVn`
+(https://open.spotify.com/artist/3LrZ1mrMzMFm5forQrdBVn)
 
-Last week's security pass added a service-role bearer-token check to `sync-threads-posts`, `sync-releases`, `cache-album-art`, and `scrape-hyperfollow`. But the two pg_cron jobs that drive these on a schedule are still sending the **anon key** in the `Authorization` header — so every scheduled run now returns `401 unauthorized` and no new Threads stories (or release refreshes) land in the DB.
+Album/track embed IDs on LoveVibeVol5 are NOT artist links and will be left alone.
 
-Current cron jobs:
-- `sync-threads-posts-every-6h` (every 6h) → anon key
-- `weekly-sync-releases-saturday` (Sat 01:00) → anon key
+## Files to update
 
-## Fix
+1. **src/data/content.ts** — `socialLinks.spotify` → new artist URL
+2. **src/components/home/SpotifyFollow.tsx** — `SPOTIFY_ARTIST_ID` constant → `3LrZ1mrMzMFm5forQrdBVn`
+3. **src/pages/Index.tsx** (line 14) — hardcoded artist URL → new URL
+4. **src/pages/ReleasePage.tsx** (line 230) — fallback Spotify artist URL → new URL
+5. **src/pages/Music.tsx** (line 71) — replace the existing different ID `4nDss1M3MqgFwRSBCmuyST` with the new artist URL
+6. **src/components/home/CurrentEra.tsx** (line 48) — fallback artist URL → new URL
 
-Update both cron jobs to send the `SUPABASE_SERVICE_ROLE_KEY` instead of the anon key, using `cron.alter_job` (or unschedule + reschedule). This is user-specific data (contains the service-role secret), so it goes through the **insert** tool, not a migration — matching the same pattern that originally created these jobs.
-
-After updating, trigger `sync-threads-posts` once manually to confirm a 200 response and that new posts since the last successful run get backfilled.
-
-## Technical details
-
-1. Unschedule and recreate both jobs with the service-role key in the Authorization header. Schedules stay identical (`0 */6 * * *` and `0 1 * * 6`).
-2. Verify via `cron.job` that the new commands are in place.
-3. Invoke `sync-threads-posts` once with the service-role token and check `synced`/`refreshed` in the response + recent rows in `stories`.
-
-No edge-function code, RLS, or frontend changes — the auth model added during the security fix is correct, only the scheduler was left behind.
+No backend / DB changes. No edge function changes (scrape-hyperfollow only references `spotify.com` as a domain allowlist).

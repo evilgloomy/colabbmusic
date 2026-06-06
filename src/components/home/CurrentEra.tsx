@@ -45,7 +45,7 @@ export const CurrentEra = () => {
     ? links
     : [
         { platform: "apple_music", url: "https://music.apple.com/artist/cola-b/1663793217", release_id: current.id, id: "am", created_at: "" },
-        { platform: "spotify", url: "https://open.spotify.com/artist/00rDJJmfKiMqxsGOuJmlzz", release_id: current.id, id: "sp", created_at: "" },
+        { platform: "spotify", url: "https://open.spotify.com/artist/3LrZ1mrMzMFm5forQrdBVn", release_id: current.id, id: "sp", created_at: "" },
       ];
 
   return (

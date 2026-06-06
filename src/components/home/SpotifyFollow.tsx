@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 
-const SPOTIFY_ARTIST_ID = "00rDJJmfKiMqxsGOuJmlzz";
+const SPOTIFY_ARTIST_ID = "3LrZ1mrMzMFm5forQrdBVn";
 
 export const SpotifyFollow = () => {
   const { t } = useTranslation();
