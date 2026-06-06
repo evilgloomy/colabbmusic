@@ -64,7 +64,7 @@ export const brand = {
 // X (Twitter) is intentionally excluded per brand policy.
 
 export const socialLinks = {
-  spotify: "https://open.spotify.com/artist/00rDJJmfKiMqxsGOuJmlzz",
+  spotify: "https://open.spotify.com/artist/3LrZ1mrMzMFm5forQrdBVn",
   appleMusic: "https://music.apple.com/artist/cola-b/1663793217",
   youtube: "https://www.youtube.com/@Cola_BB",
   youtubeMusic: "https://music.youtube.com/channel/UCcola-bb",

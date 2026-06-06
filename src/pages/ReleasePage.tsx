@@ -227,7 +227,7 @@ const ReleasePage = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
                 { label: "Apple Music", url: "https://music.apple.com/artist/cola-b/1663793217", color: "#FA233B" },
-                { label: "Spotify", url: "https://open.spotify.com/artist/00rDJJmfKiMqxsGOuJmlzz", color: "#1DB954" },
+                { label: "Spotify", url: "https://open.spotify.com/artist/3LrZ1mrMzMFm5forQrdBVn", color: "#1DB954" },
                 { label: "YouTube Music", url: videoId ? `https://www.youtube.com/watch?v=${videoId}` : "https://www.youtube.com/@Cola_BB", color: "#FF0000" },
               ].map((p) => (
                 <a key={p.label} href={p.url} target="_blank" rel="noopener noreferrer"

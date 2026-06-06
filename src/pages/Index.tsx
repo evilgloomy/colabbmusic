@@ -11,7 +11,7 @@ import { useSEO, SITE_URL } from "@/hooks/useSEO";
 import { useMemo } from "react";
 
 const SAME_AS = [
-  "https://open.spotify.com/artist/00rDJJmfKiMqxsGOuJmlzz",
+  "https://open.spotify.com/artist/3LrZ1mrMzMFm5forQrdBVn",
   "https://music.apple.com/artist/cola-b/1663793217",
   "https://www.youtube.com/@Cola_BB",
   "https://www.instagram.com/cola_bb_official",
