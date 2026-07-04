@@ -2,19 +2,23 @@ import { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { AipfEntity, AipfEntityLink, AipfAchievement } from "../types";
 import { SectionLabel, GoldDivider } from "./Chrome";
+import { useAipfT } from "@/aipf/i18n";
 
 export function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; cls: string }> = {
-    unverified: { label: "Unverified", cls: "text-muted-foreground border-border" },
-    identity_reviewed: { label: "Identity Reviewed", cls: "text-foreground border-foreground/40" },
-    verified: { label: "Verified", cls: "text-foreground border-foreground" },
-    official: { label: "Official", cls: "border-[hsl(var(--ceremonial-gold))] text-[hsl(var(--foundation-navy))]" },
-    archived: { label: "Archived", cls: "text-muted-foreground border-border" },
+  const { t } = useAipfT();
+  const map: Record<string, { key: string; cls: string }> = {
+    unverified: { key: "badge.unverified", cls: "text-muted-foreground border-border" },
+    identity_reviewed: { key: "badge.identityReviewed", cls: "text-foreground border-foreground/40" },
+    verified: { key: "badge.verified", cls: "text-foreground border-foreground" },
+    official: { key: "badge.official", cls: "border-[hsl(var(--ceremonial-gold))] text-[hsl(var(--foundation-navy))]" },
+    archived: { key: "badge.archived", cls: "text-muted-foreground border-border" },
   };
-  const info = map[status] || { label: status, cls: "text-muted-foreground border-border" };
+  const info = map[status];
+  const label = info ? t(info.key) : status;
+  const cls = info?.cls || "text-muted-foreground border-border";
   return (
-    <span className={`inline-block px-2 py-0.5 text-[0.65rem] uppercase tracking-[0.18em] border ${info.cls}`}>
-      {info.label}
+    <span className={`inline-block px-2 py-0.5 text-[0.65rem] uppercase tracking-[0.18em] border ${cls}`}>
+      {label}
     </span>
   );
 }
@@ -32,12 +36,13 @@ export function MemberTypeBadge({ type }: { type: string | null }) {
 }
 
 export function FoundingCohortBadge() {
+  const { t } = useAipfT();
   return (
     <span
       className="inline-block px-2 py-0.5 text-[0.65rem] uppercase tracking-[0.18em]"
       style={{ background: "hsl(var(--foundation-navy))", color: "hsl(var(--institution-white))" }}
     >
-      Founding Cohort 2026
+      {t("badge.founding")}
     </span>
   );
 }
@@ -51,6 +56,7 @@ export function ReviewStatusBadge({ status }: { status: string }) {
 }
 
 export function DirectoryCard({ e }: { e: AipfEntity }) {
+  const { t } = useAipfT();
   const initials = e.entity_name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   return (
     <Link
@@ -62,7 +68,7 @@ export function DirectoryCard({ e }: { e: AipfEntity }) {
           className="absolute top-0 right-0 px-2 py-1 text-[0.6rem] uppercase tracking-[0.16em]"
           style={{ background: "hsl(var(--soft-cream))", color: "hsl(var(--muted-ink))" }}
         >
-          Sample entry
+          {t("dir.card.sample")}
         </div>
       )}
       <div
@@ -82,7 +88,7 @@ export function DirectoryCard({ e }: { e: AipfEntity }) {
         <h3 className="font-institutional text-2xl mt-2">{e.entity_name}</h3>
         {e.creator_studio_name && (
           <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground mt-1">
-            by {e.creator_studio_name}
+            {t("dir.card.by")} {e.creator_studio_name}
           </p>
         )}
         {e.country_region && (
@@ -105,6 +111,7 @@ export function DirectoryCard({ e }: { e: AipfEntity }) {
 }
 
 export function ProfileHeader({ e }: { e: AipfEntity }) {
+  const { t } = useAipfT();
   const initials = e.entity_name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   return (
     <div className="grid md:grid-cols-[280px_1fr] gap-10 items-start">
@@ -125,26 +132,26 @@ export function ProfileHeader({ e }: { e: AipfEntity }) {
         <h1 className="font-institutional text-5xl md:text-6xl mt-2 leading-tight">{e.entity_name}</h1>
         {e.creator_studio_name && (
           <p className="text-sm uppercase tracking-[0.16em] text-muted-foreground mt-2">
-            by {e.creator_studio_name}
+            {t("prof.by")} {e.creator_studio_name}
           </p>
         )}
         <GoldDivider className="my-6" />
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6 text-sm">
           {e.country_region && (
             <div>
-              <div className="aipf-label mb-1">Region</div>
+              <div className="aipf-label mb-1">{t("prof.region")}</div>
               <div>{e.country_region}</div>
             </div>
           )}
           {e.year_launched && (
             <div>
-              <div className="aipf-label mb-1">Launched</div>
+              <div className="aipf-label mb-1">{t("prof.launched")}</div>
               <div>{e.year_launched}</div>
             </div>
           )}
           {e.member_number && (
             <div>
-              <div className="aipf-label mb-1">Member Number</div>
+              <div className="aipf-label mb-1">{t("prof.memberNumber")}</div>
               <div>{e.member_number}</div>
             </div>
           )}
@@ -160,8 +167,9 @@ export function ProfileHeader({ e }: { e: AipfEntity }) {
 }
 
 export function LinkList({ links, onReport }: { links: AipfEntityLink[]; onReport?: (l: AipfEntityLink) => void }) {
+  const { t } = useAipfT();
   if (!links.length) {
-    return <p className="text-sm text-muted-foreground italic">No public links on file.</p>;
+    return <p className="text-sm text-muted-foreground italic">{t("prof.noLinks")}</p>;
   }
   return (
     <ul className="divide-y" style={{ borderColor: "hsl(var(--border))" }}>
@@ -169,9 +177,9 @@ export function LinkList({ links, onReport }: { links: AipfEntityLink[]; onRepor
         <li key={l.id} className="py-3 flex items-center justify-between gap-4">
           <div className="min-w-0">
             <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-              {l.platform || l.label || "Link"}
+              {l.platform || l.label || t("prof.linkFallback")}
               {l.is_primary && (
-                <span className="ml-2" style={{ color: "hsl(var(--ceremonial-gold))" }}>· primary</span>
+                <span className="ml-2" style={{ color: "hsl(var(--ceremonial-gold))" }}>{t("prof.primary")}</span>
               )}
             </div>
             <a href={l.url} target="_blank" rel="noopener noreferrer" className="aipf-link text-sm truncate block">
@@ -183,7 +191,7 @@ export function LinkList({ links, onReport }: { links: AipfEntityLink[]; onRepor
               onClick={() => onReport(l)}
               className="text-[0.7rem] uppercase tracking-[0.16em] text-muted-foreground hover:text-foreground"
             >
-              Report broken
+              {t("prof.reportBroken")}
             </button>
           )}
         </li>
@@ -193,6 +201,7 @@ export function LinkList({ links, onReport }: { links: AipfEntityLink[]; onRepor
 }
 
 export function AchievementList({ items }: { items: AipfAchievement[] }) {
+  const { t } = useAipfT();
   if (!items.length) return null;
   return (
     <ul className="space-y-4">
@@ -203,7 +212,7 @@ export function AchievementList({ items }: { items: AipfAchievement[] }) {
           {a.description && <p className="text-sm text-foreground/80 mt-1">{a.description}</p>}
           {a.url && (
             <a href={a.url} target="_blank" rel="noopener noreferrer" className="aipf-link text-xs mt-1 inline-block">
-              Reference
+              {t("prof.reference")}
             </a>
           )}
         </li>

@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import { useAipfT } from "@/aipf/i18n";
 
 const schema = z.object({
   name: z.string().min(1).max(200),
@@ -23,8 +24,9 @@ const schema = z.object({
 });
 type V = z.infer<typeof schema>;
 
-export default function Contact() {
-  useSEO({ title: "Contact — AI People Foundation", exactTitle: true });
+function Inner() {
+  const { t } = useAipfT();
+  useSEO({ title: t("contact.seoTitle"), exactTitle: true });
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm<V>({ resolver: zodResolver(schema) as any });
@@ -33,36 +35,38 @@ export default function Contact() {
     setBusy(true);
     const { error } = await createContactMessage(v);
     setBusy(false);
-    if (error) return toast({ title: "Failed", description: error.message, variant: "destructive" });
+    if (error) return toast({ title: t("contact.failed"), description: error.message, variant: "destructive" });
     setDone(true);
     window.scrollTo(0, 0);
   }
 
   if (done) {
-    return <AipfLayout><section className="container mx-auto px-6 py-24"><EmptyState title="Thank you" copy="Your message has been received." /></section></AipfLayout>;
+    return <section className="container mx-auto px-6 py-24"><EmptyState title={t("contact.done.title")} copy={t("contact.done.copy")} /></section>;
   }
 
   return (
-    <AipfLayout>
-      <section className="container mx-auto px-6 py-16 max-w-2xl">
-        <SectionLabel>Correspondence</SectionLabel>
-        <h1 className="font-institutional text-5xl mt-3">Contact the Foundation</h1>
-        <GoldDivider className="my-6" />
-        <form onSubmit={handleSubmit(onSubmit)} className="aipf-frame p-8 space-y-5 mt-6">
-          <div><Label>Name</Label><Input {...register("name")} />{errors.name && <p className="text-xs text-destructive mt-1">Required</p>}</div>
-          <div><Label>Email</Label><Input type="email" {...register("email")} />{errors.email && <p className="text-xs text-destructive mt-1">Valid email required</p>}</div>
-          <div><Label>Subject</Label><Input {...register("subject")} />{errors.subject && <p className="text-xs text-destructive mt-1">Required</p>}</div>
-          <div>
-            <Label>Category</Label>
-            <select {...register("category")} className="h-10 w-full px-3 border border-input bg-background text-sm">
-              <option value="">Select…</option>
-              {AIPF_CONTACT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div><Label>Message</Label><Textarea rows={6} {...register("message")} />{errors.message && <p className="text-xs text-destructive mt-1">Please provide detail</p>}</div>
-          <Button disabled={busy} className="w-full">{busy ? "Sending…" : "Send"}</Button>
-        </form>
-      </section>
-    </AipfLayout>
+    <section className="container mx-auto px-6 py-16 max-w-2xl">
+      <SectionLabel>{t("contact.label")}</SectionLabel>
+      <h1 className="font-institutional text-5xl mt-3">{t("contact.title")}</h1>
+      <GoldDivider className="my-6" />
+      <form onSubmit={handleSubmit(onSubmit)} className="aipf-frame p-8 space-y-5 mt-6">
+        <div><Label>{t("contact.name")}</Label><Input {...register("name")} />{errors.name && <p className="text-xs text-destructive mt-1">{t("common.required")}</p>}</div>
+        <div><Label>{t("contact.email")}</Label><Input type="email" {...register("email")} />{errors.email && <p className="text-xs text-destructive mt-1">{t("common.validEmail")}</p>}</div>
+        <div><Label>{t("contact.subject")}</Label><Input {...register("subject")} />{errors.subject && <p className="text-xs text-destructive mt-1">{t("common.required")}</p>}</div>
+        <div>
+          <Label>{t("contact.category")}</Label>
+          <select {...register("category")} className="h-10 w-full px-3 border border-input bg-background text-sm">
+            <option value="">{t("common.select")}</option>
+            {AIPF_CONTACT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div><Label>{t("contact.message")}</Label><Textarea rows={6} {...register("message")} />{errors.message && <p className="text-xs text-destructive mt-1">{t("common.provideDetail")}</p>}</div>
+        <Button disabled={busy} className="w-full">{busy ? t("common.sending") : t("contact.send")}</Button>
+      </form>
+    </section>
   );
+}
+
+export default function Contact() {
+  return <AipfLayout><Inner /></AipfLayout>;
 }

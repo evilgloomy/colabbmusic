@@ -8,8 +8,10 @@ import { BrokenLinkReportModal } from "@/aipf/components/BrokenLinkReportModal";
 import { getEntityBySlug, getEntityLinks, getEntityAchievements } from "@/aipf/services";
 import type { AipfEntity, AipfEntityLink, AipfAchievement } from "@/aipf/types";
 import { Button } from "@/components/ui/button";
+import { useAipfT } from "@/aipf/i18n";
 
-export default function PublicProfile() {
+function Inner() {
+  const { t } = useAipfT();
   const { slug = "" } = useParams();
   const [entity, setEntity] = useState<AipfEntity | null | undefined>(undefined);
   const [links, setLinks] = useState<AipfEntityLink[]>([]);
@@ -34,33 +36,25 @@ export default function PublicProfile() {
     exactTitle: true,
   });
 
-  if (entity === undefined) {
-    return (
-      <AipfLayout>
-        <div className="container mx-auto px-6 py-24 text-center text-muted-foreground">Loading…</div>
-      </AipfLayout>
-    );
-  }
+  if (entity === undefined) return <div className="container mx-auto px-6 py-24 text-center text-muted-foreground">{t("prof.loading")}</div>;
 
   if (entity === null) {
     return (
-      <AipfLayout>
-        <div className="container mx-auto px-6 py-24">
-          <EmptyState
-            title="Entry not found"
-            copy="This directory entry may not exist yet or is not published."
-            action={<Link to="/aipf/directory" className="aipf-link text-sm">← Back to Directory</Link>}
-          />
-        </div>
-      </AipfLayout>
+      <div className="container mx-auto px-6 py-24">
+        <EmptyState
+          title={t("prof.notFound.title")}
+          copy={t("prof.notFound.copy")}
+          action={<Link to="/aipf/directory" className="aipf-link text-sm">{t("prof.notFound.back")}</Link>}
+        />
+      </div>
     );
   }
 
   return (
-    <AipfLayout>
+    <>
       <section className="container mx-auto px-6 py-16">
         <Link to="/aipf/directory" className="text-xs uppercase tracking-[0.16em] text-muted-foreground hover:text-foreground">
-          ← Directory
+          {t("prof.back")}
         </Link>
         <div className="mt-6">
           <ProfileHeader e={entity} />
@@ -73,27 +67,23 @@ export default function PublicProfile() {
         </section>
       )}
 
-      {/* Current Official Links */}
       <section className="container mx-auto px-6 py-12">
         <div className="aipf-frame p-8">
           <div className="flex flex-wrap justify-between items-center gap-4">
             <div>
-              <SectionLabel>Public Record</SectionLabel>
-              <h2 className="font-institutional text-3xl mt-2">Current Official Links</h2>
+              <SectionLabel>{t("prof.linksLabel")}</SectionLabel>
+              <h2 className="font-institutional text-3xl mt-2">{t("prof.linksTitle")}</h2>
             </div>
             <Button variant="outline" onClick={() => { setReportLink(null); setReportOpen(true); }}>
-              Report broken link
+              {t("prof.report")}
             </Button>
           </div>
           <GoldDivider className="my-6" />
-          <p className="text-sm text-muted-foreground mb-4">
-            If a social account is deleted, banned, moved, or replaced, AIPF updates the record here so
-            fans can always find the latest official links.
-          </p>
+          <p className="text-sm text-muted-foreground mb-4">{t("prof.linksIntro")}</p>
           <LinkList links={links} onReport={(l) => { setReportLink(l); setReportOpen(true); }} />
           {entity.updated_at && (
             <p className="mt-6 text-xs text-muted-foreground">
-              Last updated {new Date(entity.updated_at).toLocaleDateString()}
+              {t("prof.updated")} {new Date(entity.updated_at).toLocaleDateString()}
             </p>
           )}
         </div>
@@ -101,8 +91,8 @@ export default function PublicProfile() {
 
       {achievements.length > 0 && (
         <section className="container mx-auto px-6 py-12 max-w-3xl">
-          <SectionLabel>Record</SectionLabel>
-          <h2 className="font-institutional text-3xl mt-2">Notable Achievements</h2>
+          <SectionLabel>{t("prof.achievementsLabel")}</SectionLabel>
+          <h2 className="font-institutional text-3xl mt-2">{t("prof.achievementsTitle")}</h2>
           <GoldDivider className="my-6" />
           <AchievementList items={achievements} />
         </section>
@@ -111,7 +101,7 @@ export default function PublicProfile() {
       {entity.status_note && (
         <section className="container mx-auto px-6 py-8 max-w-3xl">
           <div className="aipf-frame p-6 text-sm text-foreground/80">
-            <SectionLabel>Foundation Note</SectionLabel>
+            <SectionLabel>{t("prof.foundationNote")}</SectionLabel>
             <p className="mt-2">{entity.status_note}</p>
           </div>
         </section>
@@ -123,6 +113,10 @@ export default function PublicProfile() {
         entity={entity}
         link={reportLink}
       />
-    </AipfLayout>
+    </>
   );
+}
+
+export default function PublicProfile() {
+  return <AipfLayout><Inner /></AipfLayout>;
 }
