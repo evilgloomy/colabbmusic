@@ -14,7 +14,7 @@ import type { AipfEntity } from "@/aipf/types";
 export default function AdminInvitations() {
   const [rows, setRows] = useState<any[]>([]);
   const [entities, setEntities] = useState<AipfEntity[]>([]);
-  const [draft, setDraft] = useState({ entity_id: "", email: "", member_type: AIPF_MEMBER_TYPES[0] });
+  const [draft, setDraft] = useState<{ entity_id: string; email: string; member_type: string }>({ entity_id: "", email: "", member_type: AIPF_MEMBER_TYPES[0] });
   const [preview, setPreview] = useState<any | null>(null);
 
   async function refresh() {
