@@ -7,8 +7,8 @@ import { SocialIcon } from "@/lib/socialIcons";
 import { socialLinks } from "@/data/content";
 import { trackSocialClick } from "@/lib/analytics";
 
-const navKeys = ["home", "music", "story", "videos", "store", "press", "chat"] as const;
-const navPaths = ["/", "/music", "/story", "/videos", "/store", "/press", "/chat"];
+const navKeys = ["home", "music", "story", "videos", "store", "press", "chat", "aipf"] as const;
+const navPaths = ["/", "/music", "/story", "/videos", "/store", "/press", "/chat", "/aipf"];
 
 export const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
