@@ -22,6 +22,26 @@ import PrivacyPage from "./pages/Privacy";
 import TermsPage from "./pages/Terms";
 import { useCartSync } from "./hooks/useCartSync";
 import { usePageTracking } from "./hooks/usePageTracking";
+import { AipfAuthProvider } from "@/aipf/AipfAuthContext";
+import AipfHome from "@/aipf/pages/Home";
+import AipfAbout from "@/aipf/pages/About";
+import AipfDirectory from "@/aipf/pages/Directory";
+import AipfPublicProfile from "@/aipf/pages/PublicProfile";
+import AipfRegisterInterest from "@/aipf/pages/RegisterInterest";
+import AipfNominate from "@/aipf/pages/Nominate";
+import AipfFoundingCohort from "@/aipf/pages/FoundingCohort";
+import AipfPrograms from "@/aipf/pages/Programs";
+import { Journal as AipfJournalPage, JournalPost as AipfJournalPost } from "@/aipf/pages/Journal";
+import AipfContact from "@/aipf/pages/Contact";
+import AipfAdminLogin from "@/aipf/pages/AdminLogin";
+import AipfAdminOverview from "@/aipf/pages/AdminOverview";
+import AipfAdminInterest from "@/aipf/pages/AdminInterest";
+import AipfAdminNominations from "@/aipf/pages/AdminNominations";
+import { AdminDirectory as AipfAdminDirectory, AdminEntityEditor as AipfAdminEntityEditor } from "@/aipf/pages/AdminDirectory";
+import AipfAdminBrokenLinks from "@/aipf/pages/AdminBrokenLinks";
+import AipfAdminInvitations from "@/aipf/pages/AdminInvitations";
+import { AdminJournal as AipfAdminJournal, AdminJournalEditor as AipfAdminJournalEditor } from "@/aipf/pages/AdminJournal";
+import { AdminGuard } from "@/aipf/admin/AdminShell";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +65,30 @@ const AppInner = () => {
       <Route path="/lovevibevol5" element={<LoveVibeVol5 />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />
+
+      {/* AI People Foundation */}
+      <Route path="/aipf" element={<AipfHome />} />
+      <Route path="/aipf/about" element={<AipfAbout />} />
+      <Route path="/aipf/directory" element={<AipfDirectory />} />
+      <Route path="/aipf/directory/:slug" element={<AipfPublicProfile />} />
+      <Route path="/aipf/register-interest" element={<AipfRegisterInterest />} />
+      <Route path="/aipf/nominate" element={<AipfNominate />} />
+      <Route path="/aipf/founding-cohort-2026" element={<AipfFoundingCohort />} />
+      <Route path="/aipf/programs" element={<AipfPrograms />} />
+      <Route path="/aipf/journal" element={<AipfJournalPage />} />
+      <Route path="/aipf/journal/:slug" element={<AipfJournalPost />} />
+      <Route path="/aipf/contact" element={<AipfContact />} />
+      <Route path="/aipf/admin/login" element={<AipfAdminLogin />} />
+      <Route path="/aipf/admin" element={<AdminGuard><AipfAdminOverview /></AdminGuard>} />
+      <Route path="/aipf/admin/interest" element={<AdminGuard><AipfAdminInterest /></AdminGuard>} />
+      <Route path="/aipf/admin/nominations" element={<AdminGuard><AipfAdminNominations /></AdminGuard>} />
+      <Route path="/aipf/admin/directory" element={<AdminGuard><AipfAdminDirectory /></AdminGuard>} />
+      <Route path="/aipf/admin/directory/:id" element={<AdminGuard><AipfAdminEntityEditor /></AdminGuard>} />
+      <Route path="/aipf/admin/broken-links" element={<AdminGuard><AipfAdminBrokenLinks /></AdminGuard>} />
+      <Route path="/aipf/admin/invitations" element={<AdminGuard><AipfAdminInvitations /></AdminGuard>} />
+      <Route path="/aipf/admin/journal" element={<AdminGuard><AipfAdminJournal /></AdminGuard>} />
+      <Route path="/aipf/admin/journal/:id" element={<AdminGuard><AipfAdminJournalEditor /></AdminGuard>} />
+
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
@@ -55,11 +99,13 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <ArtistAgentAuthProvider>
-        <BrowserRouter>
-          <AppInner />
-        </BrowserRouter>
-      </ArtistAgentAuthProvider>
+      <AipfAuthProvider>
+        <ArtistAgentAuthProvider>
+          <BrowserRouter>
+            <AppInner />
+          </BrowserRouter>
+        </ArtistAgentAuthProvider>
+      </AipfAuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
