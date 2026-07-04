@@ -32,23 +32,30 @@ export const Navbar = () => {
 
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-1 flex-1">
-          {navKeys.map((key, i) => (
-            <span key={key} className="flex items-center">
-              <Link
-                to={navPaths[i]}
-                className={`px-3 py-1 text-xs font-body font-semibold tracking-[0.12em] uppercase transition-colors ${
-                  location.pathname === navPaths[i]
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t(`nav.${key}`)}
-              </Link>
-              {i < navKeys.length - 1 && (
-                <span className="text-border text-xs select-none">/</span>
-              )}
-            </span>
-          ))}
+          {navKeys.map((key, i) => {
+            const isAipf = key === "aipf";
+            const active = location.pathname === navPaths[i] || (isAipf && location.pathname.startsWith("/aipf"));
+            return (
+              <span key={key} className="flex items-center">
+                <Link
+                  to={navPaths[i]}
+                  className={`px-3 py-1 text-xs font-body font-semibold tracking-[0.12em] uppercase transition-colors ${
+                    isAipf
+                      ? `${active ? "" : ""} text-[#B78E3F] hover:text-[#8f6d2c]`
+                      : active
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  style={isAipf ? { fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 600, fontSize: "0.85rem", letterSpacing: "0.18em" } : undefined}
+                >
+                  {t(`nav.${key}`)}
+                </Link>
+                {i < navKeys.length - 1 && (
+                  <span className="text-border text-xs select-none">/</span>
+                )}
+              </span>
+            );
+          })}
         </div>
 
         {/* Right side */}
