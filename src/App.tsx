@@ -22,6 +22,26 @@ import PrivacyPage from "./pages/Privacy";
 import TermsPage from "./pages/Terms";
 import { useCartSync } from "./hooks/useCartSync";
 import { usePageTracking } from "./hooks/usePageTracking";
+import { AipfAuthProvider } from "@/aipf/AipfAuthContext";
+import AipfHome from "@/aipf/pages/Home";
+import AipfAbout from "@/aipf/pages/About";
+import AipfDirectory from "@/aipf/pages/Directory";
+import AipfPublicProfile from "@/aipf/pages/PublicProfile";
+import AipfRegisterInterest from "@/aipf/pages/RegisterInterest";
+import AipfNominate from "@/aipf/pages/Nominate";
+import AipfFoundingCohort from "@/aipf/pages/FoundingCohort";
+import AipfPrograms from "@/aipf/pages/Programs";
+import { Journal as AipfJournalPage, JournalPost as AipfJournalPost } from "@/aipf/pages/Journal";
+import AipfContact from "@/aipf/pages/Contact";
+import AipfAdminLogin from "@/aipf/pages/AdminLogin";
+import AipfAdminOverview from "@/aipf/pages/AdminOverview";
+import AipfAdminInterest from "@/aipf/pages/AdminInterest";
+import AipfAdminNominations from "@/aipf/pages/AdminNominations";
+import { AdminDirectory as AipfAdminDirectory, AdminEntityEditor as AipfAdminEntityEditor } from "@/aipf/pages/AdminDirectory";
+import AipfAdminBrokenLinks from "@/aipf/pages/AdminBrokenLinks";
+import AipfAdminInvitations from "@/aipf/pages/AdminInvitations";
+import { AdminJournal as AipfAdminJournal, AdminJournalEditor as AipfAdminJournalEditor } from "@/aipf/pages/AdminJournal";
+import { AdminGuard } from "@/aipf/admin/AdminShell";
 
 const queryClient = new QueryClient();
 
