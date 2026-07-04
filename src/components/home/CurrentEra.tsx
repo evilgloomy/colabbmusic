@@ -75,7 +75,7 @@ export const CurrentEra = () => {
             <button onClick={() => goTo(-1)} className="w-8 h-8 rounded-full border border-white/15 hover:border-white/30 flex items-center justify-center transition-colors">
               <ChevronLeft className="h-4 w-4 text-white/70" />
             </button>
-            <span className="text-xs text-white/40 font-body tabular-nums">{activeIndex + 1} / {releases.length}</span>
+            <span className="text-xs text-white/70 font-body tabular-nums">{activeIndex + 1} / {releases.length}</span>
             <button onClick={() => goTo(1)} className="w-8 h-8 rounded-full border border-white/15 hover:border-white/30 flex items-center justify-center transition-colors">
               <ChevronRight className="h-4 w-4 text-white/70" />
             </button>
@@ -116,7 +116,7 @@ export const CurrentEra = () => {
                 {decodedThumb && <img src={decodedThumb} alt={current.title} className="w-14 h-14 object-cover flex-shrink-0" />}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-body font-medium text-white truncate">{current.title} — Cola B</p>
-                  <p className="text-xs text-white/40 mt-0.5">{t("hero.listenNow")}</p>
+                  <p className="text-xs text-white/70 mt-0.5">{t("hero.listenNow")}</p>
                 </div>
                 <Play className="h-5 w-5 text-white/60 group-hover:text-white transition-colors flex-shrink-0" />
               </button>
@@ -155,7 +155,7 @@ export const CurrentEra = () => {
                 {thumb ? (
                   <img src={thumb} alt={r.title} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full bg-white/10 flex items-center justify-center text-white/40 text-xs">♪</div>
+                  <div className="w-full h-full bg-white/10 flex items-center justify-center text-white/70 text-xs">♪</div>
                 )}
               </button>
             );

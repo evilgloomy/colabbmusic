@@ -146,7 +146,7 @@ const AboutCola = () => {
                 <div className="space-y-6">
                   {era.items.map((item, i) => (
                     <div key={i} className="pl-6 border-l border-white/10">
-                      <p className="text-xs font-body text-white/40 mb-1">{item.date}</p>
+                      <p className="text-xs font-body text-white/70 mb-1">{item.date}</p>
                       <p className="text-sm font-body font-medium text-white mb-1">{item.title}</p>
                       <p className="text-sm font-body text-white/60">{item.desc}</p>
                     </div>
