@@ -9,6 +9,7 @@ import { AIPF_BROKEN_LINK_ISSUES } from "@/aipf/lib/constants";
 import { createBrokenLinkReport } from "@/aipf/services";
 import type { AipfEntity, AipfEntityLink } from "@/aipf/types";
 import { toast } from "@/hooks/use-toast";
+import { useAipfT } from "@/aipf/i18n";
 
 export function BrokenLinkReportModal({
   open,
@@ -21,6 +22,7 @@ export function BrokenLinkReportModal({
   entity: AipfEntity;
   link?: AipfEntityLink | null;
 }) {
+  const { t } = useAipfT();
   const [email, setEmail] = useState("");
   const [issue, setIssue] = useState(AIPF_BROKEN_LINK_ISSUES[0]);
   const [message, setMessage] = useState("");
@@ -37,10 +39,10 @@ export function BrokenLinkReportModal({
     });
     setBusy(false);
     if (error) {
-      toast({ title: "Could not submit", description: error.message, variant: "destructive" });
+      toast({ title: t("bl.error"), description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Report received", description: "The Foundation will review this shortly." });
+    toast({ title: t("bl.received.t"), description: t("bl.received.c") });
     onOpenChange(false);
     setEmail("");
     setMessage("");
@@ -50,18 +52,18 @@ export function BrokenLinkReportModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="aipf-root">
         <DialogHeader>
-          <DialogTitle className="font-institutional text-2xl">Report a broken link</DialogTitle>
+          <DialogTitle className="font-institutional text-2xl">{t("bl.title")}</DialogTitle>
           <DialogDescription>
-            Help the Foundation keep the public record accurate. {link ? `Reporting: ${link.url}` : ""}
+            {t("bl.desc")} {link ? `${t("bl.reporting")} ${link.url}` : ""}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label>Your email (optional)</Label>
+            <Label>{t("bl.emailLabel")}</Label>
             <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" />
           </div>
           <div>
-            <Label>Issue type</Label>
+            <Label>{t("bl.issueLabel")}</Label>
             <Select value={issue} onValueChange={(v) => setIssue(v as any)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -72,11 +74,11 @@ export function BrokenLinkReportModal({
             </Select>
           </div>
           <div>
-            <Label>Details</Label>
+            <Label>{t("bl.details")}</Label>
             <Textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={4} />
           </div>
           <Button onClick={submit} disabled={busy} className="w-full">
-            {busy ? "Submitting…" : "Submit report"}
+            {busy ? t("common.submitting") : t("bl.submit")}
           </Button>
         </div>
       </DialogContent>
