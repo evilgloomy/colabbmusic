@@ -205,7 +205,7 @@ const FeaturedCard = ({ story, locale }: { story: Story; locale: string }) => {
           </h2>
           <p className="text-white/70 text-sm line-clamp-2 max-w-lg">{story.ai_enhanced_text || ""}</p>
           {story.posted_at && (
-            <p className="text-[10px] text-white/40 mt-3">
+            <p className="text-[10px] text-white/70 mt-3">
               {new Date(story.posted_at).toLocaleDateString(locale, { month: "long", year: "numeric" })}
             </p>
           )}
@@ -251,7 +251,7 @@ const SecondaryCard = ({ story, locale }: { story: Story; locale: string }) => {
             {story.ai_title || t("common.untitled")}
           </h3>
           {story.posted_at && (
-            <p className="text-[9px] text-white/40 mt-1">
+            <p className="text-[9px] text-white/70 mt-1">
               {new Date(story.posted_at).toLocaleDateString(locale, { month: "short", year: "numeric" })}
             </p>
           )}

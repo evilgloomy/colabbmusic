@@ -120,7 +120,7 @@ const ReleasePage = () => {
               {decodedThumb ? (
                 <img src={decodedThumb} alt={release.title} className="w-full aspect-square object-cover rounded-xl shadow-2xl" />
               ) : (
-                <div className="w-full aspect-square rounded-xl bg-white/10 flex items-center justify-center"><Music className="h-16 w-16 text-white/30" /></div>
+                <div className="w-full aspect-square rounded-xl bg-white/10 flex items-center justify-center"><Music className="h-16 w-16 text-white/70" /></div>
               )}
             </div>
             <div className="flex-1">
@@ -129,7 +129,7 @@ const ReleasePage = () => {
               </p>
               <h1 className="text-display-lg font-display font-bold text-white mb-3">{release.title}</h1>
               <p className="text-xl text-white/70 mb-2">Cola B</p>
-              <p className="text-sm text-white/40">
+              <p className="text-sm text-white/70">
                 {release.year}
                 {release.track_count && release.track_count > 1 ? ` · ${release.track_count} ${t("home.tracks")}` : ""}
               </p>
