@@ -61,7 +61,7 @@ export default function AdminNominations() {
             {rows.length === 0 ? (
               <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No nominations yet.</td></tr>
             ) : rows.map((r) => (
-              <>
+              <Fragment key={r.id}>
                 <tr key={r.id} className="border-t border-border">
                   <td className="p-3 font-medium">{r.nominee_entity_name}</td>
                   <td className="p-3">{r.category}</td>
@@ -89,7 +89,7 @@ export default function AdminNominations() {
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>

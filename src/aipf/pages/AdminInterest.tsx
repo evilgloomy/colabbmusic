@@ -76,7 +76,7 @@ export default function AdminInterest() {
             {rows.length === 0 ? (
               <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">No submissions yet.</td></tr>
             ) : rows.map((r) => (
-              <>
+              <Fragment key={r.id}>
                 <tr key={r.id} className="border-t border-border">
                   <td className="p-3 font-medium">{r.entity_name}</td>
                   <td className="p-3">{r.creator_studio_name}</td>
@@ -100,7 +100,7 @@ export default function AdminInterest() {
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>
