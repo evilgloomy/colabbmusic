@@ -1,0 +1,119 @@
+/* AI People Foundation — scoped institutional theme.
+   All tokens overrides live under .aipf-root so nothing here leaks to the Cola B site. */
+
+.aipf-root {
+  /* Brand palette */
+  --foundation-navy: 213 71% 9%;        /* #071426 */
+  --deep-navy-hover: 213 66% 13%;       /* #0B1D35 */
+  --institution-white: 45 27% 97%;      /* #F8F7F2 */
+  --soft-cream: 46 24% 92%;             /* #EFEDE5 */
+  --archive-silver: 216 8% 81%;         /* #C8CCD2 */
+  --ceremonial-gold: 39 46% 57%;        /* #C6A45D */
+  --charcoal-ink: 0 0% 9%;              /* #161616 */
+  --muted-ink: 0 0% 30%;                /* #4C4C4C */
+  --signal-blue: 214 65% 54%;           /* #3C78D8 */
+
+  /* Retheme shadcn semantic tokens inside AIPF */
+  --background: var(--institution-white);
+  --foreground: var(--charcoal-ink);
+
+  --card: 45 27% 99%;
+  --card-foreground: var(--charcoal-ink);
+
+  --popover: 45 27% 99%;
+  --popover-foreground: var(--charcoal-ink);
+
+  --primary: var(--foundation-navy);
+  --primary-foreground: var(--institution-white);
+
+  --secondary: var(--soft-cream);
+  --secondary-foreground: var(--foundation-navy);
+
+  --muted: var(--soft-cream);
+  --muted-foreground: var(--muted-ink);
+
+  --accent: var(--ceremonial-gold);
+  --accent-foreground: var(--foundation-navy);
+
+  --destructive: 0 62% 45%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 45 15% 85%;
+  --input: 45 15% 85%;
+  --ring: var(--ceremonial-gold);
+
+  --radius: 0.25rem;
+
+  background-color: hsl(var(--institution-white));
+  color: hsl(var(--charcoal-ink));
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.aipf-root .font-institutional,
+.aipf-root h1,
+.aipf-root h2,
+.aipf-root h3,
+.aipf-root h4 {
+  font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+
+.aipf-root .font-ui {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.aipf-root .aipf-label {
+  font-family: 'Inter', system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: hsl(var(--ceremonial-gold));
+}
+
+.aipf-root .aipf-gold-divider {
+  height: 1px;
+  background: hsl(var(--ceremonial-gold));
+  opacity: 0.9;
+}
+
+.aipf-root .aipf-thin-divider {
+  height: 1px;
+  background: hsl(var(--border));
+}
+
+.aipf-root .aipf-frame {
+  border: 1px solid hsl(var(--ceremonial-gold) / 0.55);
+  background: hsl(var(--card));
+}
+
+.aipf-root .aipf-navy {
+  background: hsl(var(--foundation-navy));
+  color: hsl(var(--institution-white));
+}
+
+.aipf-root .aipf-navy .aipf-label {
+  color: hsl(var(--ceremonial-gold));
+}
+
+.aipf-root a {
+  color: inherit;
+}
+
+.aipf-root .aipf-link {
+  color: hsl(var(--foundation-navy));
+  border-bottom: 1px solid hsl(var(--ceremonial-gold) / 0.6);
+  transition: border-color 0.2s;
+}
+.aipf-root .aipf-link:hover {
+  border-bottom-color: hsl(var(--ceremonial-gold));
+}
+
+/* Nav gold accent on Cola B navbar */
+.aipf-nav-accent {
+  color: hsl(39 46% 47%) !important;
+}
+.aipf-nav-accent:hover {
+  color: hsl(39 46% 40%) !important;
+}
