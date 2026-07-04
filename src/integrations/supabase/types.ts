@@ -744,14 +744,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      aipf_has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["aipf_app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      aipf_is_admin_or_reviewer: { Args: never; Returns: boolean }
+      [_ in never]: never
     }
     Enums: {
       aipf_app_role: "admin" | "reviewer" | "member"
