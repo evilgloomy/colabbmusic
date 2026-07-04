@@ -65,6 +65,30 @@ const AppInner = () => {
       <Route path="/lovevibevol5" element={<LoveVibeVol5 />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />
+
+      {/* AI People Foundation */}
+      <Route path="/aipf" element={<AipfHome />} />
+      <Route path="/aipf/about" element={<AipfAbout />} />
+      <Route path="/aipf/directory" element={<AipfDirectory />} />
+      <Route path="/aipf/directory/:slug" element={<AipfPublicProfile />} />
+      <Route path="/aipf/register-interest" element={<AipfRegisterInterest />} />
+      <Route path="/aipf/nominate" element={<AipfNominate />} />
+      <Route path="/aipf/founding-cohort-2026" element={<AipfFoundingCohort />} />
+      <Route path="/aipf/programs" element={<AipfPrograms />} />
+      <Route path="/aipf/journal" element={<AipfJournalPage />} />
+      <Route path="/aipf/journal/:slug" element={<AipfJournalPost />} />
+      <Route path="/aipf/contact" element={<AipfContact />} />
+      <Route path="/aipf/admin/login" element={<AipfAdminLogin />} />
+      <Route path="/aipf/admin" element={<AdminGuard><AipfAdminOverview /></AdminGuard>} />
+      <Route path="/aipf/admin/interest" element={<AdminGuard><AipfAdminInterest /></AdminGuard>} />
+      <Route path="/aipf/admin/nominations" element={<AdminGuard><AipfAdminNominations /></AdminGuard>} />
+      <Route path="/aipf/admin/directory" element={<AdminGuard><AipfAdminDirectory /></AdminGuard>} />
+      <Route path="/aipf/admin/directory/:id" element={<AdminGuard><AipfAdminEntityEditor /></AdminGuard>} />
+      <Route path="/aipf/admin/broken-links" element={<AdminGuard><AipfAdminBrokenLinks /></AdminGuard>} />
+      <Route path="/aipf/admin/invitations" element={<AdminGuard><AipfAdminInvitations /></AdminGuard>} />
+      <Route path="/aipf/admin/journal" element={<AdminGuard><AipfAdminJournal /></AdminGuard>} />
+      <Route path="/aipf/admin/journal/:id" element={<AdminGuard><AipfAdminJournalEditor /></AdminGuard>} />
+
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
@@ -75,11 +99,13 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <ArtistAgentAuthProvider>
-        <BrowserRouter>
-          <AppInner />
-        </BrowserRouter>
-      </ArtistAgentAuthProvider>
+      <AipfAuthProvider>
+        <ArtistAgentAuthProvider>
+          <BrowserRouter>
+            <AppInner />
+          </BrowserRouter>
+        </ArtistAgentAuthProvider>
+      </AipfAuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
