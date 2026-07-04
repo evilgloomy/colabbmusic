@@ -45,7 +45,7 @@ export function FoundingCohortBadge() {
 export function ReviewStatusBadge({ status }: { status: string }) {
   return (
     <span className="inline-block px-2 py-0.5 text-[0.65rem] uppercase tracking-[0.16em] border border-border text-muted-foreground">
-      {status.replaceAll("_", " ")}
+      {status.split("_").join(" ")}
     </span>
   );
 }
