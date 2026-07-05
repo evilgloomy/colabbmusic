@@ -50,6 +50,14 @@ export default function AdminLogin() {
           >
             {mode === "in" ? "No account? Create one." : "Have an account? Sign in."}
           </button>
+          {mode === "in" && (
+            <Link
+              to="/aipf/admin/forgot-password"
+              className="text-xs text-muted-foreground hover:text-foreground w-full text-center block"
+            >
+              Forgot password?
+            </Link>
+          )}
         </div>
         <p className="mt-4 text-xs text-muted-foreground text-center">
           <Link to="/aipf" className="hover:underline">← Back to AIPF</Link>

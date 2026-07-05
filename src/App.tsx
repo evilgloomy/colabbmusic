@@ -42,6 +42,8 @@ import AipfAdminBrokenLinks from "@/aipf/pages/AdminBrokenLinks";
 import AipfAdminInvitations from "@/aipf/pages/AdminInvitations";
 import { AdminJournal as AipfAdminJournal, AdminJournalEditor as AipfAdminJournalEditor } from "@/aipf/pages/AdminJournal";
 import { AdminGuard } from "@/aipf/admin/AdminShell";
+import AipfAdminForgotPassword from "@/aipf/pages/AdminForgotPassword";
+import AipfAdminResetPassword from "@/aipf/pages/AdminResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +81,8 @@ const AppInner = () => {
       <Route path="/aipf/journal/:slug" element={<AipfJournalPost />} />
       <Route path="/aipf/contact" element={<AipfContact />} />
       <Route path="/aipf/admin/login" element={<AipfAdminLogin />} />
+      <Route path="/aipf/admin/forgot-password" element={<AipfAdminForgotPassword />} />
+      <Route path="/aipf/admin/reset-password" element={<AipfAdminResetPassword />} />
       <Route path="/aipf/admin" element={<AdminGuard><AipfAdminOverview /></AdminGuard>} />
       <Route path="/aipf/admin/interest" element={<AdminGuard><AipfAdminInterest /></AdminGuard>} />
       <Route path="/aipf/admin/nominations" element={<AdminGuard><AipfAdminNominations /></AdminGuard>} />
