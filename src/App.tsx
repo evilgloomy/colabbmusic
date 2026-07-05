@@ -44,6 +44,10 @@ import { AdminJournal as AipfAdminJournal, AdminJournalEditor as AipfAdminJourna
 import { AdminGuard } from "@/aipf/admin/AdminShell";
 import AipfAdminForgotPassword from "@/aipf/pages/AdminForgotPassword";
 import AipfAdminResetPassword from "@/aipf/pages/AdminResetPassword";
+import AipfClaim from "@/aipf/pages/Claim";
+import AipfVerify from "@/aipf/pages/Verify";
+import AipfCertificate from "@/aipf/pages/Certificate";
+import AipfAdminOnboarding from "@/aipf/pages/AdminOnboarding";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +79,10 @@ const AppInner = () => {
       <Route path="/aipf/directory/:slug" element={<AipfPublicProfile />} />
       <Route path="/aipf/register-interest" element={<AipfRegisterInterest />} />
       <Route path="/aipf/nominate" element={<AipfNominate />} />
+      <Route path="/aipf/claim" element={<AipfClaim />} />
+      <Route path="/aipf/verify" element={<AipfVerify />} />
+      <Route path="/aipf/verify/:memberNumber" element={<AipfVerify />} />
+      <Route path="/aipf/certificate/:slug" element={<AipfCertificate />} />
       <Route path="/aipf/founding-cohort-2026" element={<AipfFoundingCohort />} />
       <Route path="/aipf/programs" element={<AipfPrograms />} />
       <Route path="/aipf/journal" element={<AipfJournalPage />} />
@@ -90,6 +98,7 @@ const AppInner = () => {
       <Route path="/aipf/admin/directory/:id" element={<AdminGuard><AipfAdminEntityEditor /></AdminGuard>} />
       <Route path="/aipf/admin/broken-links" element={<AdminGuard><AipfAdminBrokenLinks /></AdminGuard>} />
       <Route path="/aipf/admin/invitations" element={<AdminGuard><AipfAdminInvitations /></AdminGuard>} />
+      <Route path="/aipf/admin/onboarding" element={<AdminGuard><AipfAdminOnboarding /></AdminGuard>} />
       <Route path="/aipf/admin/journal" element={<AdminGuard><AipfAdminJournal /></AdminGuard>} />
       <Route path="/aipf/admin/journal/:id" element={<AdminGuard><AipfAdminJournalEditor /></AdminGuard>} />
 

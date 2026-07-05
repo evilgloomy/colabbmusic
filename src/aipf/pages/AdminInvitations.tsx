@@ -3,7 +3,7 @@ import { AdminLayout } from "@/aipf/admin/AdminShell";
 import { listInvitations, createInvitation, updateInvitation, listAllEntities } from "@/aipf/services";
 import { SectionLabel, GoldDivider } from "@/aipf/components/Chrome";
 import { AIPF_INVITATION_STATUSES, AIPF_MEMBER_TYPES } from "@/aipf/lib/constants";
-import { generateInvitationCode, invitationCopy, nextMemberNumber } from "@/aipf/lib/utils";
+import { claimUrl, generateInvitationCode, invitationCopy, nextMemberNumber } from "@/aipf/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -24,11 +24,17 @@ export default function AdminInvitations() {
   useEffect(() => { refresh(); }, []);
 
   async function create() {
-    const ent = entities.find((e) => e.id === draft.entity_id);
-    if (!ent) return toast({ title: "Pick an entity", variant: "destructive" });
-    const memberNumber = ent.member_number || nextMemberNumber(entities.map((e) => e.member_number));
+    const ent = entities.find((e) => e.id === draft.entity_id) || null;
+    // Reserve the next number across BOTH entities and open invitations
+    // so two drafted invitations can't collide.
+    const memberNumber =
+      ent?.member_number ||
+      nextMemberNumber([
+        ...entities.map((e) => e.member_number),
+        ...rows.map((r) => r.member_number),
+      ]);
     const payload = {
-      entity_id: ent.id,
+      entity_id: ent?.id ?? null,
       email: draft.email || null,
       invitation_code: generateInvitationCode(),
       member_number: memberNumber,
@@ -42,12 +48,29 @@ export default function AdminInvitations() {
     refresh();
   }
 
-  function copy(row: any) {
+  interface InvitationRow {
+    entity_id?: string | null;
+    member_type?: string | null;
+    invitation_code: string;
+    member_number?: string | null;
+  }
+
+  function fullInviteText(row: InvitationRow) {
     const ent = entities.find((e) => e.id === row.entity_id);
     const text = invitationCopy(ent?.entity_name || "the nominee", row.member_type);
-    navigator.clipboard.writeText(`${text}\n\nInvitation code: ${row.invitation_code}\nMember number: ${row.member_number}`);
+    return `${text}\n\nAccept your invitation and complete onboarding:\n${claimUrl(row.invitation_code)}\n\nInvitation code: ${row.invitation_code}\nMember number: ${row.member_number}`;
+  }
+
+  function copy(row: InvitationRow) {
+    const text = fullInviteText(row);
+    navigator.clipboard.writeText(text);
     toast({ title: "Invitation copied" });
     setPreview({ text, row });
+  }
+
+  function copyLink(row: InvitationRow) {
+    navigator.clipboard.writeText(claimUrl(row.invitation_code));
+    toast({ title: "Claim link copied" });
   }
 
   return (
@@ -60,7 +83,7 @@ export default function AdminInvitations() {
         <div>
           <Label className="text-xs uppercase tracking-[0.14em]">Entity</Label>
           <select value={draft.entity_id} onChange={(e) => setDraft({ ...draft, entity_id: e.target.value })} className="h-10 w-full px-3 border border-input bg-background text-sm">
-            <option value="">Select entity…</option>
+            <option value="">No entity yet (new member)</option>
             {entities.map((e) => <option key={e.id} value={e.id}>{e.entity_name}</option>)}
           </select>
         </div>
@@ -105,8 +128,9 @@ export default function AdminInvitations() {
                       {AIPF_INVITATION_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </td>
-                  <td className="p-3">
-                    <button onClick={() => copy(r)} className="text-xs underline">Copy text</button>
+                  <td className="p-3 whitespace-nowrap">
+                    <button onClick={() => copy(r)} className="text-xs underline">Copy invite</button>
+                    <button onClick={() => copyLink(r)} className="text-xs underline ml-3">Copy claim link</button>
                   </td>
                 </tr>
               );
@@ -118,7 +142,7 @@ export default function AdminInvitations() {
       {preview && (
         <div className="aipf-frame p-6 mt-8">
           <SectionLabel>Invitation preview</SectionLabel>
-          <Textarea rows={10} readOnly value={`${preview.text}\n\nInvitation code: ${preview.row.invitation_code}\nMember number: ${preview.row.member_number}`} className="mt-3 font-mono text-xs" />
+          <Textarea rows={12} readOnly value={preview.text} className="mt-3 font-mono text-xs" />
         </div>
       )}
     </AdminLayout>

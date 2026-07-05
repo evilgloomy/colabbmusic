@@ -117,3 +117,22 @@
 .aipf-nav-accent:hover {
   color: hsl(39 46% 40%) !important;
 }
+
+/* Certificate printing: only the certificate itself lands on paper */
+@media print {
+  .aipf-cert-page header,
+  .aipf-cert-page footer,
+  .aipf-cert-noprint {
+    display: none !important;
+  }
+  .aipf-root:has(.aipf-certificate) header,
+  .aipf-root:has(.aipf-certificate) footer {
+    display: none !important;
+  }
+  .aipf-certificate {
+    box-shadow: none !important;
+    margin: 0 auto;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

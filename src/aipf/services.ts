@@ -1,5 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { AipfEntity, AipfEntityLink, AipfAchievement, AipfJournalPost } from "./types";
+import type {
+  AipfEntity,
+  AipfEntityLink,
+  AipfAchievement,
+  AipfJournalPost,
+  AipfClaimLookup,
+  AipfOnboardingPayload,
+  AipfOnboardingSubmission,
+} from "./types";
 import { mockEntities, mockPosts } from "./data/mock";
 
 // Cast to any because these tables aren't in the generated Database type yet.
@@ -88,6 +96,85 @@ export async function listNominations() {
 }
 export async function updateNomination(id: string, patch: Record<string, unknown>) {
   return db.from("aipf_nominations").update(patch).eq("id", id);
+}
+
+// --- MEMBER CLAIM / ONBOARDING ---
+// These call security-definer RPCs added by the aipf_member_claim_flow
+// migration. Until that migration is applied, calls fail and callers
+// surface a "not yet available" state.
+export async function lookupInvitation(code: string): Promise<AipfClaimLookup | { unavailable: true }> {
+  try {
+    const { data, error } = await db.rpc("aipf_lookup_invitation", { _code: code.trim() });
+    if (error) return { unavailable: true };
+    return (data as AipfClaimLookup) ?? { found: false };
+  } catch {
+    return { unavailable: true };
+  }
+}
+
+export async function submitOnboarding(code: string, payload: AipfOnboardingPayload) {
+  try {
+    const { data, error } = await db.rpc("aipf_submit_onboarding", {
+      _code: code.trim(),
+      _payload: payload,
+    });
+    if (error) return { ok: false, error: "unavailable" as const };
+    return data as { ok: boolean; error?: string; submission_id?: string; member_number?: string | null };
+  } catch {
+    return { ok: false, error: "unavailable" as const };
+  }
+}
+
+export async function listOnboardingSubmissions(): Promise<AipfOnboardingSubmission[]> {
+  try {
+    const { data } = await db
+      .from("aipf_onboarding_submissions")
+      .select("*")
+      .order("created_at", { ascending: false });
+    return (data as AipfOnboardingSubmission[]) || [];
+  } catch {
+    return [];
+  }
+}
+
+export async function approveOnboarding(submissionId: string) {
+  try {
+    const { data, error } = await db.rpc("aipf_approve_onboarding", { _submission_id: submissionId });
+    if (error) return { ok: false, error: error.message };
+    return data as { ok: boolean; error?: string; entity_id?: string; slug?: string; member_number?: string };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "network error" };
+  }
+}
+
+export async function rejectOnboarding(submissionId: string, note: string) {
+  return db
+    .from("aipf_onboarding_submissions")
+    .update({ status: "rejected", internal_notes: note || null })
+    .eq("id", submissionId);
+}
+
+// --- REGISTRY VERIFICATION ---
+// Deliberately queries the database directly with NO mock fallback:
+// a verification surface must never "verify" sample data. A query
+// error reads as "unavailable", an empty result as "no record".
+export async function findEntityByMemberNumber(
+  memberNumber: string
+): Promise<{ entity: AipfEntity | null; unavailable?: boolean }> {
+  const normalized = memberNumber.trim().toUpperCase();
+  if (!normalized) return { entity: null };
+  try {
+    const { data, error } = await db
+      .from("aipf_entities")
+      .select("*")
+      .eq("published", true)
+      .ilike("member_number", normalized)
+      .maybeSingle();
+    if (error) return { entity: null, unavailable: true };
+    return { entity: (data as AipfEntity) || null };
+  } catch {
+    return { entity: null, unavailable: true };
+  }
 }
 
 // --- BROKEN LINK REPORTS ---

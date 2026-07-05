@@ -114,6 +114,8 @@ export function AipfFooter() {
           <div className="aipf-label mb-3">{t("footer.participate")}</div>
           <ul className="space-y-2 text-sm opacity-80">
             <li><Link to="/aipf/directory" className="hover:opacity-100">{t("nav.directory")}</Link></li>
+            <li><Link to="/aipf/verify" className="hover:opacity-100">{t("nav.verify")}</Link></li>
+            <li><Link to="/aipf/claim" className="hover:opacity-100">{t("nav.claim")}</Link></li>
             <li><Link to="/aipf/register-interest" className="hover:opacity-100">{t("nav.register")}</Link></li>
             <li><Link to="/aipf/nominate" className="hover:opacity-100">{t("nav.nominate")}</Link></li>
             <li><Link to="/aipf/contact" className="hover:opacity-100">{t("nav.contact")}</Link></li>

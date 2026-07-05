@@ -9,9 +9,10 @@ const items = [
   { to: "/aipf/admin", label: "Overview", exact: true },
   { to: "/aipf/admin/interest", label: "Interest" },
   { to: "/aipf/admin/nominations", label: "Nominations" },
+  { to: "/aipf/admin/invitations", label: "Invitations" },
+  { to: "/aipf/admin/onboarding", label: "Onboarding" },
   { to: "/aipf/admin/directory", label: "Directory" },
   { to: "/aipf/admin/broken-links", label: "Broken Links" },
-  { to: "/aipf/admin/invitations", label: "Invitations" },
   { to: "/aipf/admin/journal", label: "Journal" },
 ];
 
