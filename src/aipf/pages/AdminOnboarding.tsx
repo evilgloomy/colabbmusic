@@ -27,7 +27,7 @@ export default function AdminOnboarding() {
     const res = await approveOnboarding(row.id);
     setWorking(false);
     if (!res.ok) {
-      toast({ title: "Approval failed", description: res.error || "Unknown error", variant: "destructive" });
+      toast({ title: "Approval failed", description: ("error" in res && res.error) || "Unknown error", variant: "destructive" });
       return;
     }
     toast({ title: "Member published", description: `${res.member_number} · /aipf/directory/${res.slug}` });
