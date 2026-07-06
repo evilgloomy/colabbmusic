@@ -137,11 +137,15 @@ export async function listOnboardingSubmissions(): Promise<AipfOnboardingSubmiss
   }
 }
 
-export async function approveOnboarding(submissionId: string) {
+type ApproveResult =
+  | { ok: true; entity_id?: string; slug?: string; member_number?: string }
+  | { ok: false; error?: string };
+
+export async function approveOnboarding(submissionId: string): Promise<ApproveResult> {
   try {
     const { data, error } = await db.rpc("aipf_approve_onboarding", { _submission_id: submissionId });
     if (error) return { ok: false, error: error.message };
-    return data as { ok: boolean; error?: string; entity_id?: string; slug?: string; member_number?: string };
+    return data as ApproveResult;
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "network error" };
   }
