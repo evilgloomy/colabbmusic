@@ -498,6 +498,96 @@ export type Database = {
         }
         Relationships: []
       }
+      aipf_onboarding_submissions: {
+        Row: {
+          accepted_principles: boolean
+          bio: string | null
+          category: string | null
+          contact_email: string | null
+          country_region: string | null
+          created_at: string
+          creator_studio_name: string | null
+          entity_id: string | null
+          entity_name: string
+          follower_count: string | null
+          id: string
+          internal_notes: string | null
+          invitation_id: string
+          links: Json
+          logo_url: string | null
+          oath_signature: string
+          oath_signed_at: string
+          official_image_url: string | null
+          reviewer_id: string | null
+          status: string
+          updated_at: string
+          year_launched: number | null
+        }
+        Insert: {
+          accepted_principles?: boolean
+          bio?: string | null
+          category?: string | null
+          contact_email?: string | null
+          country_region?: string | null
+          created_at?: string
+          creator_studio_name?: string | null
+          entity_id?: string | null
+          entity_name: string
+          follower_count?: string | null
+          id?: string
+          internal_notes?: string | null
+          invitation_id: string
+          links?: Json
+          logo_url?: string | null
+          oath_signature: string
+          oath_signed_at?: string
+          official_image_url?: string | null
+          reviewer_id?: string | null
+          status?: string
+          updated_at?: string
+          year_launched?: number | null
+        }
+        Update: {
+          accepted_principles?: boolean
+          bio?: string | null
+          category?: string | null
+          contact_email?: string | null
+          country_region?: string | null
+          created_at?: string
+          creator_studio_name?: string | null
+          entity_id?: string | null
+          entity_name?: string
+          follower_count?: string | null
+          id?: string
+          internal_notes?: string | null
+          invitation_id?: string
+          links?: Json
+          logo_url?: string | null
+          oath_signature?: string
+          oath_signed_at?: string
+          official_image_url?: string | null
+          reviewer_id?: string | null
+          status?: string
+          updated_at?: string
+          year_launched?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aipf_onboarding_submissions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "aipf_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aipf_onboarding_submissions_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: false
+            referencedRelation: "aipf_invitations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       aipf_profiles: {
         Row: {
           created_at: string
@@ -744,7 +834,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      aipf_approve_onboarding: {
+        Args: { _submission_id: string }
+        Returns: Json
+      }
+      aipf_lookup_invitation: { Args: { _code: string }; Returns: Json }
+      aipf_submit_onboarding: {
+        Args: { _code: string; _payload: Json }
+        Returns: Json
+      }
     }
     Enums: {
       aipf_app_role: "admin" | "reviewer" | "member"
