@@ -74,13 +74,10 @@ function HomeInner() {
           <p className="text-lg text-white/85 max-w-2xl">{t("home.hero.desc")}</p>
           <p className="mt-4 text-sm uppercase tracking-[0.22em] text-[hsl(var(--ceremonial-gold))]">{t("home.hero.foundedBy")}</p>
           <div className="mt-10 flex flex-wrap gap-4">
-            <Link to="/aipf/register-interest" className="px-6 py-3 text-xs uppercase tracking-[0.18em] bg-[hsl(var(--ceremonial-gold))] text-[hsl(var(--foundation-navy))] hover:bg-[hsl(var(--ceremonial-gold))]/90">
-              {t("nav.register")}
+            <Link to="/aipf/join" className="px-6 py-3 text-xs uppercase tracking-[0.18em] bg-[hsl(var(--ceremonial-gold))] text-[hsl(var(--foundation-navy))] hover:bg-[hsl(var(--ceremonial-gold))]/90">
+              {t("nav.join")}
             </Link>
-            <Link to="/aipf/nominate" className="px-6 py-3 text-xs uppercase tracking-[0.18em] border border-white/50 text-white hover:bg-white/10">
-              {t("nav.nominate")}
-            </Link>
-            <Link to="/aipf/directory" className="px-6 py-3 text-xs uppercase tracking-[0.18em] text-white/80 hover:text-white underline-offset-4 hover:underline">
+            <Link to="/aipf/directory" className="px-6 py-3 text-xs uppercase tracking-[0.18em] border border-white/50 text-white hover:bg-white/10">
               {t("home.hero.explore")}
             </Link>
           </div>
@@ -107,10 +104,10 @@ function HomeInner() {
           <SectionLabel>{t("home.solution.label")}</SectionLabel>
           <h2 className="font-institutional text-4xl text-white mt-2 max-w-2xl">{t("home.solution.title")}</h2>
           <div className="aipf-gold-divider w-16 my-8" />
-          <div className="grid md:grid-cols-4 gap-6 text-white/85">
-            {solutions.map(([title, c]) => (
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-10 text-white/85">
+            {solutions.slice(0, 6).map(([title, c]) => (
               <div key={title} className="border-l pl-4" style={{ borderColor: "hsl(var(--ceremonial-gold))" }}>
-                <div className="font-institutional text-lg text-white">{title}</div>
+                <div className="font-institutional text-xl text-white">{title}</div>
                 <p className="text-sm mt-2 opacity-80">{c}</p>
               </div>
             ))}
@@ -124,16 +121,29 @@ function HomeInner() {
             <SectionLabel>{t("home.who.eligibility")}</SectionLabel>
             <h2 className="font-institutional text-4xl mt-2">{t("home.who.title")}</h2>
             <GoldDivider className="my-6" />
-            <ul className="grid grid-cols-2 gap-y-2 text-sm text-foreground/85">
-              {audience.map((x) => (<li key={x}>· {x}</li>))}
-            </ul>
+            <div className="flex flex-wrap gap-2">
+              {audience.map((x) => (
+                <span
+                  key={x}
+                  className="px-3 py-1.5 text-xs uppercase tracking-[0.1em] border"
+                  style={{ borderColor: "hsl(var(--ceremonial-gold) / 0.55)", color: "hsl(var(--foundation-navy))" }}
+                >
+                  {x}
+                </span>
+              ))}
+            </div>
           </div>
           <div>
             <SectionLabel>{t("home.mem.label")}</SectionLabel>
             <h2 className="font-institutional text-4xl mt-2">{t("home.mem.title")}</h2>
             <GoldDivider className="my-6" />
-            <ul className="space-y-2 text-sm text-foreground/85">
-              {benefits.map((b) => <li key={b}>· {b}</li>)}
+            <ul className="space-y-2.5 text-sm text-foreground/85">
+              {benefits.map((b) => (
+                <li key={b} className="flex gap-2.5">
+                  <span style={{ color: "hsl(var(--ceremonial-gold))" }}>✦</span>
+                  <span>{b}</span>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
@@ -166,8 +176,8 @@ function HomeInner() {
         <h2 className="font-institutional text-4xl mt-2">{t("home.cta.title")}</h2>
         <GoldDivider className="my-8 mx-auto" />
         <div className="flex flex-wrap gap-4 justify-center">
-          <Link to="/aipf/register-interest" className="px-6 py-3 text-xs uppercase tracking-[0.18em] bg-[hsl(var(--foundation-navy))] text-white hover:bg-[hsl(var(--deep-navy-hover))]">
-            {t("nav.register")}
+          <Link to="/aipf/join" className="px-6 py-3 text-xs uppercase tracking-[0.18em] bg-[hsl(var(--foundation-navy))] text-white hover:bg-[hsl(var(--deep-navy-hover))]">
+            {t("nav.join")}
           </Link>
           <Link to="/aipf/nominate" className="px-6 py-3 text-xs uppercase tracking-[0.18em] border border-[hsl(var(--foundation-navy))] hover:bg-[hsl(var(--soft-cream))]">
             {t("nav.nominate")}

@@ -240,6 +240,9 @@ export async function listContactMessages() {
   const { data } = await db.from("aipf_contact_messages").select("*").order("created_at", { ascending: false });
   return data || [];
 }
+export async function resolveContactMessage(id: string, resolved: boolean) {
+  return db.from("aipf_contact_messages").update({ resolved }).eq("id", id);
+}
 
 // --- OVERVIEW METRICS ---
 export async function getOverviewMetrics() {

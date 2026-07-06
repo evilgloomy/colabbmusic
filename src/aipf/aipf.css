@@ -101,6 +101,13 @@
   color: inherit;
 }
 
+/* `color: inherit` above outranks Tailwind's single-class .text-white
+   on anchors (0,1,1 vs 0,1,0), which made navy link-buttons render
+   dark-on-dark in light sections. Restore utility-class intent. */
+.aipf-root a.text-white {
+  color: hsl(var(--institution-white));
+}
+
 .aipf-root .aipf-link {
   color: hsl(var(--foundation-navy));
   border-bottom: 1px solid hsl(var(--ceremonial-gold) / 0.6);

@@ -73,7 +73,7 @@ export function InstitutionalHeader() {
             </Link>
           ))}
           <Link
-            to="/aipf/register-interest"
+            to="/aipf/join"
             className="px-4 py-2 text-xs uppercase tracking-[0.16em] border"
             style={{
               borderColor: "hsl(var(--foundation-navy))",
@@ -81,7 +81,7 @@ export function InstitutionalHeader() {
               color: "hsl(var(--institution-white))",
             }}
           >
-            {t("nav.register")}
+            {t("nav.join")}
           </Link>
         </nav>
       </div>
@@ -113,10 +113,9 @@ export function AipfFooter() {
         <div>
           <div className="aipf-label mb-3">{t("footer.participate")}</div>
           <ul className="space-y-2 text-sm opacity-80">
+            <li><Link to="/aipf/join" className="hover:opacity-100">{t("nav.join")}</Link></li>
             <li><Link to="/aipf/directory" className="hover:opacity-100">{t("nav.directory")}</Link></li>
             <li><Link to="/aipf/verify" className="hover:opacity-100">{t("nav.verify")}</Link></li>
-            <li><Link to="/aipf/claim" className="hover:opacity-100">{t("nav.claim")}</Link></li>
-            <li><Link to="/aipf/register-interest" className="hover:opacity-100">{t("nav.register")}</Link></li>
             <li><Link to="/aipf/nominate" className="hover:opacity-100">{t("nav.nominate")}</Link></li>
             <li><Link to="/aipf/contact" className="hover:opacity-100">{t("nav.contact")}</Link></li>
           </ul>

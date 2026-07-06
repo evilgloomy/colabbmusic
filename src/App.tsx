@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -27,7 +27,8 @@ import AipfHome from "@/aipf/pages/Home";
 import AipfAbout from "@/aipf/pages/About";
 import AipfDirectory from "@/aipf/pages/Directory";
 import AipfPublicProfile from "@/aipf/pages/PublicProfile";
-import AipfRegisterInterest from "@/aipf/pages/RegisterInterest";
+import AipfJoin from "@/aipf/pages/Join";
+import AipfApply from "@/aipf/pages/Apply";
 import AipfNominate from "@/aipf/pages/Nominate";
 import AipfFoundingCohort from "@/aipf/pages/FoundingCohort";
 import AipfPrograms from "@/aipf/pages/Programs";
@@ -48,6 +49,7 @@ import AipfClaim from "@/aipf/pages/Claim";
 import AipfVerify from "@/aipf/pages/Verify";
 import AipfCertificate from "@/aipf/pages/Certificate";
 import AipfAdminOnboarding from "@/aipf/pages/AdminOnboarding";
+import AipfAdminContact from "@/aipf/pages/AdminContact";
 
 const queryClient = new QueryClient();
 
@@ -77,7 +79,9 @@ const AppInner = () => {
       <Route path="/aipf/about" element={<AipfAbout />} />
       <Route path="/aipf/directory" element={<AipfDirectory />} />
       <Route path="/aipf/directory/:slug" element={<AipfPublicProfile />} />
-      <Route path="/aipf/register-interest" element={<AipfRegisterInterest />} />
+      <Route path="/aipf/join" element={<AipfJoin />} />
+      <Route path="/aipf/apply" element={<AipfApply />} />
+      <Route path="/aipf/register-interest" element={<Navigate to="/aipf/apply" replace />} />
       <Route path="/aipf/nominate" element={<AipfNominate />} />
       <Route path="/aipf/claim" element={<AipfClaim />} />
       <Route path="/aipf/verify" element={<AipfVerify />} />
@@ -99,6 +103,7 @@ const AppInner = () => {
       <Route path="/aipf/admin/broken-links" element={<AdminGuard><AipfAdminBrokenLinks /></AdminGuard>} />
       <Route path="/aipf/admin/invitations" element={<AdminGuard><AipfAdminInvitations /></AdminGuard>} />
       <Route path="/aipf/admin/onboarding" element={<AdminGuard><AipfAdminOnboarding /></AdminGuard>} />
+      <Route path="/aipf/admin/contact" element={<AdminGuard><AipfAdminContact /></AdminGuard>} />
       <Route path="/aipf/admin/journal" element={<AdminGuard><AipfAdminJournal /></AdminGuard>} />
       <Route path="/aipf/admin/journal/:id" element={<AdminGuard><AipfAdminJournalEditor /></AdminGuard>} />
 

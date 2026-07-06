@@ -45,7 +45,7 @@ function Inner() {
           <GoldDivider className="my-6 mx-auto" />
           <p className="text-foreground/80">{t("found.status.body")}</p>
           <div className="mt-6 flex flex-wrap gap-3 justify-center">
-            <Link to="/aipf/register-interest" className="px-5 py-2 text-xs uppercase tracking-[0.16em] bg-[hsl(var(--foundation-navy))] text-white">{t("nav.register")}</Link>
+            <Link to="/aipf/join" className="px-5 py-2 text-xs uppercase tracking-[0.16em] bg-[hsl(var(--foundation-navy))] text-white">{t("nav.join")}</Link>
             <Link to="/aipf/nominate" className="px-5 py-2 text-xs uppercase tracking-[0.16em] border">{t("nav.nominate")}</Link>
           </div>
         </div>

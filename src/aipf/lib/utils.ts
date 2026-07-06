@@ -45,6 +45,15 @@ export function normalizeMemberNumber(input: string): string {
   return cleaned;
 }
 
+// Serialize structured link rows into the aipf_interest_submissions
+// additional_links text column ("Platform: url" per line).
+export function linksToText(links: { platform: string; url: string }[]): string {
+  return links
+    .filter((l) => l.url.trim())
+    .map((l) => (l.platform.trim() ? `${l.platform.trim()}: ${l.url.trim()}` : l.url.trim()))
+    .join("\n");
+}
+
 export function claimUrl(code: string): string {
   return `${window.location.origin}/aipf/claim?code=${encodeURIComponent(code)}`;
 }

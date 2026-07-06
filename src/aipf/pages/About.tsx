@@ -30,20 +30,37 @@ function AboutInner() {
 
       <section className="container mx-auto px-6 pb-16">
         <div className="grid md:grid-cols-2 gap-8">
-          <div>
+          <div className="aipf-frame p-8" style={{ borderColor: "hsl(var(--ceremonial-gold))" }}>
             <SectionLabel>{t("about.isLabel")}</SectionLabel>
             <h2 className="font-institutional text-3xl mt-2">{t("about.isTitle")}</h2>
             <GoldDivider className="my-4" />
-            <ul className="space-y-2 text-foreground/85 text-sm">
-              {isItems.map((x) => <li key={x}>· {x}</li>)}
+            <ul className="space-y-2.5 text-foreground/85 text-sm">
+              {isItems.map((x) => (
+                <li key={x} className="flex gap-3">
+                  <span
+                    className="shrink-0 w-5 h-5 flex items-center justify-center text-[0.7rem] border rounded-full"
+                    style={{ borderColor: "hsl(var(--ceremonial-gold))", color: "hsl(var(--ceremonial-gold))" }}
+                  >
+                    ✓
+                  </span>
+                  <span>{x}</span>
+                </li>
+              ))}
             </ul>
           </div>
-          <div>
+          <div className="aipf-frame p-8" style={{ borderColor: "hsl(var(--border))" }}>
             <SectionLabel>{t("about.notLabel")}</SectionLabel>
-            <h2 className="font-institutional text-3xl mt-2">{t("about.notTitle")}</h2>
-            <GoldDivider className="my-4" />
-            <ul className="space-y-2 text-foreground/85 text-sm">
-              {notItems.map((x) => <li key={x}>· {x}</li>)}
+            <h2 className="font-institutional text-3xl mt-2 text-muted-foreground">{t("about.notTitle")}</h2>
+            <div className="aipf-thin-divider my-4" />
+            <ul className="space-y-2.5 text-muted-foreground text-sm">
+              {notItems.map((x) => (
+                <li key={x} className="flex gap-3">
+                  <span className="shrink-0 w-5 h-5 flex items-center justify-center text-[0.7rem] border border-border rounded-full">
+                    ✕
+                  </span>
+                  <span>{x}</span>
+                </li>
+              ))}
             </ul>
           </div>
         </div>

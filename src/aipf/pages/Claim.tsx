@@ -4,6 +4,7 @@ import { useSEO } from "@/hooks/useSEO";
 import { AipfLayout } from "@/aipf/AipfLayout";
 import { SectionLabel, GoldDivider, SealLogo } from "@/aipf/components/Chrome";
 import { EmptyState } from "@/aipf/components/Directory";
+import { PortraitGuidelines } from "@/aipf/components/PortraitGuidelines";
 import { AIPF_CATEGORIES } from "@/aipf/lib/constants";
 import { lookupInvitation, submitOnboarding } from "@/aipf/services";
 import type { AipfClaimLookup, AipfClaimLinkDraft, AipfOnboardingPayload } from "@/aipf/types";
@@ -152,7 +153,7 @@ function Inner() {
             <GoldDivider className="my-8" />
             <p className="text-xs text-muted-foreground">
               {t("claim.noCode")}{" "}
-              <Link to="/aipf/register-interest" className="aipf-link">{t("nav.register")}</Link>
+              <Link to="/aipf/apply" className="aipf-link">{t("nav.register")}</Link>
             </p>
           </div>
         )}
@@ -196,6 +197,7 @@ function Inner() {
             <Field label={t("reg.bio")}>
               <Textarea rows={4} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
             </Field>
+            <PortraitGuidelines entityName={form.entity_name} category={form.category} />
             <div className="grid md:grid-cols-2 gap-4">
               <Field label={t("reg.imageUrl")}>
                 <Input value={form.official_image_url} onChange={(e) => setForm({ ...form, official_image_url: e.target.value })} placeholder="https://" />
@@ -204,6 +206,11 @@ function Inner() {
                 <Input value={form.logo_url} onChange={(e) => setForm({ ...form, logo_url: e.target.value })} placeholder="https://" />
               </Field>
             </div>
+            {form.official_image_url && /^https?:\/\//.test(form.official_image_url) && (
+              <div className="w-28 aspect-[3/4] border border-border overflow-hidden bg-[hsl(var(--soft-cream))]">
+                <img src={form.official_image_url} alt="" className="w-full h-full object-cover" />
+              </div>
+            )}
 
             <div>
               <Label className="text-xs uppercase tracking-[0.14em] font-semibold">{t("claim.links")}</Label>
