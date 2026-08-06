@@ -4,6 +4,9 @@ import { useTranslation } from "react-i18next";
 import { useBrand } from "@/hooks/useBrand";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { useSEO } from "@/hooks/useSEO";
+import { EditorialImage } from "@/components/editorial/EditorialImage";
+import aboutPortrait from "@/assets/campaign/intro-portrait.jpg";
+
 
 const timelineEN = [
   {
