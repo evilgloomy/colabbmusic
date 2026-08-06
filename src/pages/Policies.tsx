@@ -14,14 +14,14 @@ const PoliciesPage = () => {
     <PageLayout>
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/10" />
-        <div className="relative container mx-auto px-6 py-32 md:py-40">
+        <div className="relative editorial py-32 md:py-40">
           <p className="text-xs font-medium tracking-[0.3em] uppercase text-primary mb-4">{t("policies.storePolicies")}</p>
           <h1 className="text-display-lg font-display font-bold text-foreground mb-6">{t("policies.returnPolicy")}</h1>
           <p className="text-muted-foreground max-w-lg">{t("policies.pageDesc")}</p>
         </div>
       </section>
 
-      <section className="container mx-auto px-6 py-20 max-w-3xl">
+      <section className="editorial py-20 max-w-3xl">
         <div className="prose prose-sm dark:prose-invert max-w-none space-y-8">
           <p className="text-lg font-semibold text-foreground">{t("policies.allSalesFinal")}</p>
           <p className="text-muted-foreground">{t("policies.allSalesFinalDesc")}</p>

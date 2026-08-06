@@ -30,10 +30,10 @@ const Index = () => {
         "@context": "https://schema.org",
         "@type": "MusicGroup",
         name: "Cola B",
-        alternateName: "Queen of Emo Pop",
+        alternateName: ["Coke Wang", "可樂糖"],
         url: SITE_URL,
         image: `${SITE_URL}/og-image.jpg`,
-        genre: ["Emo Pop", "Pop", "R&B", "Alternative"],
+        genre: ["Pop", "Mandopop", "Cantopop", "R&B", "Dance Pop", "Lo-fi"],
         sameAs: SAME_AS,
       },
       {
@@ -52,16 +52,16 @@ const Index = () => {
   );
 
   useSEO({
-    title: "Cola B — Queen of Emo Pop | Official Site",
+    title: "Cola B — AI Singer-Songwriter & Virtual Idol | Official Site",
     description:
-      "Enter Cola's World — music, films, journal and atelier from Cola B, the Queen of Emo Pop.",
+      "Official site of Cola B — AI singer-songwriter, virtual idol and music artist. Music, videos, stories and the Aurora store.",
     exactTitle: true,
     jsonLd,
   });
 
   return (
     <PageLayout transparentNav>
-      <h1 className="sr-only">Cola B — Queen of Emo Pop. Official music, videos, world, and store.</h1>
+      <h1 className="sr-only">Cola B — AI singer-songwriter, virtual idol and music artist. Official music, videos, world and store.</h1>
       <CampaignHero />
       <StatementLine />
       <PersonalIntro />

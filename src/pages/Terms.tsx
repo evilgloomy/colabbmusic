@@ -9,7 +9,7 @@ const TermsPage = () => {
 
   return (
     <PageLayout>
-      <section className="container mx-auto px-6 pt-24 pb-12 max-w-3xl">
+      <section className="editorial pt-24 pb-12 max-w-3xl">
         <p className="text-xs font-medium tracking-[0.3em] uppercase text-primary mb-4">Legal</p>
         <h1 className="text-display-lg font-display font-bold text-foreground mb-4">Terms of Service</h1>
         <p className="text-sm text-muted-foreground">
@@ -17,7 +17,7 @@ const TermsPage = () => {
         </p>
       </section>
 
-      <section className="container mx-auto px-6 pb-24 max-w-3xl space-y-8 text-foreground/80 font-body leading-relaxed">
+      <section className="editorial pb-24 max-w-3xl space-y-8 text-foreground/80 font-body leading-relaxed">
         <div>
           <h2 className="text-xl font-display font-bold text-foreground mb-3">1. Acceptance</h2>
           <p>

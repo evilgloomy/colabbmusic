@@ -6,7 +6,7 @@ export const SpotifyFollow = () => {
   const { t } = useTranslation();
   return (
     <section className="bg-background py-12 md:py-16 border-b border-border/30">
-      <div className="container mx-auto px-6">
+      <div className="editorial">
         <div className="max-w-2xl mx-auto">
           <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-muted-foreground mb-3 text-center">
             {t("home.followOnSpotify", "Follow on Spotify")}

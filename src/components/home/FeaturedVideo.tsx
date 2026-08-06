@@ -18,7 +18,7 @@ export const FeaturedVideo = () => {
   if (loading) {
     return (
       <section>
-        <div className="container mx-auto px-6 py-24 md:py-32 flex justify-center">
+        <div className="editorial py-24 md:py-32 flex justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       </section>
@@ -29,7 +29,7 @@ export const FeaturedVideo = () => {
 
   return (
     <section className="border-t border-border/40">
-      <div className="container mx-auto px-6 py-24 md:py-32">
+      <div className="editorial py-24 md:py-32">
         <div className="mb-12">
           <p className="text-xs font-body font-medium tracking-[0.3em] uppercase text-muted-foreground mb-3">{t("home.watch")}</p>
           <h2 className="text-display-md font-display font-semibold text-foreground">{t("home.featuredVideo")}</h2>

@@ -34,8 +34,8 @@ export const HeroSection = () => {
       </div>
 
       {/* Content — left aligned, minimal */}
-      <div className="relative container mx-auto px-6 pb-24 md:pb-32 pt-48 z-10">
-        <h1 className="sr-only">Cola B — Queen of Emo Pop. Official music, videos, story, and merch.</h1>
+      <div className="relative editorial pb-24 md:pb-32 pt-48 z-10">
+        <h1 className="sr-only">Cola B — AI singer-songwriter and virtual idol. Official music, videos, story, and merch.</h1>
         <p
           aria-hidden="true"
           className="text-hero font-display font-bold text-foreground mb-6 animate-fade-in opacity-0"

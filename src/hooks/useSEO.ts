@@ -2,8 +2,8 @@ import { useEffect } from "react";
 
 const SITE_NAME = "Cola B";
 const SITE_URL = "https://colabbmusic.com";
-const BRAND_SUFFIX = "Cola B — Queen of Emo Pop";
-const DEFAULT_TITLE = "Cola B — Queen of Emo Pop | Official Site";
+const BRAND_SUFFIX = "Cola B";
+const DEFAULT_TITLE = "Cola B — AI Singer-Songwriter & Virtual Idol | Official Site";
 const DEFAULT_DESCRIPTION = "The official home of Cola B — latest music, videos, story, and exclusive merchandise.";
 const DEFAULT_IMAGE = `${SITE_URL}/og-image.jpg`;
 
@@ -23,7 +23,7 @@ interface SEOOptions {
   noindex?: boolean;
   /**
    * If true, use `title` exactly as provided. Otherwise, the hook formats it as
-   * `{title} | Cola B — Queen of Emo Pop` (unless the title already contains "Cola B").
+   * `{title} | Cola B` (unless the title already contains "Cola B").
    */
   exactTitle?: boolean;
 }

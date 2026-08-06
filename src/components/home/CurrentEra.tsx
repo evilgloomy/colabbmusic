@@ -65,7 +65,7 @@ export const CurrentEra = () => {
         </div>
       )}
 
-      <div className="relative container mx-auto px-6 py-20 md:py-28 z-10">
+      <div className="relative editorial py-20 md:py-28 z-10">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <p className="text-xs font-body font-semibold tracking-[0.3em] uppercase text-white/50">

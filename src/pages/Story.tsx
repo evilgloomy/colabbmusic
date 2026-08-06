@@ -78,7 +78,7 @@ const StoryPage = () => {
       <section className="relative overflow-hidden">
         <img src={bannerStory} alt="" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/50 to-background" />
-        <div className="relative container mx-auto px-6 py-32 md:py-44">
+        <div className="relative editorial py-32 md:py-44">
           <p className="text-xs font-medium tracking-[0.3em] uppercase text-primary mb-4">{t("story.herWorld")}</p>
           <h1 className="text-display-lg font-display font-bold text-foreground mb-4">{t("story.pageTitle")}</h1>
           <p className="text-muted-foreground max-w-md text-sm">{t("story.pageDesc")}</p>
@@ -87,7 +87,7 @@ const StoryPage = () => {
 
       {/* Filter bar */}
       <section className="border-b border-border/40">
-        <div className="container mx-auto px-6 py-4">
+        <div className="editorial py-4">
           <div className="flex flex-wrap gap-1">
             {categoryKeys.map((cat) => (
               <button
@@ -107,7 +107,7 @@ const StoryPage = () => {
       </section>
 
       {/* Editorial content */}
-      <section className="container mx-auto px-6 py-16 md:py-20">
+      <section className="editorial py-16 md:py-20">
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
             <div className="md:col-span-8">

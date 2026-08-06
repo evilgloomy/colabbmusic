@@ -41,7 +41,7 @@ const PressPage = () => {
       <section className="relative overflow-hidden">
         <img src={bannerPress} alt="" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/50 to-background" />
-        <div className="relative container mx-auto px-6 py-32 md:py-44">
+        <div className="relative editorial py-32 md:py-44">
           <p className="text-xs font-medium tracking-[0.3em] uppercase text-primary mb-4">{t("press.media")}</p>
           <h1 className="text-display-lg font-display font-bold text-foreground mb-4">{t("press.pageTitle")}</h1>
           <p className="text-muted-foreground max-w-md text-sm">{t("press.pageDesc")}</p>
@@ -49,7 +49,7 @@ const PressPage = () => {
       </section>
 
       {/* Bios */}
-      <section className="container mx-auto px-6 py-20">
+      <section className="editorial py-20">
         <div className="max-w-3xl space-y-16">
           <div>
             <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-4">{t("press.shortBio")}</p>
@@ -73,7 +73,7 @@ const PressPage = () => {
       {/* Latest release */}
       {latestRelease && (
         <section className="bg-card/50">
-          <div className="container mx-auto px-6 py-20">
+          <div className="editorial py-20">
             <div className="max-w-3xl">
               <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-4">{t("press.latestRelease")}</p>
               <h3 className="text-display-md font-display font-bold text-foreground mb-4">{latestRelease.title}</h3>
@@ -88,7 +88,7 @@ const PressPage = () => {
       )}
 
       {/* Press images */}
-      <section className="container mx-auto px-6 py-20">
+      <section className="editorial py-20">
         <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-8">{t("press.pressImages")}</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {pressImages.map((img, i) => (
@@ -101,7 +101,7 @@ const PressPage = () => {
 
       {/* Press kit & contact */}
       <section className="border-t border-border/40">
-        <div className="container mx-auto px-6 py-20">
+        <div className="editorial py-20">
           <div className="grid md:grid-cols-2 gap-12">
             <div>
               <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-4">{t("press.pressKit")}</p>

@@ -47,7 +47,7 @@ export interface Video {
 
 export const brand = {
   name: "Cola B",
-  tagline: "Queen of Emo Pop. A world built through music, style, and moments.",
+  tagline: "AI Singer-Songwriter · Virtual Idol · Music Artist. A world built through music, style, and moments.",
   shortBio:
     "Cola B is a singer-songwriter and digital cultural personality whose world spans music, lifestyle, travel, and modern internet life.",
   mediumBio:

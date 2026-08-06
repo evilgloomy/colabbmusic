@@ -94,7 +94,7 @@ const ProductDetailPage = () => {
   if (!product) {
     return (
       <PageLayout>
-        <div className="container mx-auto px-6 pt-24 pb-16 text-center">
+        <div className="editorial pt-24 pb-16 text-center">
           <p className="text-muted-foreground">Product not found.</p>
           <Link to="/store" className="text-sm underline mt-4 inline-block">
             Back to Store
@@ -153,7 +153,7 @@ const ProductDetailPage = () => {
 
   return (
     <PageLayout>
-      <section className="container mx-auto px-6 pt-24 pb-16">
+      <section className="editorial pt-24 pb-16">
         <Link
           to="/store"
           className="inline-flex items-center gap-1 text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground hover:text-foreground transition-colors mb-8"

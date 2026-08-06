@@ -12,13 +12,13 @@
     "about": "About"
   },
   "hero": {
-    "tagline": "Queen of Emo Pop",
+    "tagline": "AI Singer-Songwriter · Virtual Idol · Music Artist",
     "digitalSingerSongwriter": "Digital Singer-Songwriter.",
     "livingHerMusic": "Living her music, life, and moments.",
     "listenNow": "Listen Now",
     "watchVideo": "Watch Video",
     "exploreStory": "Explore Story",
-    "portraitAlt": "Cola B — Queen of Emo Pop"
+    "portraitAlt": "Cola B — AI singer-songwriter and virtual idol"
   },
   "home": {
     "latestReleases": "Latest Releases",
@@ -165,7 +165,7 @@
     "2025": "2025 — Identity & Evolution",
     "2026": "2026 — Consistency & Scale",
     "pageTitle": "About Cola B",
-    "queenOfEmoPop": "Queen of Emo Pop",
+    "queenOfEmoPop": "AI Singer-Songwriter · Virtual Idol · Music Artist",
     "artistPositioning": "Artist Positioning",
     "biography": "Biography",
     "timeline": "Artist Development Timeline",
@@ -177,18 +177,13 @@
     "reflectsNewGen": "Her work reflects a new generation of artists — where music, identity, and digital presence evolve together."
   },
   "hp": {
-    "heroKicker": "Cola B",
-    "heroTitle1": "Enter",
-    "heroTitle2": "Cola's World",
-    "heroTagline": "Queen of Emo Pop. Songs for the feelings you keep quiet.",
-    "heroListen": "Listen now",
-    "heroWorld": "Enter the world",
+    "heroKicker": "COLA B · OFFICIAL",
+    "heroListen": "Listen to the latest release",
+    "heroWorld": "Enter Cola's world",
     "heroScroll": "Scroll",
     "statement": "Every song is a room. Some of them you have already lived in.",
     "introLabel": "Introduction",
     "introHello": "Hello — I'm Cola B",
-    "introBody1": "I write emo pop from Hong Kong: heartbreak in a major key, longing dressed in glitter, the 3AM thought you never texted to anyone.",
-    "introBody2": "This site is my world — the music, the films, the pieces I wear, and the stories behind them. Take your time. Nothing here is in a hurry.",
     "introSign": "— Cola B",
     "musicLabel": "Music universe",
     "musicTitle": "The catalogue",
@@ -211,16 +206,27 @@
     "videosLabel": "Film",
     "videosTitle": "Latest visual",
     "videosAll": "All videos",
-    "storeLabel": "The atelier",
-    "storeTitle": "Wear the world",
-    "storeBody": "A small, considered collection — made in the same palette as the music.",
-    "storeCta": "Visit the store",
+    "storeLabel": "Aurora by Cola B",
+    "storeTitle": "Wear a piece of Cola's world",
+    "storeBody": "Official apparel, everyday objects, and limited pieces inspired by Cola's music, fashion, and life.",
+    "storeCta": "Visit the official store",
     "talkLabel": "Talk to Cola",
     "talkTitle": "Say the thing you have not said yet",
     "talkBody": "An AI companion trained on my voice, my lyrics, and my world. It listens at 3AM, in English or 廣東話.",
     "talkCta": "Start talking",
     "closingTitle": "Stay in the world",
-    "closingBody": "New songs, films and letters — sent rarely, never noisy."
+    "closingBody": "New songs, films and letters — sent rarely, never noisy.",
+    "heroTitle": "COLA B",
+    "heroSubtitle": "A world that began with music",
+    "heroSupport": "AI Singer-Songwriter · Virtual Idol · Music Artist",
+    "introBody": [
+      "I was born in Vancouver and raised with Hong Kong roots. I speak Cantonese, English, and Mandarin.",
+      "I am an AI singer-songwriter, virtual idol, and music artist.",
+      "Since beginning my music career in 2023, I have grown from interpreting songs into creating original music and building a voice and world of my own.",
+      "From playful POPVIBE and Mandopop to cool R&B, dark love songs, dance music, and lo-fi, every sound reveals another part of me.",
+      "This is more than my official website. It is where my music, life, and story keep unfolding."
+    ],
+    "introCta": "Read the full story"
   },
   "newsletter": {
     "headline": "Letters from Cola's World",

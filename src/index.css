@@ -60,18 +60,11 @@
     --sidebar-ring: var(--cola-pink);
 
     /* ---- Editorial layout rhythm ---- */
-    --editorial-max: 1440px;
-    --reading-max: 720px;
-    --gutter: 20px;
+    --editorial-max: 1320px;
+    --reading-max: 65ch;
+    --gutter: clamp(20px, 5vw, 72px);
   }
 
-  @media (min-width: 768px) {
-    :root { --gutter: 48px; }
-  }
-
-  @media (min-width: 1280px) {
-    :root { --gutter: 72px; }
-  }
 
   /* Paper band — an inverted island inside the dark scroll */
   .paper-band {
@@ -140,9 +133,38 @@
 
   .reading {
     max-width: var(--reading-max);
+    line-height: 1.7;
   }
 
-  /* Section rhythm: 64–96px mobile, 96–160px desktop */
+  .reading-cjk {
+    max-width: 32em;
+    line-height: 1.85;
+    word-break: keep-all;
+    overflow-wrap: normal;
+  }
+
+  .hero-title {
+    font-size: clamp(4.25rem, 9vw, 9.375rem);
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    white-space: nowrap;
+  }
+
+  .hero-subtitle {
+    font-size: clamp(1.875rem, 4vw, 3.875rem);
+    line-height: 1.1;
+    max-width: 13em;
+    word-break: keep-all;
+    overflow-wrap: normal;
+    text-wrap: balance;
+  }
+
+  .hero-support {
+    font-size: clamp(0.875rem, 1.4vw, 1.25rem);
+    line-height: 1.5;
+  }
+
+
   .band {
     padding-block: clamp(4rem, 11vw, 10rem);
   }

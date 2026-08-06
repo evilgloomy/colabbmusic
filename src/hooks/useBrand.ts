@@ -3,11 +3,11 @@ import { useTranslation } from "react-i18next";
 const brandContent = {
   en: {
     name: "Cola B",
-    tagline: "Queen of Emo Pop",
+    tagline: "AI Singer-Songwriter · Virtual Idol · Music Artist",
     heroBody:
-      "Cola B is a Mandarin pop singer-songwriter redefining emotional storytelling through a blend of Mandopop, Emo Pop, and modern digital artistry.",
+      "Cola B is an AI singer-songwriter, virtual idol and music artist. Born in Vancouver with Hong Kong roots, she sings in Cantonese, English and Mandarin, and has built a catalogue that moves from POPVIBE and Mandopop to R&B, dark love songs, dance music and lo-fi.",
     shortBio:
-      "Cola B is a Mandarin pop singer-songwriter known for emotionally driven Mandopop and modern pop productions. Since her debut in 2023, she has developed a cross-genre catalog spanning Emo Pop, Dance Pop, EDM, and Lo-fi, while building a growing presence across Chinese and global streaming platforms.",
+      "Cola B is an AI singer-songwriter, virtual idol and music artist, born in Vancouver with a Hong Kong family background. Since beginning her music career in 2023 she has moved from interpreting songs to original writing, building a cross-genre catalogue of more than 50 releases spanning Mandopop, R&B, dance pop and lo-fi across Chinese and global streaming platforms.",
     mediumBio:
       "Cola B is a Mandarin pop singer-songwriter whose work centers on emotional storytelling, introspection, and the evolving relationship between human feeling and digital creation. Her music draws from pop, R&B, and alternative influences, delivered with a voice that balances vulnerability and confidence.",
     longBio:
@@ -24,11 +24,11 @@ const brandContent = {
   },
   "zh-HK": {
     name: "Cola B",
-    tagline: "Emo Pop 女王",
+    tagline: "AI 唱作歌手 · 虛擬偶像 · 音樂人",
     heroBody:
-      "Cola B 是一位華語流行創作歌手，以細膩的情感敘事與現代流行音樂融合，打造出屬於她獨特的音樂世界。",
+      "Cola B 係一位 AI Singer-Songwriter、虛擬偶像同音樂人。喺加拿大溫哥華出世，屋企有香港背景，識講廣東話、英文同普通話，音樂由 POPVIBE、華語流行到 R&B、暗黑情歌、Dance Pop 同 Lo-Fi。",
     shortBio:
-      "Cola B 是一位華語流行創作歌手，以情感細膩的 Mandopop 作品見稱。自 2023 年出道以來，她已建立跨越 Emo Pop、Dance Pop、EDM 與 Lo-fi 的音樂版圖，並逐步拓展至全球市場。",
+      "Cola B 係一位 AI Singer-Songwriter、虛擬偶像同音樂人，喺加拿大溫哥華出世，屋企有香港背景。由 2023 年開始音樂活動，由翻唱走到原創，作品超過 50 首，橫跨華語流行、R&B、Dance Pop 同 Lo-Fi，並持續拓展中國與全球市場。",
     mediumBio:
       "Cola B 是一位以情感敘事為核心的華語創作歌手，其音樂圍繞著愛情、回憶與自我反思。她的音樂汲取流行、R&B和另類音樂的靈感，以一種兼具脆弱和自信的聲音呈現。",
     longBio:

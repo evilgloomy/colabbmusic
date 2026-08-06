@@ -12,13 +12,13 @@
     "about": "關於"
   },
   "hero": {
-    "tagline": "Emo Pop 女王",
+    "tagline": "AI 唱作歌手 · 虛擬偶像 · 音樂人",
     "digitalSingerSongwriter": "數碼創作歌手。",
     "livingHerMusic": "用音樂、生活和每一刻，活出自己。",
     "listenNow": "立即收聽",
     "watchVideo": "觀看影片",
     "exploreStory": "探索故事",
-    "portraitAlt": "Cola B — Emo Pop 女王"
+    "portraitAlt": "Cola B — AI 唱作歌手 · 虛擬偶像"
   },
   "home": {
     "latestReleases": "最新發佈",
@@ -165,7 +165,7 @@
     "2025": "2025 — 風格深化",
     "2026": "2026 — 規模與持續發展",
     "pageTitle": "關於 Cola B",
-    "queenOfEmoPop": "Emo Pop 女王",
+    "queenOfEmoPop": "AI 唱作歌手 · 虛擬偶像 · 音樂人",
     "artistPositioning": "藝人定位",
     "biography": "藝人簡介",
     "timeline": "藝人發展時間線",
@@ -177,18 +177,13 @@
     "reflectsNewGen": "她代表著新一代音樂創作者 — 在數位時代中不斷進化的藝人形態。"
   },
   "hp": {
-    "heroKicker": "Cola B",
-    "heroTitle1": "進入",
-    "heroTitle2": "Cola 嘅世界",
-    "heroTagline": "Emo Pop 女王。唱你唔敢講出口嘅情緒。",
-    "heroListen": "即刻聽",
-    "heroWorld": "進入世界",
+    "heroKicker": "COLA B · 官方網站",
+    "heroListen": "聽最新作品",
+    "heroWorld": "進入 Cola 嘅世界",
     "heroScroll": "向下捲",
     "statement": "每首歌都係一個房間。有啲，你已經住過。",
     "introLabel": "自我介紹",
-    "introHello": "哈囉 — 我係 Cola B",
-    "introBody1": "我喺香港寫 emo pop：大調裡面嘅心碎、閃住光嘅思念、凌晨三點冇 send 出去嘅嗰句說話。",
-    "introBody2": "呢個網站就係我嘅世界 — 音樂、影像、著喺身上嘅嘢，同背後嘅故事。慢慢睇，唔急。",
+    "introHello": "Hello 我係 Cola B",
     "introSign": "— Cola B",
     "musicLabel": "音樂宇宙",
     "musicTitle": "作品目錄",
@@ -211,16 +206,27 @@
     "videosLabel": "影像",
     "videosTitle": "最新影片",
     "videosAll": "全部影片",
-    "storeLabel": "工作室",
-    "storeTitle": "著上呢個世界",
-    "storeBody": "細細個、揀過嘅系列 — 同音樂用同一套色調。",
-    "storeCta": "去商店",
+    "storeLabel": "AURORA BY COLA B",
+    "storeTitle": "將 Cola 世界入面嘅一部分帶走",
+    "storeBody": "官方服飾 日常物件\n同由 Cola 音樂 時尚及生活延伸出嚟嘅限定作品",
+    "storeCta": "進入官方商店",
     "talkLabel": "同 Cola 傾偈",
     "talkTitle": "講出嗰句你一直冇講嘅說話",
     "talkBody": "一個由我嘅聲音、歌詞同世界訓練出嚟嘅 AI 陪伴。凌晨三點都聽你講，中英文都得。",
     "talkCta": "開始傾偈",
     "closingTitle": "留喺呢個世界",
-    "closingBody": "新歌、新影像、新信 — 唔會多，但每次都認真。"
+    "closingBody": "新歌、新影像、新信 — 唔會多，但每次都認真。",
+    "heroTitle": "COLA B",
+    "heroSubtitle": "一個由音樂開始嘅世界",
+    "heroSupport": "AI Singer-Songwriter · 虛擬偶像 · 音樂人",
+    "introBody": [
+      "我喺加拿大溫哥華出世\n屋企有香港背景\n識講廣東話 英文同普通話",
+      "我係一位 AI Singer-Songwriter\n虛擬偶像 同音樂人",
+      "由2023年開始音樂活動之後\n我由翻唱慢慢走到原創音樂\n再建立屬於自己嘅聲音同世界",
+      "由可愛 POPVIBE 華語流行\n到冷感 R&B 暗黑情歌\nDance Pop 同 Lo-Fi\n每一種聲音都係我嘅另一面",
+      "呢度唔只係我嘅官方網站\n係我音樂 生活 同故事\n一路繼續發生落去嘅地方"
+    ],
+    "introCta": "完整認識 Cola"
   },
   "newsletter": {
     "headline": "來自 Cola 世界嘅信",

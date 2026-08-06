@@ -37,7 +37,7 @@ export const StoryPreview = () => {
 
   return (
     <section className="border-t border-border/40">
-      <div className="container mx-auto px-6 py-24 md:py-32">
+      <div className="editorial py-24 md:py-32">
         <div className="flex items-end justify-between mb-14">
           <div>
             <p className="text-xs font-body font-medium tracking-[0.3em] uppercase text-muted-foreground mb-3">

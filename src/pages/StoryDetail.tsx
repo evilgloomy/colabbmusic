@@ -85,7 +85,7 @@ const StoryDetailPage = () => {
   if (loading) {
     return (
       <PageLayout>
-        <div className="container mx-auto px-6 py-32">
+        <div className="editorial py-32">
           <div className="max-w-3xl mx-auto space-y-6">
             <div className="h-6 w-32 bg-muted animate-pulse rounded" />
             <div className="aspect-[4/3] bg-muted animate-pulse rounded-xl" />
@@ -99,7 +99,7 @@ const StoryDetailPage = () => {
   if (!story) {
     return (
       <PageLayout>
-        <div className="container mx-auto px-6 py-32 text-center">
+        <div className="editorial py-32 text-center">
           <h1 className="text-display-md font-display font-bold text-foreground mb-4">{t("story.storyNotFound")}</h1>
           <Link to="/story" className="text-primary hover:underline text-sm">{t("story.backToStories")}</Link>
         </div>
@@ -114,7 +114,7 @@ const StoryDetailPage = () => {
 
   return (
     <PageLayout>
-      <article className="container mx-auto px-6 py-24 md:py-32">
+      <article className="editorial py-24 md:py-32">
         <div className="max-w-3xl mx-auto">
           <Link to="/story" className="inline-flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase text-muted-foreground hover:text-foreground transition-colors mb-8">
             <ArrowLeft className="h-3.5 w-3.5" />

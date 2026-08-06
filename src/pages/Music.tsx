@@ -55,7 +55,7 @@ const MusicPage = () => {
       <section className="relative overflow-hidden">
         <img src={bannerMusic} alt="" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/50 to-background" />
-        <div className="relative container mx-auto px-6 py-32 md:py-44">
+        <div className="relative editorial py-32 md:py-44">
           <p className="text-xs font-medium tracking-[0.3em] uppercase text-primary mb-4">{t("music.listenEverywhere")}</p>
           <h1 className="text-display-lg font-display font-bold text-foreground mb-4">{t("music.pageTitle")}</h1>
           <p className="text-muted-foreground max-w-md text-sm">{t("music.pageDesc")}</p>
@@ -64,7 +64,7 @@ const MusicPage = () => {
 
       {/* Stream links */}
       <section className="border-b border-border/40">
-        <div className="container mx-auto px-6 py-6">
+        <div className="editorial py-6">
           <div className="flex flex-wrap items-center gap-6">
             <span className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground">{t("music.streamOn")}</span>
             <a href="https://www.youtube.com/@Cola_BB" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary transition-colors">YouTube Music</a>
@@ -75,7 +75,7 @@ const MusicPage = () => {
       </section>
 
       {/* Discography */}
-      <section className="container mx-auto px-6 py-20">
+      <section className="editorial py-20">
         <div className="mb-10">
           <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-2">{t("music.discography")}</p>
           <h2 className="text-display-md font-display font-bold text-foreground">
