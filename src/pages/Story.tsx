@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Play } from "lucide-react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { publishableOnly, isPublishableStory } from "@/lib/publishable";
 import { useSEO, SITE_URL } from "@/hooks/useSEO";
 import { useTranslation } from "react-i18next";
 import { useMemo } from "react";
@@ -64,7 +65,7 @@ const StoryPage = () => {
     fetchStories();
   }, []);
 
-  const withMedia = stories.filter((s) => s.media_url);
+  const withMedia = publishableOnly(stories, (s) => isPublishableStory(s) && !!s.media_url, "world/stories");
   const filtered = filter === "all" ? withMedia : withMedia.filter((s) => s.category === filter);
 
   // Split into featured (first item) and rest for editorial hierarchy

@@ -4,6 +4,8 @@ import { Play } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { fetchYouTubeFeed, CHANNELS, type YouTubeVideo } from "@/lib/youtube";
 import { Reveal, Kicker } from "@/components/editorial/Reveal";
+import { publishableOnly, isPublishableVideo } from "@/lib/publishable";
+import { trackVideoPlay } from "@/lib/analytics";
 
 export const VideoFilm = () => {
   const { t } = useTranslation();
@@ -11,7 +13,9 @@ export const VideoFilm = () => {
   const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
-    fetchYouTubeFeed(CHANNELS.VEVO, 4).then(setVideos);
+    fetchYouTubeFeed(CHANNELS.VEVO, 6).then((all) =>
+      setVideos(publishableOnly(all, isPublishableVideo, "home/videos").slice(0, 4)),
+    );
   }, []);
 
   if (videos.length === 0) return null;
@@ -41,7 +45,11 @@ export const VideoFilm = () => {
                 title={lead.title}
               />
             ) : (
-              <button onClick={() => setPlaying(true)} className="group h-full w-full relative">
+              <button
+                onClick={() => {
+                  setPlaying(true);
+                  trackVideoPlay(lead.videoId, lead.title, "home_video");
+                }} className="group h-full w-full relative">
                 <img
                   src={lead.thumbnail}
                   alt={lead.title}

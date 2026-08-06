@@ -42,7 +42,7 @@ export const PremiumGate = ({ onRefresh }: PremiumGateProps) => {
       <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
         <Crown className="w-8 h-8 text-primary" />
       </div>
-      <h2 className="text-xl font-semibold text-foreground font-sora mb-2">
+      <h2 className="text-xl font-semibold text-foreground font-display mb-2">
         Ultimate Plan Required
       </h2>
       <p className="text-sm text-muted-foreground mb-6 max-w-xs">

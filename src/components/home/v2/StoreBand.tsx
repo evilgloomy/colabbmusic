@@ -7,6 +7,8 @@ import { ProductCard } from "@/components/store/ProductCard";
 import { Reveal, Kicker } from "@/components/editorial/Reveal";
 import { EditorialImage } from "@/components/editorial/EditorialImage";
 import storePortrait from "@/assets/campaign/store-portrait.jpg";
+import { trackStoreVisit } from "@/lib/analytics";
+import { publishableOnly, isPublishableProduct } from "@/lib/publishable";
 
 export const StoreBand = () => {
   const { t } = useTranslation();
@@ -16,7 +18,9 @@ export const StoreBand = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  const filtered = products.filter((p) => !isCoffeeProduct(p)).slice(0, 3);
+  const filtered = publishableOnly(products, isPublishableProduct, "home/store")
+    .filter((p) => !isCoffeeProduct(p))
+    .slice(0, 3);
 
   return (
     <section className="paper-band band">
@@ -38,6 +42,7 @@ export const StoreBand = () => {
             <p className="mt-5 text-body-lg text-foreground/70 reading reading-cjk">{t("hp.storeBody")}</p>
             <Link
               to="/store"
+              onClick={() => trackStoreVisit("home_store_band")}
               className="mt-8 inline-flex items-center min-h-[44px] px-8 py-3.5 bg-foreground text-background label hover:opacity-90 transition-opacity"
             >
               {t("hp.storeCta")}

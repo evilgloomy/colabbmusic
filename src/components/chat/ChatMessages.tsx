@@ -27,7 +27,7 @@ export const ChatMessages = ({ messages, isLoading, characterName }: ChatMessage
     return (
       <div className="flex-1 flex items-center justify-center px-6">
         <div className="text-center space-y-3">
-          <p className="text-lg font-semibold text-foreground font-sora">Start chatting with {characterName}</p>
+          <p className="text-lg font-semibold text-foreground font-display">Start chatting with {characterName}</p>
           <p className="text-sm text-muted-foreground">Send a message to begin your conversation.</p>
         </div>
       </div>

@@ -218,3 +218,21 @@ export function trackNewsletterSignup(source: string) {
   gtag("event", "newsletter_signup", { source });
 }
 
+
+/* ---------- Generic editorial engagement events ---------- */
+/**
+ * Consent-aware by construction: gtag/fbq are only defined after init(),
+ * which runs once the visitor accepts analytics cookies.
+ */
+export function trackEvent(name: string, params: Record<string, unknown> = {}) {
+  gtag("event", name, params);
+}
+
+export const trackHeroListen = (location = "home_hero") => trackEvent("hero_listen", { location });
+export const trackVideoPlay = (videoId: string, title: string, location: string) =>
+  trackEvent("video_play", { video_id: videoId, video_title: title, location });
+export const trackStoryOpen = (storyId: string, location: string) =>
+  trackEvent("story_open", { story_id: storyId, location });
+export const trackStoreVisit = (location: string) => trackEvent("store_visit", { location });
+export const trackChatOpen = (location: string) => trackEvent("chat_open", { location });
+export const trackLanguageChange = (language: string) => trackEvent("language_change", { language });
