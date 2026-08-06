@@ -1,12 +1,15 @@
 import { PageLayout } from "@/components/layout/PageLayout";
-import { HeroSection } from "@/components/home/HeroSection";
-import { SpotifyFollow } from "@/components/home/SpotifyFollow";
-import { CurrentEra } from "@/components/home/CurrentEra";
-import { FeaturedMusic } from "@/components/home/FeaturedMusic";
-import { StoryPreview } from "@/components/home/StoryPreview";
-import { FeaturedVideo } from "@/components/home/FeaturedVideo";
-import { StorePreview } from "@/components/home/StorePreview";
-import { PressPreview } from "@/components/home/PressPreview";
+import { CampaignHero } from "@/components/home/v2/CampaignHero";
+import { StatementLine } from "@/components/home/v2/StatementLine";
+import { PersonalIntro } from "@/components/home/v2/PersonalIntro";
+import { MusicUniverse } from "@/components/home/v2/MusicUniverse";
+import { WhyIMakeMusic } from "@/components/home/v2/WhyIMakeMusic";
+import { WorldSection } from "@/components/home/v2/WorldSection";
+import { ProofOfScale } from "@/components/home/v2/ProofOfScale";
+import { VideoFilm } from "@/components/home/v2/VideoFilm";
+import { StoreBand } from "@/components/home/v2/StoreBand";
+import { TalkToCola } from "@/components/home/v2/TalkToCola";
+import { ClosingStatement } from "@/components/home/v2/ClosingStatement";
 import { useSEO, SITE_URL } from "@/hooks/useSEO";
 import { useMemo } from "react";
 
@@ -51,21 +54,25 @@ const Index = () => {
   useSEO({
     title: "Cola B — Queen of Emo Pop | Official Site",
     description:
-      "Official headquarters of Cola B — music, story, videos, and curated lifestyle from the Queen of Emo Pop.",
+      "Enter Cola's World — music, films, journal and atelier from Cola B, the Queen of Emo Pop.",
     exactTitle: true,
     jsonLd,
   });
 
   return (
-    <PageLayout>
-      <HeroSection />
-      <SpotifyFollow />
-      <CurrentEra />
-      <FeaturedMusic />
-      <StoryPreview />
-      <FeaturedVideo />
-      <StorePreview />
-      <PressPreview />
+    <PageLayout transparentNav>
+      <h1 className="sr-only">Cola B — Queen of Emo Pop. Official music, videos, world, and store.</h1>
+      <CampaignHero />
+      <StatementLine />
+      <PersonalIntro />
+      <MusicUniverse />
+      <WhyIMakeMusic />
+      <WorldSection />
+      <ProofOfScale />
+      <VideoFilm />
+      <StoreBand />
+      <TalkToCola />
+      <ClosingStatement />
     </PageLayout>
   );
 };
