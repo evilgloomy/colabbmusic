@@ -24,7 +24,7 @@ const brandContent = {
   },
   "zh-HK": {
     name: "Cola B",
-    tagline: "Emo Pop 女王",
+    tagline: "AI 唱作歌手 · 虛擬偶像 · 音樂人",
     heroBody:
       "Cola B 是一位華語流行創作歌手，以細膩的情感敘事與現代流行音樂融合，打造出屬於她獨特的音樂世界。",
     shortBio:
