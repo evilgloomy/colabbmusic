@@ -1,8 +1,8 @@
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Play, Loader2 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { fetchYouTubeFeed, CHANNELS, type YouTubeVideo } from "@/lib/youtube";
-import { useSEO } from "@/hooks/useSEO";
+import { useSEO, SITE_URL } from "@/hooks/useSEO";
 import { useTranslation } from "react-i18next";
 import bannerVideos from "@/assets/banner-videos.jpg";
 import { publishableOnly, isPublishableVideo } from "@/lib/publishable";
@@ -12,13 +12,37 @@ const VideosPage = () => {
   const { t, i18n } = useTranslation();
   const locale = i18n.language?.startsWith("zh") ? "zh-HK" : "en-US";
 
+  const [videos, setVideos] = useState<YouTubeVideo[]>([]);
+
+  const videoJsonLd = useMemo(() => {
+    if (!videos.length) return undefined;
+    return {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      itemListElement: videos.slice(0, 10).map((v, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        item: {
+          "@type": "VideoObject",
+          name: v.title,
+          thumbnailUrl: v.thumbnail,
+          uploadDate: v.published,
+          embedUrl: v.embedUrl,
+          contentUrl: `https://www.youtube.com/watch?v=${v.videoId}`,
+          url: `${SITE_URL}/videos`,
+          description: v.title,
+        },
+      })),
+    };
+  }, [videos]);
+
   useSEO({
     title: t("videos.pageTitle") + " — Cola B",
     description:
       "Watch every official Cola B music video and visual release from her VEVO channel — full-length premieres, live sessions, and behind-the-scenes cuts.",
+    jsonLd: videoJsonLd,
   });
 
-  const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [featuredIndex, setFeaturedIndex] = useState(0);
   const [playingId, setPlayingId] = useState<string | null>(null);
