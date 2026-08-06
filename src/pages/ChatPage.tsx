@@ -176,6 +176,7 @@ const ChatPage = () => {
   if (authLoading || pageLoading) {
     return (
       <PageLayout hideFooter>
+        <h1 className="sr-only">Talk to Cola B — AI chat with Cola B</h1>
         <div className="flex items-center justify-center" style={{ height: 'calc(100vh - 4rem)' }}>
           <div className="flex flex-col items-center gap-3">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -189,6 +190,7 @@ const ChatPage = () => {
   if (!user) {
     return (
       <PageLayout hideFooter>
+        <h1 className="sr-only">Talk to Cola B — AI chat with Cola B</h1>
         <div style={{ height: 'calc(100vh - 4rem)' }}><ChatAuthForm /></div>
       </PageLayout>
     );
@@ -197,6 +199,7 @@ const ChatPage = () => {
   if (subCheckDone && (!subscriptionStatus?.subscribed)) {
     return (
       <PageLayout hideFooter>
+        <h1 className="sr-only">Talk to Cola B — AI chat with Cola B</h1>
         <div style={{ height: 'calc(100vh - 4rem)' }}><PremiumGate onRefresh={checkSubscription} /></div>
       </PageLayout>
     );
@@ -205,6 +208,7 @@ const ChatPage = () => {
   if (error) {
     return (
       <PageLayout hideFooter>
+        <h1 className="sr-only">Talk to Cola B — AI chat with Cola B</h1>
         <div className="flex items-center justify-center" style={{ height: 'calc(100vh - 4rem)' }}>
           <div className="text-center space-y-3">
             <p className="text-destructive font-medium">{error}</p>
@@ -222,7 +226,7 @@ const ChatPage = () => {
           <div className="flex items-center gap-3">
             {character?.avatar_url && <img src={character.avatar_url} alt={character.name} className="w-9 h-9 rounded-full object-cover border border-border" />}
             <div>
-              <h1 className="text-sm font-semibold text-foreground font-sora">{character?.name || 'Cola B'}</h1>
+              <h1 className="text-sm font-semibold text-foreground font-display">{character?.name || 'Cola B'}</h1>
               <p className="text-xs text-muted-foreground">{t("chat.aiChat")}</p>
             </div>
           </div>
