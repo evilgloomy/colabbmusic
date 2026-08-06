@@ -55,7 +55,7 @@ const PIPELINE: { key: string; label: string; statuses: string[] }[] = [
 export default function AdminInterest() {
   const [rows, setRows] = useState<Row[]>([]);
   const [invitations, setInvitations] = useState<Row[]>([]);
-  const [entities, setEntities] = useState<Row[]>([]);
+  const [entities, setEntities] = useState<Partial<Row>[]>([]);
   const [tab, setTab] = useState<string>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
