@@ -83,7 +83,7 @@ export const isPublishableProduct = (p: ProductLike | null | undefined): boolean
  */
 export function publishableOnly<T>(
   items: readonly T[] | null | undefined,
-  guard: (item: T) => boolean,
+  guard: (item: NoInfer<T>) => boolean,
   label: string,
 ): T[] {
   const list = items ?? [];
