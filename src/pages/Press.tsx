@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { fetchReleases, type YouTubeRelease } from "@/lib/youtube";
+import { publishableOnly, isPublishableRelease } from "@/lib/publishable";
 import { Download, Mail } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
 import { useTranslation } from "react-i18next";
@@ -31,7 +32,8 @@ const PressPage = () => {
 
   useEffect(() => {
     fetchReleases().then((releases) => {
-      if (releases.length > 0) setLatestRelease(releases[0]);
+      const publishable = publishableOnly(releases, isPublishableRelease, "press/latest");
+      if (publishable.length > 0) setLatestRelease(publishable[0]);
     });
   }, []);
 
