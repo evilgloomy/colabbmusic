@@ -15,7 +15,7 @@ const StorePage = () => {
   useSEO({
     title: t("store.pageTitle") + " — Cola B",
     description:
-      "Shop official Cola B merchandise — exclusive apparel, vinyl, accessories, and limited-edition drops shipped worldwide from the Queen of Emo Pop.",
+      "Shop official Cola B merchandise — exclusive apparel, vinyl, accessories, and limited-edition drops shipped worldwide from Cola B.",
   });
 
   const [activeCollection, setActiveCollection] = useState("all");

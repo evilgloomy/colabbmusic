@@ -84,7 +84,7 @@ const AboutCola = () => {
   const timeline = isZH ? timelineZH : timelineEN;
 
   useSEO({
-    title: isZH ? "關於 Cola B — Emo Pop 女王" : "About Cola B — Queen of Emo Pop",
+    title: isZH ? "關於 Cola B — AI 唱作歌手 · 虛擬偶像" : "About Cola B — AI Singer-Songwriter & Virtual Idol",
     description: brand.shortBio,
   });
 
