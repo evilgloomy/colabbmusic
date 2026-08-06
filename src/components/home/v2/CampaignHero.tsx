@@ -21,7 +21,7 @@ export const CampaignHero = () => {
         alt="Cola B — campaign portrait"
         objectPositionDesktop="72% center"
         objectPositionTablet="70% center"
-        objectPositionMobile="62% center"
+        objectPositionMobile="58% 6%"
         priority
         className="!absolute inset-0 h-full w-full"
       />
