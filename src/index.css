@@ -60,18 +60,11 @@
     --sidebar-ring: var(--cola-pink);
 
     /* ---- Editorial layout rhythm ---- */
-    --editorial-max: 1440px;
-    --reading-max: 720px;
-    --gutter: 20px;
+    --editorial-max: 1320px;
+    --reading-max: 65ch;
+    --gutter: clamp(20px, 5vw, 72px);
   }
 
-  @media (min-width: 768px) {
-    :root { --gutter: 48px; }
-  }
-
-  @media (min-width: 1280px) {
-    :root { --gutter: 72px; }
-  }
 
   /* Paper band — an inverted island inside the dark scroll */
   .paper-band {
