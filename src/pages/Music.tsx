@@ -4,7 +4,8 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { fetchYouTubeFeed, fetchReleasesPaginated, CHANNELS, type YouTubeVideo, type YouTubeRelease } from "@/lib/youtube";
 import { Music, Play, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useSEO } from "@/hooks/useSEO";
+import { useSEO, SITE_URL } from "@/hooks/useSEO";
+import { buildBreadcrumb } from "@/components/seo/JsonLd";
 import { useTranslation } from "react-i18next";
 import bannerMusic from "@/assets/banner-music.jpg";
 import { publishableOnly, isPublishableRelease, isPublishableVideo } from "@/lib/publishable";
@@ -15,9 +16,12 @@ const MusicPage = () => {
   const { t, i18n } = useTranslation();
   const locale = i18n.language?.startsWith("zh") ? "zh-HK" : "en-US";
 
+  const breadcrumbJsonLd = buildBreadcrumb([{ name: "Home", url: "/" }, { name: "Music", url: "/music" }], SITE_URL);
+
   useSEO({
     title: t("music.pageTitle") + " — Cola B",
     description: t("music.pageDesc"),
+    jsonLd: breadcrumbJsonLd,
   });
 
   const [dbReleases, setDbReleases] = useState<YouTubeRelease[]>([]);

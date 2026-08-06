@@ -3,7 +3,8 @@ import { Play, Download, Mail } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useBrand } from "@/hooks/useBrand";
 import { PageLayout } from "@/components/layout/PageLayout";
-import { useSEO } from "@/hooks/useSEO";
+import { useSEO, SITE_URL } from "@/hooks/useSEO";
+import { buildBreadcrumb } from "@/components/seo/JsonLd";
 import { EditorialImage } from "@/components/editorial/EditorialImage";
 import aboutPortrait from "@/assets/campaign/intro-portrait.jpg";
 
@@ -86,9 +87,12 @@ const AboutCola = () => {
   const isZH = i18n.language?.startsWith("zh");
   const timeline = isZH ? timelineZH : timelineEN;
 
+  const breadcrumbJsonLd = buildBreadcrumb([{ name: "Home", url: "/" }, { name: "About", url: "/about-cola" }], SITE_URL);
+
   useSEO({
     title: isZH ? "關於 Cola B — AI 唱作歌手 · 虛擬偶像" : "About Cola B — AI Singer-Songwriter & Virtual Idol",
     description: brand.shortBio,
+    jsonLd: breadcrumbJsonLd,
   });
 
   return (

@@ -5,7 +5,8 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { ProductCard } from "@/components/store/ProductCard";
 import { fetchProducts } from "@/lib/shopify";
 import { collections, isCoffeeProduct } from "@/lib/collections";
-import { useSEO } from "@/hooks/useSEO";
+import { useSEO, SITE_URL } from "@/hooks/useSEO";
+import { buildBreadcrumb } from "@/components/seo/JsonLd";
 import { useTranslation } from "react-i18next";
 import bannerStore from "@/assets/banner-store.jpg";
 import { publishableOnly, isPublishableProduct } from "@/lib/publishable";
@@ -13,10 +14,13 @@ import { publishableOnly, isPublishableProduct } from "@/lib/publishable";
 const StorePage = () => {
   const { t } = useTranslation();
 
+  const breadcrumbJsonLd = buildBreadcrumb([{ name: "Home", url: "/" }, { name: "Store", url: "/store" }], SITE_URL);
+
   useSEO({
     title: t("store.pageTitle") + " — Cola B",
     description:
       "Shop official Cola B merchandise — exclusive apparel, vinyl, accessories, and limited-edition drops shipped worldwide from Cola B.",
+    jsonLd: breadcrumbJsonLd,
   });
 
   const [activeCollection, setActiveCollection] = useState("all");

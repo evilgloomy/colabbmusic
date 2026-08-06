@@ -3,7 +3,8 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { fetchReleases, type YouTubeRelease } from "@/lib/youtube";
 import { publishableOnly, isPublishableRelease } from "@/lib/publishable";
 import { Download, Mail } from "lucide-react";
-import { useSEO } from "@/hooks/useSEO";
+import { useSEO, SITE_URL } from "@/hooks/useSEO";
+import { buildBreadcrumb } from "@/components/seo/JsonLd";
 import { useTranslation } from "react-i18next";
 import { useBrand } from "@/hooks/useBrand";
 import pressImg1 from "@/assets/press-1.jpg";
@@ -23,9 +24,12 @@ const PressPage = () => {
   const { t } = useTranslation();
   const brand = useBrand();
 
+  const breadcrumbJsonLd = buildBreadcrumb([{ name: "Home", url: "/" }, { name: "Press", url: "/press" }], SITE_URL);
+
   useSEO({
     title: t("press.pageTitle") + " — Cola B",
     description: t("press.pageDesc"),
+    jsonLd: breadcrumbJsonLd,
   });
 
   const [latestRelease, setLatestRelease] = useState<YouTubeRelease | null>(null);
