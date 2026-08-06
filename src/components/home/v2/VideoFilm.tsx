@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { fetchYouTubeFeed, CHANNELS, type YouTubeVideo } from "@/lib/youtube";
 import { Reveal, Kicker } from "@/components/editorial/Reveal";
 import { publishableOnly, isPublishableVideo } from "@/lib/publishable";
+import { trackVideoPlay } from "@/lib/analytics";
 
 export const VideoFilm = () => {
   const { t } = useTranslation();
@@ -44,7 +45,11 @@ export const VideoFilm = () => {
                 title={lead.title}
               />
             ) : (
-              <button onClick={() => setPlaying(true)} className="group h-full w-full relative">
+              <button
+                onClick={() => {
+                  setPlaying(true);
+                  trackVideoPlay(lead.videoId, lead.title, "home_video");
+                }} className="group h-full w-full relative">
                 <img
                   src={lead.thumbnail}
                   alt={lead.title}

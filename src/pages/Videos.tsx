@@ -6,6 +6,7 @@ import { useSEO } from "@/hooks/useSEO";
 import { useTranslation } from "react-i18next";
 import bannerVideos from "@/assets/banner-videos.jpg";
 import { publishableOnly, isPublishableVideo } from "@/lib/publishable";
+import { trackVideoPlay } from "@/lib/analytics";
 
 const VideosPage = () => {
   const { t, i18n } = useTranslation();
@@ -64,7 +65,7 @@ const VideosPage = () => {
                 {playingId === featured.videoId ? (
                   <iframe src={`${featured.embedUrl}?autoplay=1`} className="w-full h-full" allow="autoplay; encrypted-media" allowFullScreen title={featured.title} />
                 ) : (
-                  <button onClick={() => setPlayingId(featured.videoId)} className="w-full h-full relative group cursor-pointer">
+                  <button onClick={() => { setPlayingId(featured.videoId); trackVideoPlay(featured.videoId, featured.title, "videos_page"); }} className="w-full h-full relative group cursor-pointer">
                     <img src={featured.thumbnail} alt={featured.title} className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-700" />
                     <div className="absolute inset-0 bg-foreground/20 group-hover:bg-foreground/10 transition-colors" />
                     <div className="absolute inset-0 flex items-center justify-center">

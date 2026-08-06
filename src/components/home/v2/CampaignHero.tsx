@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { EditorialImage } from "@/components/editorial/EditorialImage";
 import heroDesktop from "@/assets/campaign/hero-desktop.jpg";
 import heroMobile from "@/assets/campaign/hero-mobile.jpg";
+import { trackHeroListen, trackEvent } from "@/lib/analytics";
 
 export const CampaignHero = () => {
   const { t } = useTranslation();

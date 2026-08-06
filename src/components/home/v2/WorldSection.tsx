@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Reveal, Kicker } from "@/components/editorial/Reveal";
 import { publishableOnly, isPublishableStory } from "@/lib/publishable";
+import { trackStoryOpen } from "@/lib/analytics";
 import cityNight from "@/assets/campaign/city-night.jpg";
 
 interface Story {
@@ -51,7 +52,7 @@ export const WorldSection = () => {
           <div className="mt-14 grid md:grid-cols-3 gap-10">
             {stories.map((s, i) => (
               <Reveal key={s.id} delay={i * 80}>
-                <Link to={`/story/${s.id}`} className="group block">
+                <Link to={`/story/${s.id}`} className="group block" onClick={() => trackStoryOpen(s.id, "home_world")}>
                   <div className="rule mb-5" />
                   <p className="label text-cola-pearl/40">{s.category || "Journal"}</p>
                   <h3 className="font-display text-display-md mt-3 group-hover:text-cola-pink transition-colors">

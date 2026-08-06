@@ -5,7 +5,7 @@ import { CartDrawer } from "@/components/store/CartDrawer";
 import { useTranslation } from "react-i18next";
 import { SocialIcon } from "@/lib/socialIcons";
 import { socialLinks } from "@/data/content";
-import { trackSocialClick } from "@/lib/analytics";
+import { trackSocialClick, trackLanguageChange } from "@/lib/analytics";
 
 const NAV: { key: string; path: string }[] = [
   { key: "music", path: "/music" },
@@ -38,7 +38,9 @@ export const Navbar = ({ transparent }: NavbarProps) => {
   const solid = !transparent || scrolled || mobileOpen;
 
   const toggleLang = () => {
-    i18n.changeLanguage(i18n.language?.startsWith("zh") ? "en" : "zh-HK");
+    const next = i18n.language?.startsWith("zh") ? "en" : "zh-HK";
+    i18n.changeLanguage(next);
+    trackLanguageChange(next);
   };
   const langLabel = i18n.language?.startsWith("zh") ? "EN" : "繁";
 
