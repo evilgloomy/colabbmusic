@@ -18,7 +18,7 @@ export const CampaignHero = () => {
           height={1024}
           fetchPriority="high"
           decoding="async"
-          className="absolute inset-0 h-full w-full object-cover object-[72%_18%] md:object-[70%_center]"
+          className="absolute inset-0 h-full w-full object-cover object-[72%_top] md:object-[70%_center]"
         />
       </picture>
 
