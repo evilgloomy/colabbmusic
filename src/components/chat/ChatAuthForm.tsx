@@ -43,7 +43,7 @@ export const ChatAuthForm = () => {
           <div className="w-16 h-16 mx-auto rounded-full bg-primary/20 flex items-center justify-center">
             <MessageCircle className="w-8 h-8 text-primary" />
           </div>
-          <h2 className="text-xl font-semibold text-foreground font-sora">Check Your Email</h2>
+          <h2 className="text-xl font-semibold text-foreground font-display">Check Your Email</h2>
           <p className="text-sm text-muted-foreground">
             We sent a confirmation link to <strong>{email}</strong>. Click the link to activate your account, then come back here to sign in.
           </p>
@@ -62,7 +62,7 @@ export const ChatAuthForm = () => {
           <div className="w-16 h-16 mx-auto rounded-full bg-primary/20 flex items-center justify-center">
             <MessageCircle className="w-8 h-8 text-primary" />
           </div>
-          <h2 className="text-xl font-semibold text-foreground font-sora">Chat with Cola B</h2>
+          <h2 className="text-xl font-semibold text-foreground font-display">Chat with Cola B</h2>
           <p className="text-sm text-muted-foreground">
             {isSignUp
               ? 'Create an account to get started. An Ultimate subscription ($30/mo) is required to chat.'
