@@ -91,20 +91,32 @@ const AboutCola = () => {
   return (
     <PageLayout>
       {/* Hero */}
-      <section className="editorial pt-32 pb-20 md:pt-40 md:pb-28">
-        <p className="text-xs font-body font-medium tracking-[0.3em] uppercase text-muted-foreground mb-4 animate-fade-in opacity-0" style={{ animationDelay: "0.1s" }}>
-          {t("about.pageTitle")}
-        </p>
-        <h1 className="text-hero font-display font-bold text-foreground mb-6 animate-fade-in opacity-0" style={{ animationDelay: "0.3s", lineHeight: "1.05" }}>
-          COLA B
-        </h1>
-        <p className="text-display-md font-display italic text-primary mb-8 animate-fade-in opacity-0" style={{ animationDelay: "0.5s" }}>
-          {t("about.queenOfEmoPop")}
-        </p>
-        <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl font-body animate-fade-in opacity-0" style={{ animationDelay: "0.7s" }}>
-          {brand.heroBody}
-        </p>
+      <section className="editorial pt-32 pb-20 md:pt-40 md:pb-28 grid md:grid-cols-[56fr_44fr] gap-10 md:gap-20 items-center">
+        <div>
+          <p className="text-xs font-body font-medium tracking-[0.3em] uppercase text-muted-foreground mb-4 animate-fade-in opacity-0" style={{ animationDelay: "0.1s" }}>
+            {t("about.pageTitle")}
+          </p>
+          <h1 className="hero-title font-display font-bold text-foreground mb-6 animate-fade-in opacity-0" style={{ animationDelay: "0.3s" }}>
+            COLA B
+          </h1>
+          <p className="hero-subtitle font-display italic text-primary mb-8 animate-fade-in opacity-0" style={{ animationDelay: "0.5s" }}>
+            {t("about.queenOfEmoPop")}
+          </p>
+          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed reading reading-cjk font-body animate-fade-in opacity-0" style={{ animationDelay: "0.7s" }}>
+            {brand.heroBody}
+          </p>
+        </div>
+        <EditorialImage
+          src={aboutPortrait}
+          alt="Cola B — portrait"
+          objectPositionDesktop="62% 22%"
+          objectPositionMobile="62% 18%"
+          aspectRatioDesktop="4 / 5"
+          priority
+          className="max-h-[680px] w-full"
+        />
       </section>
+
 
       {/* Positioning */}
       <section className="border-t border-border/40">
