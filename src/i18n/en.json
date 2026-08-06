@@ -221,5 +221,15 @@
     "talkCta": "Start talking",
     "closingTitle": "Stay in the world",
     "closingBody": "New songs, films and letters — sent rarely, never noisy."
+  },
+  "newsletter": {
+    "headline": "Letters from Cola's World",
+    "subhead": "New songs, films and notes — sent rarely, never noisy.",
+    "placeholder": "Your email",
+    "cta": "Subscribe",
+    "success": "You're in. Welcome to the world.",
+    "alreadySubscribed": "You're already on the list.",
+    "errorInvalid": "Please enter a valid email address.",
+    "errorGeneric": "Something went wrong. Please try again."
   }
 }

@@ -221,5 +221,15 @@
     "talkCta": "開始傾偈",
     "closingTitle": "留喺呢個世界",
     "closingBody": "新歌、新影像、新信 — 唔會多，但每次都認真。"
+  },
+  "newsletter": {
+    "headline": "來自 Cola 世界嘅信",
+    "subhead": "新歌、新影像、新信 — 唔會多，但每次都認真。",
+    "placeholder": "你嘅電郵",
+    "cta": "訂閱",
+    "success": "搞掂喇。歡迎入嚟。",
+    "alreadySubscribed": "你已經喺名單入面。",
+    "errorInvalid": "請輸入有效嘅電郵地址。",
+    "errorGeneric": "出咗啲問題，請再試一次。"
   }
 }
