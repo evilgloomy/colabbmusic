@@ -8,6 +8,7 @@ import { collections, isCoffeeProduct } from "@/lib/collections";
 import { useSEO } from "@/hooks/useSEO";
 import { useTranslation } from "react-i18next";
 import bannerStore from "@/assets/banner-store.jpg";
+import { publishableOnly, isPublishableProduct } from "@/lib/publishable";
 
 const StorePage = () => {
   const { t } = useTranslation();
@@ -26,7 +27,7 @@ const StorePage = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  const filteredProducts = products
+  const filteredProducts = publishableOnly(products, isPublishableProduct, "store/products")
     .filter((p) => !isCoffeeProduct(p))
     .filter((p) => {
       const col = collections.find((c) => c.id === activeCollection);

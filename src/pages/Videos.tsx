@@ -5,6 +5,7 @@ import { fetchYouTubeFeed, CHANNELS, type YouTubeVideo } from "@/lib/youtube";
 import { useSEO } from "@/hooks/useSEO";
 import { useTranslation } from "react-i18next";
 import bannerVideos from "@/assets/banner-videos.jpg";
+import { publishableOnly, isPublishableVideo } from "@/lib/publishable";
 
 const VideosPage = () => {
   const { t, i18n } = useTranslation();
@@ -24,7 +25,7 @@ const VideosPage = () => {
 
   useEffect(() => {
     fetchYouTubeFeed(CHANNELS.VEVO, 15)
-      .then(setVideos)
+      .then((all) => setVideos(publishableOnly(all, isPublishableVideo, "videos page")))
       .finally(() => setLoading(false));
   }, []);
 

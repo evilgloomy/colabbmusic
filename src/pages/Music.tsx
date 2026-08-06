@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useSEO } from "@/hooks/useSEO";
 import { useTranslation } from "react-i18next";
 import bannerMusic from "@/assets/banner-music.jpg";
+import { publishableOnly, isPublishableRelease, isPublishableVideo } from "@/lib/publishable";
 
 const PAGE_SIZE = 30;
 
@@ -31,16 +32,16 @@ const MusicPage = () => {
       fetchReleasesPaginated(0, PAGE_SIZE),
       fetchYouTubeFeed(CHANNELS.ARTIST, 15),
     ]).then(([{ releases, hasMore: more }, vid]) => {
-      setDbReleases(releases);
+      setDbReleases(publishableOnly(releases, isPublishableRelease, "music/releases"));
       setHasMore(more);
-      setYtVideos(vid);
+      setYtVideos(publishableOnly(vid, isPublishableVideo, "music/videos"));
     }).finally(() => setLoading(false));
   }, []);
 
   const loadMore = useCallback(async () => {
     setLoadingMore(true);
     const { releases, hasMore: more } = await fetchReleasesPaginated(dbReleases.length, PAGE_SIZE);
-    setDbReleases(prev => [...prev, ...releases]);
+    setDbReleases(prev => [...prev, ...publishableOnly(releases, isPublishableRelease, "music/releases")]);
     setHasMore(more);
     setLoadingMore(false);
   }, [dbReleases.length]);

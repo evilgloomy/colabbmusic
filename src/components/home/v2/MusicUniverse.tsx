@@ -4,13 +4,16 @@ import { useTranslation } from "react-i18next";
 import { Music } from "lucide-react";
 import { fetchReleases, type YouTubeRelease } from "@/lib/youtube";
 import { Reveal, Kicker } from "@/components/editorial/Reveal";
+import { publishableOnly, isPublishableRelease } from "@/lib/publishable";
 
 export const MusicUniverse = () => {
   const { t } = useTranslation();
   const [releases, setReleases] = useState<YouTubeRelease[]>([]);
 
   useEffect(() => {
-    fetchReleases().then((all) => setReleases(all.slice(0, 8)));
+    fetchReleases().then((all) =>
+      setReleases(publishableOnly(all, isPublishableRelease, "home/music").slice(0, 8)),
+    );
   }, []);
 
   if (releases.length === 0) return null;

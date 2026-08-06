@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Reveal, Kicker } from "@/components/editorial/Reveal";
+import { publishableOnly, isPublishableStory } from "@/lib/publishable";
 import cityNight from "@/assets/campaign/city-night.jpg";
 
 interface Story {
@@ -23,8 +24,10 @@ export const WorldSection = () => {
       .from("stories")
       .select("id, ai_title, ai_enhanced_text, category, media_url, posted_at")
       .order("posted_at", { ascending: false })
-      .limit(3)
-      .then(({ data }) => setStories((data as Story[]) || []));
+      .limit(9)
+      .then(({ data }) =>
+        setStories(publishableOnly((data as Story[]) || [], isPublishableStory, "home/world").slice(0, 3)),
+      );
   }, []);
 
   return (
