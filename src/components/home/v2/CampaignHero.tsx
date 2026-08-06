@@ -7,7 +7,7 @@ export const CampaignHero = () => {
   const { t } = useTranslation();
 
   return (
-    <section className="relative min-h-[92vh] md:min-h-[100svh] flex items-end overflow-hidden bg-cola-ink">
+    <section className="relative min-h-[92vh] md:min-h-[92svh] flex items-end overflow-hidden bg-cola-ink">
       {/* Portrait — vertical crop on mobile, wide campaign frame on desktop */}
       <picture>
         <source media="(min-width: 768px)" srcSet={heroDesktop} />
@@ -18,9 +18,10 @@ export const CampaignHero = () => {
           height={1024}
           fetchPriority="high"
           decoding="async"
-          className="absolute inset-0 h-full w-full object-cover object-[72%_top] md:object-[70%_center]"
+          className="absolute inset-0 h-full w-full object-cover object-[72%_top] md:object-[68%_12%]"
         />
       </picture>
+
 
       {/* Scrims: readable type, no muddy grey */}
       <div className="absolute inset-0 ink-scrim hidden md:block" aria-hidden="true" />
