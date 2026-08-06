@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 const brandContent = {
   en: {
     name: "Cola B",
-    tagline: "Queen of Emo Pop",
+    tagline: "AI Singer-Songwriter · Virtual Idol · Music Artist",
     heroBody:
       "Cola B is a Mandarin pop singer-songwriter redefining emotional storytelling through a blend of Mandopop, Emo Pop, and modern digital artistry.",
     shortBio:
