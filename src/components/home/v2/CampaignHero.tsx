@@ -60,12 +60,14 @@ export const CampaignHero = () => {
           <div className="mt-9 flex flex-wrap gap-4 animate-fade-in opacity-0" style={{ animationDelay: "0.65s" }}>
             <Link
               to="/music"
+              onClick={() => trackHeroListen()}
               className="min-h-[44px] inline-flex items-center px-8 py-4 bg-cola-pink text-cola-ink text-xs font-semibold tracking-[0.2em] uppercase transition-opacity hover:opacity-90 active:scale-[0.98]"
             >
               {t("hp.heroListen")}
             </Link>
             <Link
               to="/story"
+              onClick={() => trackEvent("hero_world_open", { location: "home_hero" })}
               className="min-h-[44px] inline-flex items-center px-8 py-4 border border-cola-pearl/35 text-cola-pearl text-xs font-semibold tracking-[0.2em] uppercase transition-colors hover:border-cola-pearl/70"
             >
               {t("hp.heroWorld")}
