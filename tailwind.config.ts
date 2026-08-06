@@ -14,15 +14,20 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Sora", "sans-serif"],
-        display: ["Sora", "sans-serif"],
-        body: ["Sora", "sans-serif"],
+        sans: ["Inter", "Noto Sans TC", "system-ui", "sans-serif"],
+        display: ["Bodoni Moda", "Noto Serif TC", "Georgia", "serif"],
+        body: ["Inter", "Noto Sans TC", "system-ui", "sans-serif"],
+        cjk: ["Noto Serif TC", "Bodoni Moda", "serif"],
       },
       fontSize: {
-        "hero": ["clamp(3rem, 7vw, 5.5rem)", { lineHeight: "1.05", letterSpacing: "-0.02em" }],
-        "display-lg": ["clamp(2rem, 4vw, 3.5rem)", { lineHeight: "1.1", letterSpacing: "-0.01em" }],
-        "display-md": ["clamp(1.5rem, 3vw, 2.25rem)", { lineHeight: "1.15" }],
+        hero: ["clamp(3.4rem, 11vw, 9rem)", { lineHeight: "0.92", letterSpacing: "-0.035em" }],
+        section: ["clamp(2.1rem, 5.4vw, 4.5rem)", { lineHeight: "1.02", letterSpacing: "-0.025em" }],
+        quote: ["clamp(1.5rem, 3.4vw, 2.75rem)", { lineHeight: "1.28", letterSpacing: "-0.015em" }],
+        "display-lg": ["clamp(1.9rem, 4vw, 3.25rem)", { lineHeight: "1.08", letterSpacing: "-0.02em" }],
+        "display-md": ["clamp(1.4rem, 2.6vw, 2rem)", { lineHeight: "1.15", letterSpacing: "-0.01em" }],
+        "body-lg": ["clamp(1rem, 1.2vw, 1.15rem)", { lineHeight: "1.75" }],
       },
+
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -57,11 +62,19 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        "rose-dust": "hsl(var(--rose-dust))",
-        porcelain: "hsl(var(--porcelain))",
-        cocoa: "hsl(var(--cocoa))",
-        "soft-silver": "hsl(var(--soft-silver))",
-        "blush-mist": "hsl(var(--blush-mist))",
+        cola: {
+          ink: "hsl(var(--cola-ink))",
+          surface: "hsl(var(--cola-surface))",
+          "surface-soft": "hsl(var(--cola-surface-soft))",
+          paper: "hsl(var(--cola-paper))",
+          pearl: "hsl(var(--cola-pearl))",
+          wine: "hsl(var(--cola-wine))",
+          pink: "hsl(var(--cola-pink))",
+          blush: "hsl(var(--cola-blush))",
+          aurora: "hsl(var(--cola-aurora))",
+          silver: "hsl(var(--cola-silver))",
+        },
+
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

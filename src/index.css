@@ -2,55 +2,89 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;0,6..96,700;1,6..96,400&family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Serif+TC:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
-    --background: 30 20% 97%;
-    --foreground: 20 10% 12%;
+    /* ---- Cola B campaign palette ---- */
+    --cola-ink: 255 12% 5%;          /* #0a0910 */
+    --cola-surface: 253 19% 8%;      /* #121019 */
+    --cola-surface-soft: 255 19% 11%;/* #1a1722 */
+    --cola-paper: 24 30% 95%;        /* #f7f3f0 */
+    --cola-pearl: 23 100% 98%;       /* #fffaf7 */
+    --cola-wine: 328 63% 22%;        /* #5d1538 */
+    --cola-pink: 333 73% 59%;        /* #e2498b */
+    --cola-blush: 335 64% 85%;       /* #f3bfd4 */
+    --cola-aurora: 263 100% 79%;     /* #b995ff */
+    --cola-silver: 248 11% 80%;      /* #c9c7d3 */
+    --cola-muted: 259 7% 67%;        /* #aaa5b3 */
 
-    --card: 25 15% 95%;
-    --card-foreground: 20 10% 12%;
+    /* ---- Semantic tokens (dark editorial default) ---- */
+    --background: var(--cola-ink);
+    --foreground: var(--cola-pearl);
 
-    --popover: 30 20% 97%;
-    --popover-foreground: 20 10% 12%;
+    --card: var(--cola-surface);
+    --card-foreground: var(--cola-pearl);
 
-    --primary: 350 25% 60%;
-    --primary-foreground: 0 0% 100%;
+    --popover: var(--cola-surface);
+    --popover-foreground: var(--cola-pearl);
 
-    --secondary: 25 12% 90%;
-    --secondary-foreground: 20 10% 30%;
+    --primary: var(--cola-pink);
+    --primary-foreground: var(--cola-ink);
 
-    --muted: 25 10% 92%;
-    --muted-foreground: 20 10% 45%;
+    --secondary: var(--cola-surface-soft);
+    --secondary-foreground: var(--cola-pearl);
 
-    --accent: 340 20% 88%;
-    --accent-foreground: 20 10% 12%;
+    --muted: var(--cola-surface-soft);
+    --muted-foreground: var(--cola-muted);
+
+    --accent: var(--cola-aurora);
+    --accent-foreground: var(--cola-ink);
 
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 25 10% 90%;
-    --input: 25 10% 90%;
-    --ring: 350 25% 60%;
+    --border: 258 12% 19%;
+    --input: 258 12% 19%;
+    --ring: var(--cola-pink);
 
-    --radius: 0.5rem;
+    --radius: 0rem;
 
-    --sidebar-background: 30 20% 97%;
-    --sidebar-foreground: 20 10% 12%;
-    --sidebar-primary: 350 25% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 340 20% 88%;
-    --sidebar-accent-foreground: 20 10% 30%;
-    --sidebar-border: 25 10% 90%;
-    --sidebar-ring: 350 25% 60%;
+    --sidebar-background: var(--cola-surface);
+    --sidebar-foreground: var(--cola-pearl);
+    --sidebar-primary: var(--cola-pink);
+    --sidebar-primary-foreground: var(--cola-ink);
+    --sidebar-accent: var(--cola-surface-soft);
+    --sidebar-accent-foreground: var(--cola-pearl);
+    --sidebar-border: 258 12% 19%;
+    --sidebar-ring: var(--cola-pink);
 
-    /* Brand palette */
-    --porcelain: 30 20% 97%;
-    --rose-dust: 350 25% 65%;
-    --cocoa: 20 15% 35%;
-    --soft-silver: 20 5% 78%;
-    --blush-mist: 340 18% 92%;
+    /* ---- Editorial layout rhythm ---- */
+    --editorial-max: 1440px;
+    --reading-max: 720px;
+    --gutter: 20px;
+  }
+
+  @media (min-width: 768px) {
+    :root { --gutter: 48px; }
+  }
+
+  @media (min-width: 1280px) {
+    :root { --gutter: 72px; }
+  }
+
+  /* Paper band — an inverted island inside the dark scroll */
+  .paper-band {
+    --background: var(--cola-paper);
+    --foreground: 255 12% 8%;
+    --card: var(--cola-pearl);
+    --card-foreground: 255 12% 8%;
+    --muted-foreground: 260 6% 38%;
+    --border: 24 12% 84%;
+    --secondary: 24 22% 91%;
+    --secondary-foreground: 255 12% 8%;
+    background-color: hsl(var(--cola-paper));
+    color: hsl(255 12% 8%);
   }
 }
 
@@ -65,29 +99,118 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Sora', sans-serif;
+    font-family: 'Inter', 'Noto Sans TC', system-ui, sans-serif;
+    font-feature-settings: "ss01";
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Sora', sans-serif;
+    font-family: 'Bodoni Moda', 'Noto Serif TC', Georgia, serif;
+    font-weight: 500;
+    letter-spacing: -0.01em;
   }
 
   ::selection {
-    background: hsl(350 25% 65% / 0.2);
-    color: hsl(20 10% 12%);
+    background: hsl(var(--cola-pink) / 0.35);
+    color: hsl(var(--cola-pearl));
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--cola-pink));
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Editorial container — wider and more generous than the shadcn default */
+  .editorial {
+    width: 100%;
+    max-width: var(--editorial-max);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  .reading {
+    max-width: var(--reading-max);
+  }
+
+  /* Section rhythm: 64–96px mobile, 96–160px desktop */
+  .band {
+    padding-block: clamp(4rem, 11vw, 10rem);
+  }
+
+  .band-tight {
+    padding-block: clamp(3.5rem, 7vw, 6rem);
+  }
+
+  .rule {
+    height: 1px;
+    background: hsl(var(--cola-pearl) / 0.14);
+  }
+
+  .paper-band .rule {
+    background: hsl(255 12% 8% / 0.14);
   }
 }
 
 @layer utilities {
   .font-display {
-    font-family: 'Sora', sans-serif;
+    font-family: 'Bodoni Moda', 'Noto Serif TC', Georgia, serif;
   }
 
   .font-body {
-    font-family: 'Sora', sans-serif;
+    font-family: 'Inter', 'Noto Sans TC', system-ui, sans-serif;
+  }
+
+  .font-editorial-cjk {
+    font-family: 'Noto Serif TC', 'Bodoni Moda', serif;
+  }
+
+  .label {
+    font-family: 'Inter', 'Noto Sans TC', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
   }
 
   .text-balance {
     text-wrap: balance;
   }
+
+  .aurora-veil {
+    background-image:
+      radial-gradient(60% 80% at 8% 90%, hsl(var(--cola-pink) / 0.22), transparent 70%),
+      radial-gradient(50% 60% at 90% 10%, hsl(var(--cola-aurora) / 0.14), transparent 70%);
+  }
+
+  .ink-scrim {
+    background-image: linear-gradient(
+      to right,
+      hsl(var(--cola-ink) / 0.94) 0%,
+      hsl(var(--cola-ink) / 0.78) 42%,
+      hsl(var(--cola-ink) / 0.25) 72%,
+      transparent 100%
+    );
+  }
+
+  .ink-scrim-bottom {
+    background-image: linear-gradient(
+      to top,
+      hsl(var(--cola-ink)) 0%,
+      hsl(var(--cola-ink) / 0.75) 28%,
+      transparent 72%
+    );
+  }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { CartDrawer } from "@/components/store/CartDrawer";
@@ -7,62 +7,77 @@ import { SocialIcon } from "@/lib/socialIcons";
 import { socialLinks } from "@/data/content";
 import { trackSocialClick } from "@/lib/analytics";
 
-const navKeys = ["home", "music", "story", "videos", "store", "press", "chat", "aipf"] as const;
-const navPaths = ["/", "/music", "/story", "/videos", "/store", "/press", "/chat", "/aipf"];
+const NAV: { key: string; path: string }[] = [
+  { key: "music", path: "/music" },
+  { key: "world", path: "/story" },
+  { key: "videos", path: "/videos" },
+  { key: "store", path: "/store" },
+  { key: "about", path: "/about-cola" },
+  { key: "chat", path: "/chat" },
+];
 
-export const Navbar = () => {
+interface NavbarProps {
+  /** Overlay the hero until the user scrolls. */
+  transparent?: boolean;
+}
+
+export const Navbar = ({ transparent }: NavbarProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
   const { t, i18n } = useTranslation();
 
-  const toggleLang = () => {
-    const next = i18n.language?.startsWith("zh") ? "en" : "zh-HK";
-    i18n.changeLanguage(next);
-  };
+  useEffect(() => {
+    if (!transparent) return;
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [transparent]);
 
+  const solid = !transparent || scrolled || mobileOpen;
+
+  const toggleLang = () => {
+    i18n.changeLanguage(i18n.language?.startsWith("zh") ? "en" : "zh-HK");
+  };
   const langLabel = i18n.language?.startsWith("zh") ? "EN" : "繁";
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/85 backdrop-blur-xl border-b border-border/30">
-      <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-        {/* Wordmark */}
-        <Link to="/" className="font-display text-xl font-bold text-foreground tracking-tight mr-8">
+    <nav
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        solid ? "bg-cola-ink/85 backdrop-blur-xl border-b border-cola-pearl/10" : "bg-transparent"
+      }`}
+    >
+      <div className="editorial h-16 flex items-center justify-between">
+        <Link
+          to="/"
+          className="font-display text-xl tracking-[0.16em] uppercase text-cola-pearl mr-10"
+          onClick={() => setMobileOpen(false)}
+        >
           Cola B
         </Link>
 
-        {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-1 flex-1">
-          {navKeys.map((key, i) => {
-            const isAipf = key === "aipf";
-            const active = location.pathname === navPaths[i] || (isAipf && location.pathname.startsWith("/aipf"));
+        <div className="hidden md:flex items-center gap-7 flex-1">
+          {NAV.map(({ key, path }) => {
+            const active = location.pathname === path || location.pathname.startsWith(`${path}/`);
             return (
-              <span key={key} className="flex items-center">
-                <Link
-                  to={navPaths[i]}
-                  className={`px-3 py-1 text-xs font-body font-semibold tracking-[0.12em] uppercase transition-colors ${
-                    isAipf
-                      ? `${active ? "" : ""} text-[#B78E3F] hover:text-[#8f6d2c]`
-                      : active
-                        ? "text-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                  }`}
-                  style={isAipf ? { fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 600, fontSize: "0.85rem", letterSpacing: "0.18em" } : undefined}
-                >
-                  {t(`nav.${key}`)}
-                </Link>
-                {i < navKeys.length - 1 && (
-                  <span className="text-border text-xs select-none">/</span>
-                )}
-              </span>
+              <Link
+                key={key}
+                to={path}
+                className={`text-[0.7rem] font-semibold tracking-[0.22em] uppercase transition-colors ${
+                  active ? "text-cola-pink" : "text-cola-pearl/65 hover:text-cola-pearl"
+                }`}
+              >
+                {t(`nav.${key}`)}
+              </Link>
             );
           })}
         </div>
 
-        {/* Right side */}
         <div className="flex items-center gap-4 ml-auto">
           <button
             onClick={toggleLang}
-            className="px-2.5 py-1 text-xs font-body font-bold tracking-wider text-muted-foreground hover:text-foreground border border-border/40 hover:border-border transition-colors"
+            className="px-2.5 py-1 text-[0.7rem] font-semibold tracking-[0.16em] text-cola-pearl/70 hover:text-cola-pearl border border-cola-pearl/20 hover:border-cola-pearl/50 transition-colors"
           >
             {langLabel}
           </button>
@@ -73,43 +88,31 @@ export const Navbar = () => {
             rel="noopener noreferrer"
             aria-label="Instagram"
             onClick={() => trackSocialClick("instagram", "navbar")}
-            className="hidden md:flex text-muted-foreground hover:text-foreground transition-colors"
+            className="hidden md:flex text-cola-pearl/65 hover:text-cola-pearl transition-colors"
           >
             <SocialIcon platform="instagram" className="h-4 w-4" />
           </a>
-          <a
-            href={socialLinks.spotify}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Spotify"
-            onClick={() => trackSocialClick("spotify", "navbar")}
-            className="hidden md:flex text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <SocialIcon platform="spotify" className="h-4 w-4" />
-          </a>
           <button
-            className="md:hidden text-foreground"
+            className="md:hidden text-cola-pearl min-h-11 min-w-11 flex items-center justify-end"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Toggle menu"
+            aria-expanded={mobileOpen}
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden bg-background/95 backdrop-blur-xl border-t border-border/30">
-          <div className="container mx-auto px-6 py-6 flex flex-col gap-4">
-            {navKeys.map((key, i) => (
+        <div className="md:hidden bg-cola-ink/97 backdrop-blur-xl border-t border-cola-pearl/10">
+          <div className="editorial py-8 flex flex-col gap-6">
+            {NAV.map(({ key, path }) => (
               <Link
                 key={key}
-                to={navPaths[i]}
+                to={path}
                 onClick={() => setMobileOpen(false)}
-                className={`text-sm font-body font-semibold tracking-[0.12em] uppercase transition-colors ${
-                  location.pathname === navPaths[i]
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
+                className={`font-display text-2xl ${
+                  location.pathname === path ? "text-cola-pink" : "text-cola-pearl"
                 }`}
               >
                 {t(`nav.${key}`)}

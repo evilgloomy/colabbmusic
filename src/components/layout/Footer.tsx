@@ -76,6 +76,19 @@ export const Footer = () => {
           <Link to="/policies" className="hover:text-foreground transition-colors">{t("footer.shippingReturns")}</Link>
         </div>
 
+        {/* Projects */}
+        <div className="flex flex-wrap items-center gap-3 mb-8">
+          <span className="label text-muted-foreground/50">Projects</span>
+          <Link
+            to="/aipf"
+            className="text-xs tracking-[0.18em] uppercase text-cola-blush hover:text-cola-pink transition-colors"
+            style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 600 }}
+          >
+            {t("nav.aipf")}
+          </Link>
+        </div>
+
+
         {/* Bottom row */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-6 border-t border-border/30">
           <p className="text-[11px] text-muted-foreground/60 font-body">
