@@ -44,7 +44,7 @@ const VideosPage = () => {
       <section className="relative overflow-hidden">
         <img src={bannerVideos} alt="" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/50 to-background" />
-        <div className="relative container mx-auto px-6 py-32 md:py-44">
+        <div className="relative editorial py-32 md:py-44">
           <p className="text-xs font-medium tracking-[0.3em] uppercase text-primary mb-4">{t("videos.visual")}</p>
           <h1 className="text-display-lg font-display font-bold text-foreground mb-4">{t("videos.pageTitle")}</h1>
           <p className="text-muted-foreground max-w-md text-sm">{t("videos.pageDesc")}</p>
@@ -54,11 +54,11 @@ const VideosPage = () => {
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
       ) : videos.length === 0 ? (
-        <div className="container mx-auto px-6 py-20 text-center"><p className="text-muted-foreground">{t("videos.noVideos")}</p></div>
+        <div className="editorial py-20 text-center"><p className="text-muted-foreground">{t("videos.noVideos")}</p></div>
       ) : (
         <>
           {featured && (
-            <section ref={heroRef} className="container mx-auto px-6 pb-16">
+            <section ref={heroRef} className="editorial pb-16">
               <div className="relative aspect-video overflow-hidden bg-card">
                 {playingId === featured.videoId ? (
                   <iframe src={`${featured.embedUrl}?autoplay=1`} className="w-full h-full" allow="autoplay; encrypted-media" allowFullScreen title={featured.title} />
@@ -82,7 +82,7 @@ const VideosPage = () => {
           )}
 
           {rest.length > 0 && (
-            <section className="container mx-auto px-6 pb-24">
+            <section className="editorial pb-24">
               <p className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground mb-8">{t("videos.allVideos")}</p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10">
                 {rest.map((video) => (

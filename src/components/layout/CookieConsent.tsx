@@ -31,7 +31,7 @@ export const CookieConsent = () => {
       aria-label={t("consent.title")}
       className="fixed inset-x-0 bottom-0 z-50 border-t border-border/40 bg-background/95 backdrop-blur-sm"
     >
-      <div className="container mx-auto px-6 py-5 flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+      <div className="editorial py-5 flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
         <p className="flex-1 text-xs md:text-sm text-foreground/80 font-body leading-relaxed">
           {t("consent.message")}{" "}
           <Link to="/privacy" className="underline underline-offset-4 hover:text-foreground">

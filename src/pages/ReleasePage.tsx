@@ -111,7 +111,7 @@ const ReleasePage = () => {
         {decodedThumb && (
           <div className="absolute inset-0"><img src={decodedThumb} alt="" className="w-full h-full object-cover opacity-15 blur-3xl scale-110" /></div>
         )}
-        <div className="relative container mx-auto px-6 pt-32 pb-16 z-10">
+        <div className="relative editorial pt-32 pb-16 z-10">
           <Link to="/music" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white/90 transition-colors mb-10">
             <ArrowLeft className="h-4 w-4" /> {t("release.backToMusic")}
           </Link>
@@ -164,7 +164,7 @@ const ReleasePage = () => {
 
       {isPlaying && activeVideoId && (
         <section className="bg-black">
-          <div className="container mx-auto px-6">
+          <div className="editorial">
             <div className="max-w-4xl mx-auto aspect-video">
               <iframe key={activeVideoId} src={`https://www.youtube.com/embed/${activeVideoId}?autoplay=1&rel=0&modestbranding=1`} className="w-full h-full" allow="autoplay; encrypted-media" allowFullScreen title={release.title} />
             </div>
@@ -173,7 +173,7 @@ const ReleasePage = () => {
       )}
 
       {tracks.length > 0 && (
-        <section className="container mx-auto px-6 py-16">
+        <section className="editorial py-16">
           <h2 className="text-display-sm font-display font-bold text-foreground mb-8">{t("release.tracklist")}</h2>
           <div className="max-w-3xl space-y-1">
             {tracks.map((track) => {
@@ -198,7 +198,7 @@ const ReleasePage = () => {
         </section>
       )}
 
-      <section className="container mx-auto px-6 py-16">
+      <section className="editorial py-16">
         <h2 className="text-display-sm font-display font-bold text-foreground mb-8">{t("release.listenEverywhere")}</h2>
         {links.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

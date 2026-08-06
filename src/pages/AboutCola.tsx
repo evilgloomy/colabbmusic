@@ -91,7 +91,7 @@ const AboutCola = () => {
   return (
     <PageLayout>
       {/* Hero */}
-      <section className="container mx-auto px-6 pt-32 pb-20 md:pt-40 md:pb-28">
+      <section className="editorial pt-32 pb-20 md:pt-40 md:pb-28">
         <p className="text-xs font-body font-medium tracking-[0.3em] uppercase text-muted-foreground mb-4 animate-fade-in opacity-0" style={{ animationDelay: "0.1s" }}>
           {t("about.pageTitle")}
         </p>
@@ -108,7 +108,7 @@ const AboutCola = () => {
 
       {/* Positioning */}
       <section className="border-t border-border/40">
-        <div className="container mx-auto px-6 py-20 md:py-28">
+        <div className="editorial py-20 md:py-28">
           <h2 className="text-display-md font-display font-semibold text-foreground mb-8">{t("about.artistPositioning")}</h2>
           <ul className="space-y-3 max-w-xl">
             {brand.positioning.map((item, i) => (
@@ -123,7 +123,7 @@ const AboutCola = () => {
 
       {/* Biography */}
       <section className="border-t border-border/40">
-        <div className="container mx-auto px-6 py-20 md:py-28">
+        <div className="editorial py-20 md:py-28">
           <h2 className="text-display-md font-display font-semibold text-foreground mb-10">{t("about.biography")}</h2>
           <div className="max-w-2xl space-y-6">
             {brand.longBio.split("\n\n").map((para, i) => (
@@ -135,7 +135,7 @@ const AboutCola = () => {
 
       {/* Timeline */}
       <section className="border-t border-border/40" style={{ background: "hsl(20 8% 10%)" }}>
-        <div className="container mx-auto px-6 py-20 md:py-28">
+        <div className="editorial py-20 md:py-28">
           <h2 className="text-display-md font-display font-semibold text-white mb-14">{t("about.timeline")}</h2>
           <div className="space-y-16 max-w-2xl">
             {timeline.map((era) => (
@@ -160,7 +160,7 @@ const AboutCola = () => {
 
       {/* Positioning Summary */}
       <section className="border-t border-border/40">
-        <div className="container mx-auto px-6 py-20 md:py-28 text-center">
+        <div className="editorial py-20 md:py-28 text-center">
           <h2 className="text-display-md font-display font-semibold text-foreground mb-6">{t("about.positioningSummary")}</h2>
           <p className="text-base text-muted-foreground font-body mb-4">{t("about.definedBy")}</p>
           <ul className="space-y-2 mb-8">
@@ -174,7 +174,7 @@ const AboutCola = () => {
 
       {/* CTAs */}
       <section className="border-t border-border/40">
-        <div className="container mx-auto px-6 py-20 md:py-28">
+        <div className="editorial py-20 md:py-28">
           <div className="flex flex-col md:flex-row gap-6 justify-center">
             <Link
               to="/music"

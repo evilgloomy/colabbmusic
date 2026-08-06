@@ -22,7 +22,7 @@ export const Footer = () => {
 
   return (
     <footer className="border-t border-border/40 bg-card/50">
-      <div className="container mx-auto px-6 py-12">
+      <div className="editorial py-12">
         {/* Newsletter */}
         <div className="pb-10 mb-10 border-b border-border/30">
           <EmailSignup
