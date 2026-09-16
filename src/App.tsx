@@ -114,6 +114,24 @@ const AppInner = () => {
       <Route path="/aipf/admin/journal" element={<AdminGuard><AipfAdminJournal /></AdminGuard>} />
       <Route path="/aipf/admin/journal/:id" element={<AdminGuard><AipfAdminJournalEditor /></AdminGuard>} />
 
+      {/* Cola Live — private, unlisted */}
+      <Route
+        path="/live/*"
+        element={
+          <LiveAuthProvider>
+            <Suspense fallback={null}>
+              <Routes>
+                <Route path="login" element={<LiveLogin />} />
+                <Route path="" element={<LiveGuard><LiveLobby /></LiveGuard>} />
+                <Route path="session/:sessionId" element={<LiveGuard><LiveRoom /></LiveGuard>} />
+                <Route path="producer/:sessionId" element={<LiveGuard staffOnly><LiveProducer /></LiveGuard>} />
+                <Route path="*" element={<Navigate to="/live" replace />} />
+              </Routes>
+            </Suspense>
+          </LiveAuthProvider>
+        }
+      />
+
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
