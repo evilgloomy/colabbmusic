@@ -1,5 +1,5 @@
 import type { LiveState } from "@/live/lib/types";
-import portrait from "@/assets/intro-portrait.jpg";
+import portrait from "@/assets/campaign/portrait-close.jpg";
 
 const LABEL: Record<LiveState, string> = {
   IDLE: "Ready",

@@ -50,6 +50,13 @@ import AipfVerify from "@/aipf/pages/Verify";
 import AipfCertificate from "@/aipf/pages/Certificate";
 import AipfAdminOnboarding from "@/aipf/pages/AdminOnboarding";
 import AipfAdminContact from "@/aipf/pages/AdminContact";
+import { lazy, Suspense } from "react";
+import { LiveAuthProvider } from "@/live/LiveAuthContext";
+import LiveGuard from "@/live/components/LiveGuard";
+const LiveLogin = lazy(() => import("@/live/pages/LiveLogin"));
+const LiveLobby = lazy(() => import("@/live/pages/LiveLobby"));
+const LiveRoom = lazy(() => import("@/live/pages/LiveRoom"));
+const LiveProducer = lazy(() => import("@/live/pages/LiveProducer"));
 
 const queryClient = new QueryClient();
 
