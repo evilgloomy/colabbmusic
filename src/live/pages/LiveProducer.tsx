@@ -98,7 +98,10 @@ export default function LiveProducer() {
       <main className="mx-auto w-full max-w-7xl px-6 py-8">
         <header className="flex flex-wrap items-end justify-between gap-4 border-b live-hairline pb-5">
           <div>
-            <p className="live-eyebrow">Producer console {convo.mockMode && <span className="live-accent">· MOCK MODE</span>}</p>
+            <p className="live-eyebrow">
+              Producer console · engine <span className="live-accent">Aurora Lite</span>
+              {convo.mockMode && <span className="live-accent"> · rehearsal</span>}
+            </p>
             <h1 className="live-display text-3xl">{config.title}</h1>
           </div>
           <div className="flex gap-2">
