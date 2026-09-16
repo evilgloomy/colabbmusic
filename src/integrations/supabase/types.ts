@@ -630,6 +630,336 @@ export type Database = {
         }
         Relationships: []
       }
+      live_context_injections: {
+        Row: {
+          active: boolean
+          consumed_at: string | null
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          kind: string
+          scope: string
+          session_id: string
+        }
+        Insert: {
+          active?: boolean
+          consumed_at?: string | null
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+          kind?: string
+          scope?: string
+          session_id: string
+        }
+        Update: {
+          active?: boolean
+          consumed_at?: string | null
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind?: string
+          scope?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_context_injections_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_latency_metrics: {
+        Row: {
+          aurora_ms: number | null
+          created_at: string
+          id: string
+          lemo_ms: number | null
+          message_id: string | null
+          session_id: string
+          speech_finalization_ms: number | null
+          total_ms: number | null
+          voice_ttfa_ms: number | null
+        }
+        Insert: {
+          aurora_ms?: number | null
+          created_at?: string
+          id?: string
+          lemo_ms?: number | null
+          message_id?: string | null
+          session_id: string
+          speech_finalization_ms?: number | null
+          total_ms?: number | null
+          voice_ttfa_ms?: number | null
+        }
+        Update: {
+          aurora_ms?: number | null
+          created_at?: string
+          id?: string
+          lemo_ms?: number | null
+          message_id?: string | null
+          session_id?: string
+          speech_finalization_ms?: number | null
+          total_ms?: number | null
+          voice_ttfa_ms?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_latency_metrics_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "live_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_latency_metrics_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_lemo_states: {
+        Row: {
+          arousal: number | null
+          confidence: number | null
+          created_at: string
+          delivery_note: string | null
+          emotion: string | null
+          energy: number | null
+          id: string
+          is_fallback: boolean
+          message_id: string | null
+          pause_before_ms: number | null
+          session_id: string
+          speaking_rate: number | null
+          valence: number | null
+          warmth: number | null
+        }
+        Insert: {
+          arousal?: number | null
+          confidence?: number | null
+          created_at?: string
+          delivery_note?: string | null
+          emotion?: string | null
+          energy?: number | null
+          id?: string
+          is_fallback?: boolean
+          message_id?: string | null
+          pause_before_ms?: number | null
+          session_id: string
+          speaking_rate?: number | null
+          valence?: number | null
+          warmth?: number | null
+        }
+        Update: {
+          arousal?: number | null
+          confidence?: number | null
+          created_at?: string
+          delivery_note?: string | null
+          emotion?: string | null
+          energy?: number | null
+          id?: string
+          is_fallback?: boolean
+          message_id?: string | null
+          pause_before_ms?: number | null
+          session_id?: string
+          speaking_rate?: number | null
+          valence?: number | null
+          warmth?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_lemo_states_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "live_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_lemo_states_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          interrupted: boolean
+          is_final: boolean
+          role: string
+          session_id: string
+          source: string
+          turn_index: number
+          visibility: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          interrupted?: boolean
+          is_final?: boolean
+          role: string
+          session_id: string
+          source?: string
+          turn_index?: number
+          visibility?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          interrupted?: boolean
+          is_final?: boolean
+          role?: string
+          session_id?: string
+          source?: string
+          turn_index?: number
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_session_participants: {
+        Row: {
+          capacity: string
+          created_at: string
+          id: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          capacity?: string
+          created_at?: string
+          id?: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          capacity?: string
+          created_at?: string
+          id?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_session_participants_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_sessions: {
+        Row: {
+          approved_announcements: string | null
+          campaign: string | null
+          created_at: string
+          created_by: string
+          id: string
+          interviewer_name: string | null
+          media_organization: string | null
+          mock_mode: boolean
+          music_releases: string | null
+          notes: string | null
+          primary_language: string
+          recording_enabled: boolean
+          silence_threshold_ms: number
+          status: string
+          talking_points: string | null
+          title: string
+          topic: string | null
+          topics_to_avoid: string | null
+          unreleased_info: string | null
+          updated_at: string
+        }
+        Insert: {
+          approved_announcements?: string | null
+          campaign?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          interviewer_name?: string | null
+          media_organization?: string | null
+          mock_mode?: boolean
+          music_releases?: string | null
+          notes?: string | null
+          primary_language?: string
+          recording_enabled?: boolean
+          silence_threshold_ms?: number
+          status?: string
+          talking_points?: string | null
+          title: string
+          topic?: string | null
+          topics_to_avoid?: string | null
+          unreleased_info?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approved_announcements?: string | null
+          campaign?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          interviewer_name?: string | null
+          media_organization?: string | null
+          mock_mode?: boolean
+          music_releases?: string | null
+          notes?: string | null
+          primary_language?: string
+          recording_enabled?: boolean
+          silence_threshold_ms?: number
+          status?: string
+          talking_points?: string | null
+          title?: string
+          topic?: string | null
+          topics_to_avoid?: string | null
+          unreleased_info?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      live_user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["live_app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["live_app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["live_app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       release_tracks: {
         Row: {
           created_at: string
@@ -843,9 +1173,11 @@ export type Database = {
         Args: { _code: string; _payload: Json }
         Returns: Json
       }
+      live_guest_session_view: { Args: { _session_id: string }; Returns: Json }
     }
     Enums: {
       aipf_app_role: "admin" | "reviewer" | "member"
+      live_app_role: "admin" | "producer" | "guest"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -974,6 +1306,7 @@ export const Constants = {
   public: {
     Enums: {
       aipf_app_role: ["admin", "reviewer", "member"],
+      live_app_role: ["admin", "producer", "guest"],
     },
   },
 } as const
