@@ -16,6 +16,7 @@ export function createServerAuroraAdapter(): AuroraAdapter {
       if (!data?.ok) throw new Error(data?.error || "Aurora request failed");
       return {
         reply_text: data.reply_text,
+        engine: data.engine,
         lemo: data.lemo,
         metadata: data.metadata,
         memory_refs: data.memory_refs,
