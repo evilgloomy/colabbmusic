@@ -3,15 +3,20 @@ import { createMockSpeechAdapter } from "./speech/mockSpeech";
 import { createMockAuroraAdapter } from "./aurora/mockAurora";
 import { createServerAuroraAdapter } from "./aurora/serverAurora";
 import { createMockLemoAdapter } from "./lemo/mockLemo";
-import { createMockVoiceAdapter } from "./voice/mockVoice";
+import { createBrowserTtsPlaceholderAdapter } from "./voice/browserTtsVoice";
+import { createVoiceStudioAdapter } from "./voice/voiceStudio";
+import { AVATAR_PROVIDER_ID } from "@/live/lib/avatar";
 import type { AuroraAdapter, LemoAdapter, SpeechInputAdapter, VoiceAdapter } from "@/live/lib/types";
 
 /**
- * Single place where providers are chosen. Phase 2 registers real Aurora, LEMO
- * and Cola Voice implementations here — nothing else changes.
+ * Single place where providers are chosen. Full Aurora/ShibaOS and a realtime
+ * avatar register here later — nothing else changes.
  */
 export const LIVE_MOCK_MODE =
   (import.meta.env.VITE_LIVE_MOCK_MODE ?? "true").toString().toLowerCase() !== "false";
+
+export const AURORA_ENGINE_LABEL = "Aurora Lite";
+export const AVATAR_PROVIDER_LABEL = `LiveColaAvatar (${AVATAR_PROVIDER_ID})`;
 
 export type SpeechMode = "browser" | "simulated";
 
@@ -29,6 +34,6 @@ export function getLemoAdapter(): LemoAdapter {
 }
 
 export function getVoiceAdapter(): VoiceAdapter {
-  // Phase 2: return a streaming Cola Voice adapter here.
-  return createMockVoiceAdapter();
+  // VoiceStudio first; browser TTS placeholder only as fallback.
+  return createVoiceStudioAdapter(createBrowserTtsPlaceholderAdapter());
 }
