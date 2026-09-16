@@ -5,6 +5,8 @@ import {
   getLemoAdapter,
   getSpeechAdapter,
   getVoiceAdapter,
+  AURORA_ENGINE_LABEL,
+  AVATAR_PROVIDER_LABEL,
   LIVE_MOCK_MODE,
   type SpeechMode,
 } from "@/live/adapters/registry";
