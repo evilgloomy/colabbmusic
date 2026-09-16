@@ -50,6 +50,13 @@ import AipfVerify from "@/aipf/pages/Verify";
 import AipfCertificate from "@/aipf/pages/Certificate";
 import AipfAdminOnboarding from "@/aipf/pages/AdminOnboarding";
 import AipfAdminContact from "@/aipf/pages/AdminContact";
+import { lazy, Suspense } from "react";
+import { LiveAuthProvider } from "@/live/LiveAuthContext";
+import LiveGuard from "@/live/components/LiveGuard";
+const LiveLogin = lazy(() => import("@/live/pages/LiveLogin"));
+const LiveLobby = lazy(() => import("@/live/pages/LiveLobby"));
+const LiveRoom = lazy(() => import("@/live/pages/LiveRoom"));
+const LiveProducer = lazy(() => import("@/live/pages/LiveProducer"));
 
 const queryClient = new QueryClient();
 
@@ -106,6 +113,24 @@ const AppInner = () => {
       <Route path="/aipf/admin/contact" element={<AdminGuard><AipfAdminContact /></AdminGuard>} />
       <Route path="/aipf/admin/journal" element={<AdminGuard><AipfAdminJournal /></AdminGuard>} />
       <Route path="/aipf/admin/journal/:id" element={<AdminGuard><AipfAdminJournalEditor /></AdminGuard>} />
+
+      {/* Cola Live — private, unlisted */}
+      <Route
+        path="/live/*"
+        element={
+          <LiveAuthProvider>
+            <Suspense fallback={null}>
+              <Routes>
+                <Route path="login" element={<LiveLogin />} />
+                <Route path="" element={<LiveGuard><LiveLobby /></LiveGuard>} />
+                <Route path="session/:sessionId" element={<LiveGuard><LiveRoom /></LiveGuard>} />
+                <Route path="producer/:sessionId" element={<LiveGuard staffOnly><LiveProducer /></LiveGuard>} />
+                <Route path="*" element={<Navigate to="/live" replace />} />
+              </Routes>
+            </Suspense>
+          </LiveAuthProvider>
+        }
+      />
 
       <Route path="*" element={<NotFound />} />
     </Routes>
