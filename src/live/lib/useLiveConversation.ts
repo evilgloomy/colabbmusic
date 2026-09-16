@@ -54,11 +54,13 @@ export function useLiveConversation(opts: {
   const [latency, setLatency] = useState<LatencySample>({});
   const [latencyHistory, setLatencyHistory] = useState<LatencySample[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [amplitude, setAmplitude] = useState(0);
   const [services, setServices] = useState<ServiceStatusMap>({
     speech: { health: "unknown" },
-    aurora: { health: LIVE_MOCK_MODE ? "mock" : "unknown" },
-    lemo: { health: LIVE_MOCK_MODE ? "mock" : "unknown" },
-    voice: { health: "mock", note: "Browser TTS placeholder" },
+    aurora: { health: "unknown", note: AURORA_ENGINE_LABEL },
+    lemo: { health: LIVE_MOCK_MODE ? "mock" : "unknown", note: "LEMO Lite" },
+    voice: { health: "mock", note: "Browser TTS Placeholder" },
+    avatar: { health: "ok", note: AVATAR_PROVIDER_LABEL },
   });
 
   const speechRef = useRef(getSpeechAdapter(speechMode));
