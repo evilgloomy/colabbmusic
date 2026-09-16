@@ -74,6 +74,7 @@ export const Footer = () => {
           <Link to="/press" className="hover:text-foreground transition-colors">{t("footer.pressKit")}</Link>
           <a href="mailto:cola.bb.225@gmail.com" className="hover:text-foreground transition-colors">{t("footer.contact")}</a>
           <Link to="/policies" className="hover:text-foreground transition-colors">{t("footer.shippingReturns")}</Link>
+          <Link to="/live" className="hover:text-foreground transition-colors" rel="nofollow">Cola Live</Link>
         </div>
 
         {/* Projects */}
