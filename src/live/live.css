@@ -63,6 +63,118 @@
   color: hsl(var(--live-ink));
 }
 
+/* ------------------------------ Live avatar ------------------------------ */
+.live-root .live-avatar {
+  position: relative;
+  width: min(420px, 78vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.live-root .live-avatar-aura {
+  position: absolute;
+  inset: -14% -14% 8%;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at 50% 42%,
+    hsl(var(--live-aurora) / calc(0.10 + var(--level, 0) * 0.30)),
+    hsl(var(--live-wine) / 0.22) 45%,
+    transparent 70%
+  );
+  filter: blur(8px);
+  transition: opacity 0.5s ease;
+  opacity: 0.35;
+}
+.live-root .live-avatar[data-mood="listening"] .live-avatar-aura { opacity: 0.7; }
+.live-root .live-avatar[data-mood="thinking"] .live-avatar-aura { opacity: 0.55; animation: live-think 2.2s ease-in-out infinite; }
+.live-root .live-avatar[data-mood="speaking"] .live-avatar-aura { opacity: 1; }
+.live-root .live-avatar[data-mood="error"] .live-avatar-aura {
+  opacity: 0.6;
+  background: radial-gradient(circle at 50% 42%, hsl(var(--live-pink) / 0.25), transparent 68%);
+}
+
+.live-root .live-avatar-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: hsl(var(--live-ink));
+  animation: live-breath 5.4s ease-in-out infinite;
+  transform-origin: 50% 70%;
+}
+
+.live-root .live-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 22%;
+  transform: scale(calc(1.02 + var(--level, 0) * 0.012));
+  filter: saturate(calc(0.95 + var(--warmth, 0.5) * 0.25))
+    contrast(calc(1 + var(--level, 0) * 0.06))
+    brightness(calc(0.94 + var(--level, 0) * 0.1));
+  transition: filter 0.12s linear, transform 0.12s linear;
+}
+
+/* Soft eyelid sweep — no cartoon overlay, just a believable blink. */
+.live-root .live-avatar-eyelids {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 26%;
+  height: 11%;
+  background: linear-gradient(to bottom, hsl(var(--live-ink) / 0.72), hsl(var(--live-ink) / 0));
+  opacity: 0;
+  transform: scaleY(0.2);
+  transform-origin: top;
+  transition: opacity 90ms ease, transform 90ms ease;
+  pointer-events: none;
+}
+.live-root .live-avatar[data-blink="true"] .live-avatar-eyelids {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+.live-root .live-avatar-light {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to top, hsl(var(--live-ink) / 0.55), transparent 48%),
+    radial-gradient(circle at 70% 18%, hsl(var(--live-pink) / calc(var(--level, 0) * 0.16)), transparent 55%);
+}
+
+.live-root .live-avatar-voiceline {
+  margin-top: 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.live-root .live-avatar[data-mood="speaking"] .live-avatar-voiceline { opacity: 0.9; }
+.live-root .live-avatar[data-mood="listening"] .live-avatar-voiceline { opacity: 0.25; }
+.live-root .live-avatar-voiceline span {
+  width: 2px;
+  background: hsl(var(--live-pink));
+  height: calc(3px + var(--level, 0) * 20px * (0.4 + 0.6 * abs(sin(calc(var(--i) * 1rad)))));
+  transition: height 90ms linear;
+}
+
+@keyframes live-breath {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.012) translateY(-3px); }
+}
+@keyframes live-think {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.75; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-root .live-avatar-frame,
+  .live-root .live-avatar-aura { animation: none; }
+}
+
 /* Cola presence halo */
 .live-root .live-halo {
   position: relative;
