@@ -438,6 +438,7 @@ export function useLiveConversation(opts: {
     turns,
     partial,
     muted,
+    amplitude,
     lemo,
     latency,
     latencyHistory,
