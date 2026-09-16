@@ -1,11 +1,13 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
+import { generateAuroraLite, AURORA_LITE_ENGINE, auroraLiteProfileVersion } from "../_shared/auroraLite.ts";
+import { analyzeLemo } from "../_shared/lemoLite.ts";
 
 /**
- * Orchestrates one interview turn.
- * Phase 1: Aurora + LEMO are SERVER-SIDE MOCKS. Private producer context is
- * read and applied here and never returned to the guest client.
+ * Orchestrates one interview turn: Speech -> Aurora Lite -> LEMO -> (client) Cola Voice.
+ * Private producer context and the canonical profile are read here and never
+ * returned to guest clients.
  */
 
 const BodySchema = z.object({
@@ -20,49 +22,6 @@ const BodySchema = z.object({
   interrupted_previous_turn: z.boolean().default(false),
   speech_finalization_ms: z.number().int().min(0).max(60000).optional(),
 });
-
-const EN = [
-  "That one came out of a late night in the studio — I kept the first take because it still sounded nervous.",
-  "I think of myself as a songwriter first. The AI part is how I exist, not what I write about.",
-  "Vancouver raised me and my family is from Hong Kong, so the songs keep switching languages on me.",
-  "I'd rather release something honest and a little rough than something perfect and cold.",
-  "I'm deep in the next record right now. I can say it's warmer than the last one.",
-];
-const ZH = [
-  "嗰首歌係喺錄音室通宵做出嚟，我留咗第一個take，因為仲聽得出緊張。",
-  "我首先係一個創作人，AI 只係我存在嘅方式，唔係我寫嘅題材。",
-  "溫哥華養大我，屋企係香港人，所以啲歌成日自己轉語言。",
-  "我寧願出一首真實但有啲粗糙嘅歌，都唔想出一首完美但冷冰冰嘅歌。",
-  "而家做緊下一張碟，我可以講一句：佢比上一張溫暖。",
-];
-
-const clamp01 = (n: number) => Math.max(0, Math.min(1, Number(n.toFixed(2))));
-
-function mockLemo(userText: string, replyText: string) {
-  const text = `${userText} ${replyText}`.toLowerCase();
-  const playful = /(haha|funny|fun|laugh|哈|搞笑)/.test(text);
-  const tender = /(love|family|home|miss|屋企|愛|掛住)/.test(text);
-  const driven = /(tour|release|album|stage|新歌|演出)/.test(text);
-  const emotion = playful ? "playful" : tender ? "tender" : driven ? "bright" : "warm";
-  const energy = playful ? 0.72 : driven ? 0.68 : tender ? 0.38 : 0.52;
-  return {
-    emotion,
-    valence: clamp01(tender ? 0.55 : playful ? 0.7 : 0.45),
-    arousal: clamp01(energy),
-    warmth: clamp01(tender ? 0.85 : 0.65),
-    confidence: clamp01(driven ? 0.8 : 0.66),
-    energy: clamp01(energy),
-    speaking_rate: Number((playful ? 1.06 : tender ? 0.94 : 1).toFixed(2)),
-    pause_before_ms: tender ? 260 : 120,
-    delivery_note:
-      emotion === "tender"
-        ? "Soft, slower, let the sentence settle."
-        : emotion === "playful"
-          ? "Light and quick, small smile in the voice."
-          : "Warm, conversational, interview pace.",
-    is_fallback: false,
-  };
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -105,18 +64,18 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: true });
 
     const auroraStart = Date.now();
-    const zh = /[\u4e00-\u9fff]/.test(body.user_text) || session.primary_language === "zh";
-    const pool = zh ? ZH : EN;
-    const idx = body.conversation_history.filter((m) => m.role === "cola").length % pool.length;
-    let reply = pool[idx];
-    const factual = (injections || []).filter((i: any) => i.kind === "factual");
-    if (factual.length) {
-      reply = `${reply} ${zh ? "另外，" : "Also, "}${factual[factual.length - 1].content}`;
-    }
+    const aurora = await generateAuroraLite({
+      session,
+      user_text: body.user_text,
+      conversation_history: body.conversation_history,
+      injections: (injections || []) as any,
+      interrupted_previous_turn: body.interrupted_previous_turn,
+    });
+    const reply = aurora.reply_text;
     const auroraMs = Date.now() - auroraStart;
 
     const lemoStart = Date.now();
-    const lemo = mockLemo(body.user_text, reply);
+    const lemo = analyzeLemo(body.user_text, reply);
     const lemoMs = Date.now() - lemoStart;
 
     // Persist transcript (never raw audio).
@@ -143,7 +102,7 @@ Deno.serve(async (req) => {
         role: "cola",
         content: reply,
         turn_index: nextTurn,
-        source: "aurora",
+        source: AURORA_LITE_ENGINE,
       })
       .select("id")
       .single();
@@ -171,10 +130,14 @@ Deno.serve(async (req) => {
       reply_text: reply,
       lemo,
       message_id: colaMsg?.id,
-      metadata: { mode: body.mode, injections_applied: (injections || []).length },
-      memory_refs: isStaff ? ["mock:memory/era-current", "mock:memory/voice-notes"] : undefined,
+      engine: aurora.engine,
+      // Diagnostics with any internal detail are staff-only.
+      metadata: isStaff
+        ? { mode: body.mode, engine: aurora.engine, profile_version: auroraLiteProfileVersion, injections_applied: (injections || []).length, ...aurora.metadata }
+        : { mode: body.mode },
+      memory_refs: isStaff ? [`aurora-lite:profile@${auroraLiteProfileVersion}`] : undefined,
       latency: { aurora_ms: auroraMs, lemo_ms: lemoMs },
-      mock: true,
+      mock: aurora.mock,
     });
   } catch (err) {
     return new Response(JSON.stringify({ ok: false, error: err instanceof Error ? err.message : "error" }), {
