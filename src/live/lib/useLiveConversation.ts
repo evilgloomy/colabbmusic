@@ -5,6 +5,8 @@ import {
   getLemoAdapter,
   getSpeechAdapter,
   getVoiceAdapter,
+  AURORA_ENGINE_LABEL,
+  AVATAR_PROVIDER_LABEL,
   LIVE_MOCK_MODE,
   type SpeechMode,
 } from "@/live/adapters/registry";
@@ -52,11 +54,13 @@ export function useLiveConversation(opts: {
   const [latency, setLatency] = useState<LatencySample>({});
   const [latencyHistory, setLatencyHistory] = useState<LatencySample[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [amplitude, setAmplitude] = useState(0);
   const [services, setServices] = useState<ServiceStatusMap>({
     speech: { health: "unknown" },
-    aurora: { health: LIVE_MOCK_MODE ? "mock" : "unknown" },
-    lemo: { health: LIVE_MOCK_MODE ? "mock" : "unknown" },
-    voice: { health: "mock", note: "Browser TTS placeholder" },
+    aurora: { health: "unknown", note: AURORA_ENGINE_LABEL },
+    lemo: { health: LIVE_MOCK_MODE ? "mock" : "unknown", note: "LEMO Lite" },
+    voice: { health: "mock", note: "Browser TTS Placeholder" },
+    avatar: { health: "ok", note: AVATAR_PROVIDER_LABEL },
   });
 
   const speechRef = useRef(getSpeechAdapter(speechMode));
@@ -141,6 +145,21 @@ export function useLiveConversation(opts: {
     if (!observerOnly) broadcast("services", services);
   }, [services, broadcast, observerOnly]);
 
+  /* --------------------- outgoing audio level for the avatar -------------------- */
+  useEffect(() => {
+    if (observerOnly || state !== "COLA_SPEAKING") {
+      setAmplitude(0);
+      return;
+    }
+    let raf = 0;
+    const tick = () => {
+      setAmplitude(voiceRef.current.getAmplitude?.() ?? 0);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [state, observerOnly]);
+
   /* -------------------------------- speaking ------------------------------- */
   const speak = useCallback(
     async (text: string, emotion: LemoState, turnStarted: number, partialLatency: LatencySample) => {
@@ -212,7 +231,13 @@ export function useLiveConversation(opts: {
           ...sample,
           aurora_ms: result.latency?.aurora_ms ?? Math.round(performance.now() - auroraStart),
         };
-        setServices((s) => ({ ...s, aurora: { health: result.mock ? "mock" : "ok" } }));
+        setServices((s) => ({
+          ...s,
+          aurora: {
+            health: result.mock ? "mock" : "ok",
+            note: `${AURORA_ENGINE_LABEL}${result.mock ? " · fallback replies" : ""}`,
+          },
+        }));
 
         go("LEMO_PROCESSING");
         let emotion = result.lemo;
@@ -413,6 +438,7 @@ export function useLiveConversation(opts: {
     turns,
     partial,
     muted,
+    amplitude,
     lemo,
     latency,
     latencyHistory,

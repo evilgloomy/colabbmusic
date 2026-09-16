@@ -62,7 +62,7 @@ export interface LatencySample {
   total_ms?: number;
 }
 
-export type ServiceKey = "speech" | "aurora" | "lemo" | "voice";
+export type ServiceKey = "speech" | "aurora" | "lemo" | "voice" | "avatar";
 export type ServiceHealth = "unknown" | "mock" | "ok" | "degraded" | "down";
 export type ServiceStatusMap = Record<ServiceKey, { health: ServiceHealth; note?: string }>;
 
@@ -109,6 +109,8 @@ export interface AuroraRequest {
 
 export interface AuroraResult {
   reply_text: string;
+  /** Engine that produced the reply, e.g. "aurora-lite" or "aurora". */
+  engine?: string;
   lemo?: LemoState;
   metadata?: Record<string, unknown>;
   memory_refs?: string[];
@@ -145,9 +147,13 @@ export interface VoiceRequest {
 
 export interface VoiceAdapter {
   readonly id: string;
+  /** Human label shown in producer diagnostics. */
+  readonly label?: string;
   readonly isMock: boolean;
   speak(req: VoiceRequest, handlers: VoiceHandlers): Promise<void>;
   cancel(): void;
   flush(): void;
   isSpeaking(): boolean;
+  /** 0-1 outgoing audio level for the avatar, when the provider exposes it. */
+  getAmplitude?(): number;
 }

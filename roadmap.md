@@ -17,3 +17,11 @@
 - Guest invite UI (currently guests are added to a session by an admin)
 - Transcript history reload after refresh (transcript is in-memory per session run)
 - Mobile Safari audio unlock hardening
+
+## Cola Live — Aurora Lite revision (2026-09-16)
+- [x] Aurora Lite server engine + canonical JSON profile (supabase/functions/_shared/cola-aurora-lite.json)
+- [x] LiveColaAvatar with breathing/blink/state/amplitude reactions
+- [x] Simplified guest room UX; producer labels engine as Aurora Lite
+- [x] VoiceStudio adapter + edge proxy stub; browser TTS renamed Browser TTS Placeholder
+- [ ] Blocked: VoiceStudio API spec needed to finish audio streaming + real amplitude
+- [ ] Replace SAMPLE placeholders in the Aurora Lite JSON with verified facts

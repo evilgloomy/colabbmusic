@@ -1,11 +1,27 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import LiveLayout from "@/live/LiveLayout";
-import ColaStage from "@/live/components/ColaStage";
+import LiveColaAvatar from "@/live/components/LiveColaAvatar";
 import TranscriptView from "@/live/components/TranscriptView";
 import { useLiveSession } from "@/live/lib/useLiveSession";
 import { useLiveConversation } from "@/live/lib/useLiveConversation";
 import { useLiveAuth } from "@/live/LiveAuthContext";
+import type { LiveState } from "@/live/lib/types";
+
+/** Plain, non-technical status for the guest. */
+const STATUS: Record<LiveState, string> = {
+  IDLE: "Ready",
+  CONNECTING: "Connecting",
+  LISTENING: "Listening",
+  USER_SPEAKING: "Listening",
+  FINALIZING_TRANSCRIPT: "Listening",
+  AURORA_PROCESSING: "Thinking",
+  LEMO_PROCESSING: "Thinking",
+  VOICE_CONNECTING: "Thinking",
+  COLA_SPEAKING: "Speaking",
+  INTERRUPTED: "Listening",
+  ERROR: "Paused",
+};
 
 export default function LiveRoom() {
   const { sessionId = "" } = useParams();
@@ -13,8 +29,12 @@ export default function LiveRoom() {
   const { config, loading, error } = useLiveSession(sessionId);
   const convo = useLiveConversation({ sessionId, config });
   const [simText, setSimText] = useState("");
+  const [showTranscript, setShowTranscript] = useState(true);
 
   const active = convo.state !== "IDLE";
+  const speaking = convo.state === "COLA_SPEAKING";
+  const listening =
+    convo.state === "LISTENING" || convo.state === "USER_SPEAKING" || convo.state === "FINALIZING_TRANSCRIPT";
 
   if (loading) {
     return (
@@ -36,16 +56,25 @@ export default function LiveRoom() {
 
   return (
     <LiveLayout title={config.title}>
-      <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-6 py-12">
+      <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col items-center px-6 py-10">
         <header className="text-center">
           <p className="live-eyebrow">{config.media_organization || "Private interview"}</p>
-          <h1 className="live-display mt-2 text-3xl md:text-4xl">{config.title}</h1>
+          <h1 className="live-display mt-1 text-xl md:text-2xl">{config.title}</h1>
         </header>
 
-        <section className="mt-14 flex flex-col items-center">
-          <ColaStage state={convo.state} />
+        <section className="mt-8 flex w-full flex-col items-center">
+          <LiveColaAvatar
+            state={convo.state}
+            emotion={convo.lemo}
+            amplitude={convo.amplitude}
+            speaking={speaking}
+            listening={listening}
+            partialTranscript={convo.partial}
+          />
 
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+          <p className="live-eyebrow mt-6">{STATUS[convo.state]}</p>
+
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             {!active ? (
               <button className="live-btn" onClick={() => convo.start()}>Start conversation</button>
             ) : (
@@ -53,16 +82,14 @@ export default function LiveRoom() {
                 <button className="live-btn" onClick={() => convo.toggleMute()}>
                   {convo.muted ? "Unmute mic" : "Mute mic"}
                 </button>
-                <button className="live-btn live-btn-danger" onClick={() => convo.stopCola()}>
-                  Interrupt Cola
-                </button>
+                <button className="live-btn live-btn-danger" onClick={() => convo.stopCola()}>Interrupt</button>
                 <button className="live-btn" onClick={() => convo.stop()}>End</button>
               </>
             )}
           </div>
 
           {!active && (
-            <label className="mt-6 flex items-center gap-2 text-xs opacity-60">
+            <label className="mt-5 flex items-center gap-2 text-xs opacity-60">
               <input
                 type="checkbox"
                 checked={convo.speechMode === "browser"}
@@ -74,7 +101,7 @@ export default function LiveRoom() {
 
           {active && convo.canSimulate && (
             <form
-              className="mt-6 flex w-full max-w-xl gap-2"
+              className="mt-5 flex w-full max-w-xl gap-2"
               onSubmit={(e) => {
                 e.preventDefault();
                 if (!simText.trim()) return;
@@ -92,18 +119,22 @@ export default function LiveRoom() {
             </form>
           )}
 
-          {convo.error && <p className="live-accent mt-6 max-w-xl text-center text-sm">{convo.error}</p>}
+          {convo.error && <p className="live-accent mt-5 max-w-xl text-center text-sm">{convo.error}</p>}
         </section>
 
-        <section className="mt-16 border-t live-hairline pt-8">
-          <h2 className="live-eyebrow">Transcript</h2>
-          <div className="mt-5">
-            <TranscriptView turns={convo.turns} partial={convo.partial} />
-          </div>
+        <section className="mt-12 w-full border-t live-hairline pt-6">
+          <button className="live-eyebrow" onClick={() => setShowTranscript((v) => !v)}>
+            Transcript {showTranscript ? "−" : "+"}
+          </button>
+          {showTranscript && (
+            <div className="mt-4">
+              <TranscriptView turns={convo.turns} partial={convo.partial} />
+            </div>
+          )}
         </section>
 
-        {isStaff && convo.mockMode && (
-          <p className="live-eyebrow mt-10 text-center live-accent">Mock mode — staff view only</p>
+        {isStaff && (
+          <p className="live-eyebrow live-accent mt-8 text-center">Rehearsal · staff view</p>
         )}
       </main>
     </LiveLayout>

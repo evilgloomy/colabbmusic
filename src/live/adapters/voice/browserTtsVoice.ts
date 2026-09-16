@@ -2,23 +2,47 @@ import { AudioQueue, splitIntoSpeakableChunks } from "@/live/audio/audioQueue";
 import type { VoiceAdapter, VoiceHandlers, VoiceRequest } from "@/live/lib/types";
 
 /**
- * MOCK Cola Voice. Uses browser speech synthesis purely as a placeholder so the
- * queue, streaming cadence, cancel/flush and barge-in are all testable. This is
- * NOT Cola's voice; replacing this module with a streaming provider requires no
- * change anywhere else.
+ * BROWSER TTS PLACEHOLDER — this is NOT Cola's voice.
+ * It exists only so the queue, streaming cadence, cancel/flush and barge-in are
+ * testable before VoiceStudio is connected. Replacing it changes nothing else.
  */
-export function createMockVoiceAdapter(): VoiceAdapter {
+export function createBrowserTtsPlaceholderAdapter(): VoiceAdapter {
   const queue = new AudioQueue();
   let speaking = false;
+  let level = 0;
+  let raf = 0;
+
+  const startLevelLoop = (energy: number) => {
+    cancelAnimationFrame(raf);
+    const tick = () => {
+      // No analyser is available for speechSynthesis; produce a tasteful,
+      // speech-like envelope instead of pretending to do precise lip sync.
+      const t = performance.now() / 1000;
+      const base = 0.34 + 0.3 * energy;
+      const wobble = Math.sin(t * 9.1) * 0.22 + Math.sin(t * 15.7) * 0.12 + Math.sin(t * 3.3) * 0.1;
+      level = Math.max(0.05, Math.min(1, base + wobble));
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+  };
+  const stopLevelLoop = () => {
+    cancelAnimationFrame(raf);
+    level = 0;
+  };
 
   return {
-    id: "mock-voice-browser-tts",
+    id: "browser-tts-placeholder",
+    label: "Browser TTS Placeholder",
     isMock: true,
     isSpeaking: () => speaking,
+    getAmplitude: () => level,
     async speak(req: VoiceRequest, handlers: VoiceHandlers) {
       speaking = true;
       queue.cancel();
-      queue.onFirstAudio = handlers.onFirstAudio;
+      queue.onFirstAudio = () => {
+        startLevelLoop(req.lemo.energy ?? 0.5);
+        handlers.onFirstAudio();
+      };
       queue.onError = handlers.onError;
 
       const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
@@ -27,10 +51,10 @@ export function createMockVoiceAdapter(): VoiceAdapter {
       await new Promise<void>((resolve) => {
         queue.onDrained = () => {
           speaking = false;
+          stopLevelLoop();
           handlers.onDone();
           resolve();
         };
-        // Emotional metadata shapes delivery even in mock mode.
         const rate = Math.max(0.6, Math.min(1.6, req.lemo.speaking_rate || 1));
         const pitch = 1 + (req.lemo.warmth - 0.5) * 0.3;
 
@@ -43,7 +67,6 @@ export function createMockVoiceAdapter(): VoiceAdapter {
                 const timer = setTimeout(() => {
                   if (signal.aborted) return done();
                   if (!synth) {
-                    // No synthesis available: simulate duration.
                     const ms = Math.min(4000, chunk.length * 55);
                     const t = setTimeout(done, ms);
                     signal.addEventListener("abort", () => {
@@ -83,6 +106,7 @@ export function createMockVoiceAdapter(): VoiceAdapter {
     },
     cancel() {
       speaking = false;
+      stopLevelLoop();
       try {
         window.speechSynthesis?.cancel();
       } catch {

@@ -98,7 +98,10 @@ export default function LiveProducer() {
       <main className="mx-auto w-full max-w-7xl px-6 py-8">
         <header className="flex flex-wrap items-end justify-between gap-4 border-b live-hairline pb-5">
           <div>
-            <p className="live-eyebrow">Producer console {convo.mockMode && <span className="live-accent">· MOCK MODE</span>}</p>
+            <p className="live-eyebrow">
+              Producer console · engine <span className="live-accent">Aurora Lite</span>
+              {convo.mockMode && <span className="live-accent"> · rehearsal</span>}
+            </p>
             <h1 className="live-display text-3xl">{config.title}</h1>
           </div>
           <div className="flex gap-2">
@@ -146,7 +149,7 @@ export default function LiveProducer() {
                   setManual("");
                 }}
               >
-                <label className="live-eyebrow">Manual response (skips Aurora, keeps LEMO + voice)</label>
+                <label className="live-eyebrow">Manual response (skips Aurora Lite, keeps LEMO + voice)</label>
                 <textarea rows={2} value={manual} onChange={(e) => setManual(e.target.value)} className="live-panel w-full bg-transparent px-3 py-2 text-sm outline-none" />
                 <button className="live-btn">Send manual response</button>
               </form>
@@ -159,7 +162,7 @@ export default function LiveProducer() {
                   setExact("");
                 }}
               >
-                <label className="live-eyebrow">Speak exact text (skips Aurora and LEMO)</label>
+                <label className="live-eyebrow">Speak exact text (skips Aurora Lite and LEMO)</label>
                 <textarea rows={2} value={exact} onChange={(e) => setExact(e.target.value)} className="live-panel w-full bg-transparent px-3 py-2 text-sm outline-none" />
                 <button className="live-btn live-btn-danger">Speak exact text</button>
               </form>
@@ -202,12 +205,21 @@ export default function LiveProducer() {
             <div className="live-panel p-5">
               <h2 className="live-eyebrow">Services</h2>
               <ul className="mt-3 space-y-2 live-mono">
-                {(["speech", "aurora", "lemo", "voice"] as ServiceKey[]).map((k) => (
-                  <li key={k} className="flex items-center justify-between">
-                    <span className="uppercase opacity-70">{k}</span>
-                    <span className={svc(k).health === "down" || svc(k).health === "degraded" ? "live-accent" : ""}>
-                      {svc(k).health}
-                    </span>
+                {([
+                  ["speech", "Speech provider"],
+                  ["aurora", "Aurora Lite"],
+                  ["lemo", "LEMO"],
+                  ["voice", "Voice provider"],
+                  ["avatar", "Avatar provider"],
+                ] as [ServiceKey, string][]).map(([k, label]) => (
+                  <li key={k}>
+                    <div className="flex items-center justify-between">
+                      <span className="opacity-70">{label}</span>
+                      <span className={svc(k).health === "down" || svc(k).health === "degraded" ? "live-accent" : ""}>
+                        {svc(k).health}
+                      </span>
+                    </div>
+                    {svc(k).note && <p className="opacity-45">{svc(k).note}</p>}
                   </li>
                 ))}
               </ul>
