@@ -132,7 +132,8 @@ export class NativeAvatarClient implements AvatarProvider {
   setState(state: AvatarState) { try { this.send({ type: "avatar.state", state }); } catch {} }
   private fail() {
     this.ended?.reject(new RuntimeError("AvatarUnavailable")); this.ended = undefined;
-    void this.disconnect().then(() => this.update({ status: "fallback", reason: "AvatarUnavailable" }));
+    const expectedGeneration = this.generation + 1;
+    void this.disconnect().then(() => { if (this.generation === expectedGeneration) this.update({ status: "fallback", reason: "AvatarUnavailable" }); });
   }
   async disconnect() {
     ++this.generation; this.connectAbort?.abort(); this.connectAbort = undefined;

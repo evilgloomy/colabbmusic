@@ -60,8 +60,9 @@ class Session:
         self.closed = False
 
     async def event(self, data):
-        if self.ws:
-            await self.ws.send_json(data)
+        if self.ws and not self.closed:
+            try: await self.ws.send_json(data)
+            except (RuntimeError, WebSocketDisconnect): pass
 
     def cancel(self):
         self.timeline.cancel()

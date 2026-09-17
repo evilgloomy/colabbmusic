@@ -91,7 +91,8 @@ Deno.serve(async (req) => {
       text: body.text,
       stream: body.stream,
       language_boost: languageBoost(body.language),
-      voice_setting: { voice_id: voiceId, speed, vol: 1, pitch: 0 },
+      voice_setting: { voice_id: voiceId, speed, vol: 1, pitch: 0,
+        emotion: ["playful", "bright"].includes(body.lemo?.emotion ?? "") ? "happy" : "calm" },
       audio_setting: { sample_rate: body.format === "pcm" ? 16000 : 32000, bitrate: 128000, format: body.format, channel: 1 },
     };
     if (!body.stream) payload.output_format = "hex";

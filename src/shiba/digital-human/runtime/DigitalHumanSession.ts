@@ -106,7 +106,15 @@ export class DigitalHumanSession extends DigitalHumanRuntime {
       let first = true;
       for await (const chunk of this.options.speech.synthesize({ text, emotion, language: this.options.language ?? this.options.character.defaultLanguage, signal })) {
         signal.throwIfAborted();
-        if (first) { first = false; metrics.voice_ttfa_ms = performance.now() - voiceStart; }
+        if (first) {
+          first = false; metrics.voice_ttfa_ms = performance.now() - voiceStart;
+          if (emotion.pause_before_ms > 0) await new Promise<void>((resolve, reject) => {
+            const abort = () => { clearTimeout(timer); reject(new DOMException("Aborted", "AbortError")); };
+            const timer = setTimeout(() => { signal.removeEventListener("abort", abort); resolve(); }, Math.min(600, emotion.pause_before_ms));
+            signal.addEventListener("abort", abort, { once: true });
+          });
+          signal.throwIfAborted();
+        }
         saved.push(chunk);
         if (saved.reduce((sum, c) => sum + c.pcm.byteLength, 0) > 16000 * 2 * 45) throw new Error("SpeechUnavailable");
         this.emit({ type: "speech.chunk" });

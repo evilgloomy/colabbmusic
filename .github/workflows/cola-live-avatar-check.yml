@@ -35,3 +35,14 @@ jobs:
           python-version: '3.11'
       - run: pip install -r services/cola-avatar-engine/requirements-test.txt
       - run: python -m pytest services/cola-avatar-engine/tests -q
+  edge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.2.12
+      - run: deno check --no-lock --node-modules-dir=none supabase/functions/live-turn/index.ts supabase/functions/cola-voice/index.ts supabase/functions/live-health/index.ts supabase/functions/native-avatar-session/index.ts supabase/functions/live-control/index.ts
+        env:
+          DENO_NO_PACKAGE_JSON: '1'

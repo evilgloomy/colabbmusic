@@ -41,6 +41,7 @@ export function useLiveConversation(opts: { sessionId: string; config: LiveSessi
   const runtime = useMemo(() => createColaSession(sessionId, mic, config?.primary_language, config?.silence_threshold_ms),
     [sessionId, mic, config?.primary_language, config?.silence_threshold_ms]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const seenControls = useRef(new Set<string>());
   const controlRef = useRef<(event: LiveControlEvent) => void>(() => {});
   const broadcast = useCallback((event: string, payload: unknown) => {
     if (!observerOnly) void channelRef.current?.send({ type: "broadcast", event, payload });
@@ -73,8 +74,9 @@ export function useLiveConversation(opts: { sessionId: string; config: LiveSessi
         case "session.interrupted": setTurns(current => current.map((t, i) => i === current.length - 1 && t.role === "cola" ? { ...t, interrupted: true } : t)); break;
         case "runtime.error": {
           const messages = { AvatarUnavailable: "", SpeechUnavailable: "Cola’s usual voice is unavailable. Using the backup voice.",
-            BrainUnavailable: "Cola could not reply. Please try again.", MicrophoneUnavailable: "The microphone is unavailable. Allow access or use typed input.",
+            BrainUnavailable: "Cola could not reply. Please try again.", MicrophoneUnavailable: "The microphone is unavailable. Select Start again to use typed input.",
             SessionExpired: "Please sign in again.", NetworkUnavailable: "Connection lost. Please try again." };
+          if (event.error.code === "MicrophoneUnavailable") setSpeechMode("simulated");
           if (messages[event.error.code]) setError(messages[event.error.code]);
           if (event.error.code === "SpeechUnavailable") setServices(s => ({ ...s, voice: { health: "degraded", note: "Browser TTS emergency fallback" } }));
           break;
@@ -99,7 +101,14 @@ export function useLiveConversation(opts: { sessionId: string; config: LiveSessi
       .on("broadcast", { event: "lemo" }, ({ payload }) => { if (observerOnly) setLemo(payload); })
       .on("broadcast", { event: "latency" }, ({ payload }) => { if (observerOnly) { setLatency(p => ({ ...p, ...payload })); setLatencyHistory(h => [...h.slice(-19), payload]); } })
       .on("broadcast", { event: "services" }, ({ payload }) => { if (observerOnly) setServices(payload); })
-      .on("broadcast", { event: "control" }, ({ payload }) => { if (!observerOnly) controlRef.current(payload); }).subscribe();
+      .on("broadcast", { event: "control" }, ({ payload }) => { if (!observerOnly && typeof payload.ticket === "string") {
+        void supabase.functions.invoke("live-control", { body: { mode: "verify", session_id: sessionId, ticket: payload.ticket } }).then(({ data, error }) => {
+          if (!error && data?.ok && !seenControls.current.has(data.id)) {
+            if (seenControls.current.size > 1000) seenControls.current.clear();
+            seenControls.current.add(data.id); controlRef.current(data.event);
+          }
+        });
+      } }).subscribe();
     channelRef.current = channel;
     return () => { void supabase.removeChannel(channel); channelRef.current = null; };
   }, [sessionId, observerOnly]);
@@ -119,8 +128,11 @@ export function useLiveConversation(opts: { sessionId: string; config: LiveSessi
   };
   controlRef.current = handleControl;
   const sendControl = (event: LiveControlEvent) => {
-    void channelRef.current?.send({ type: "broadcast", event: "control", payload: event });
-    if (!observerOnly) handleControl(event);
+    if (!observerOnly) { handleControl(event); return; }
+    void supabase.functions.invoke("live-control", { body: { mode: "issue", session_id: sessionId, event } }).then(({ data, error }) => {
+      if (error || !data?.ok) { setError("Producer control could not be authorized. Please try again."); return; }
+      void channelRef.current?.send({ type: "broadcast", event: "control", payload: { ticket: data.ticket } });
+    });
   };
   return { state, turns, partial, muted, amplitude: 0, lemo, latency, latencyHistory, services, error,
     speechMode, canSimulate: speechMode === "simulated", mockMode: false, setSpeechMode,

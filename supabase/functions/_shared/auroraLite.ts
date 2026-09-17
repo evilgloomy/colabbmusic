@@ -153,6 +153,7 @@ export async function probeAuroraLite() {
     systemPrompt: "Reply with the single word ok.", history: [], userText: "Hello",
   }, () => "ok");
   return { aurora_lite_llm: result.provider === "deterministic" ? "fallback" : "online",
+    reason: result.provider === "deterministic" ? "providers_unavailable" : undefined,
     provider: result.provider, model: result.model, latency_ms: result.latencyMs,
     profile_version: auroraLiteProfileVersion, profile_loaded: Boolean(profile.identity.stage_name) };
 }
