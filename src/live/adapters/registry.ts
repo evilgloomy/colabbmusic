@@ -5,6 +5,7 @@ import { createServerAuroraAdapter } from "./aurora/serverAurora";
 import { createMockLemoAdapter } from "./lemo/mockLemo";
 import { createBrowserTtsPlaceholderAdapter } from "./voice/browserTtsVoice";
 import { createVoiceStudioAdapter } from "./voice/voiceStudio";
+import { createMinimaxVoiceAdapter } from "./voice/minimaxVoice";
 import { AVATAR_PROVIDER_LABEL as AVATAR_LABEL } from "@/live/lib/avatar";
 import type { AuroraAdapter, LemoAdapter, SpeechInputAdapter, VoiceAdapter } from "@/live/lib/types";
 
