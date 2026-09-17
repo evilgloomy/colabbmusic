@@ -172,7 +172,7 @@ export function useLiveConversation(opts: {
       const voiceStart = performance.now();
       let ttfa: number | undefined;
       await voiceRef.current.speak(
-        { text, voice_id: "cola_b_primary", lemo: emotion, stream: true, language: config?.primary_language },
+        { text, voice_id: "", lemo: emotion, stream: true, language: config?.primary_language },
         {
           onFirstAudio: () => {
             ttfa = Math.round(performance.now() - voiceStart);
