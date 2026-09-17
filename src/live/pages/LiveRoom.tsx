@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import LiveLayout from "@/live/LiveLayout";
 import LiveColaAvatar from "@/live/components/LiveColaAvatar";
 import TranscriptView from "@/live/components/TranscriptView";
