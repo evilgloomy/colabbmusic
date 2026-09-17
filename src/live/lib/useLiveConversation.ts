@@ -371,44 +371,85 @@ export function useLiveConversation(opts: {
   );
 
   /* ------------------------------ session life ----------------------------- */
+  const startWithMode = useCallback(
+    async (mode: SpeechMode) => {
+      const adapter = getSpeechAdapter(mode);
+      speechRef.current = adapter;
+      await adapter.start(
+        {
+          onSpeechStart: () => {
+            // Barge-in: interviewer talks while Cola speaks.
+            if (stateRef.current === "COLA_SPEAKING" || stateRef.current === "VOICE_CONNECTING") {
+              stopCola(true);
+            }
+            go("USER_SPEAKING");
+          },
+          onPartial: (text) => {
+            setPartial(text);
+            broadcast("partial", { text });
+          },
+          onFinal: (text, meta) => {
+            speechEndRef.current = performance.now();
+            go("FINALIZING_TRANSCRIPT");
+            void runTurn(text, meta.finalizationMs);
+          },
+          onError: (msg) => {
+            // Never leave the room stuck in LISTENING when speech cannot run.
+            if (msg.startsWith("unsupported:") || msg.startsWith("mic-denied:")) {
+              const reason = msg.split(":").slice(1).join(":").trim();
+              void adapter.stop();
+              setSpeechMode("simulated");
+              setServices((s) => ({ ...s, speech: { health: "degraded", note: reason } }));
+              setError(`${reason} Typed input is active.`);
+              void startWithMode("simulated");
+              return;
+            }
+            setServices((s) => ({ ...s, speech: { health: "degraded", note: msg } }));
+            setError(msg);
+          },
+        },
+        { silenceThresholdMs: config?.silence_threshold_ms ?? 750, language: config?.primary_language },
+      );
+      setServices((s) => ({
+        ...s,
+        speech: {
+          health: adapter.isMock ? "mock" : "ok",
+          note: adapter.isMock ? "Typed input fallback" : adapter.id,
+        },
+      }));
+      go("LISTENING");
+    },
+    [broadcast, config, go, runTurn, stopCola],
+  );
+
   const start = useCallback(async () => {
     if (observerOnly) return;
     setError(null);
     startedRef.current = true;
     go("CONNECTING");
-    const adapter = getSpeechAdapter(speechMode);
-    speechRef.current = adapter;
-    await adapter.start(
-      {
-        onSpeechStart: () => {
-          // Barge-in: interviewer talks while Cola speaks.
-          if (stateRef.current === "COLA_SPEAKING" || stateRef.current === "VOICE_CONNECTING") {
-            stopCola(true);
-          }
-          go("USER_SPEAKING");
-        },
-        onPartial: (text) => {
-          setPartial(text);
-          broadcast("partial", { text });
-        },
-        onFinal: (text, meta) => {
-          speechEndRef.current = performance.now();
-          go("FINALIZING_TRANSCRIPT");
-          void runTurn(text, meta.finalizationMs);
-        },
-        onError: (msg) => {
-          setServices((s) => ({ ...s, speech: { health: "degraded", note: msg } }));
-          setError(msg);
-        },
-      },
-      { silenceThresholdMs: config?.silence_threshold_ms ?? 750, language: config?.primary_language },
-    );
-    setServices((s) => ({
-      ...s,
-      speech: { health: adapter.isMock ? "mock" : "ok", note: adapter.id },
-    }));
-    go("LISTENING");
-  }, [broadcast, config, go, observerOnly, runTurn, speechMode, stopCola]);
+
+    let mode = speechMode;
+    if (mode === "browser") {
+      if (!speechRecognitionSupported()) {
+        mode = "simulated";
+        setSpeechMode("simulated");
+        setError("This browser cannot listen live. Typed input is active — Chrome or Edge supports the microphone.");
+      } else {
+        // Explicit permission prompt, so mic denial is distinguishable from
+        // SpeechRecognition failures. Release the probe stream immediately.
+        try {
+          const probe = await navigator.mediaDevices.getUserMedia({ audio: true });
+          probe.getTracks().forEach((t) => t.stop());
+        } catch {
+          mode = "simulated";
+          setSpeechMode("simulated");
+          setServices((s) => ({ ...s, speech: { health: "degraded", note: "Microphone permission denied" } }));
+          setError("Microphone access was blocked. Allow it in the browser, or use typed input.");
+        }
+      }
+    }
+    await startWithMode(mode);
+  }, [go, observerOnly, speechMode, startWithMode]);
 
   const stop = useCallback(async () => {
     startedRef.current = false;
