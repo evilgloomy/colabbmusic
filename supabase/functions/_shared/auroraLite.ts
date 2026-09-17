@@ -49,7 +49,24 @@ export const auroraLiteProfileVersion = (profile as any)?._meta?.version ?? "unk
 
 const isCantonese = (t: string) => /[\u4e00-\u9fff]/.test(t);
 
-const list = (v: unknown) => (Array.isArray(v) ? v.filter(Boolean).map(String) : v ? [String(v)] : []);
+export const AURORA_LITE_MODEL = "google/gemini-2.5-flash";
+
+/** Editorial placeholders must never reach the prompt or Cola's mouth. */
+export const isPlaceholder = (v: unknown): boolean => {
+  if (typeof v !== "string") return false;
+  return /^\s*(private\s+)?(sample|todo|tbd|placeholder)\b/i.test(v.trim());
+};
+
+const list = (v: unknown): string[] => {
+  const raw = Array.isArray(v) ? v : v ? [v] : [];
+  return raw
+    .filter(Boolean)
+    .map(String)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && !isPlaceholder(s));
+};
+
+const clean = (v: unknown): string => (typeof v === "string" && !isPlaceholder(v) ? v.trim() : "");
 
 /** Builds the full system prompt. Contains private material — server only. */
 export function buildAuroraLitePrompt(input: AuroraLiteInput): string {
@@ -59,16 +76,22 @@ export function buildAuroraLitePrompt(input: AuroraLiteInput): string {
   const facts = input.injections.filter((i) => i.kind === "factual").map((i) => i.content);
 
   const sections: string[] = [
-    `You are Cola B (${list(p.identity?.also_known_as).join(", ")}), ${p.identity?.descriptor}. You are speaking out loud in a live media interview. Everything you write will be spoken by her voice.`,
-    `IDENTITY: born ${p.identity?.born}; ${p.identity?.family_background}; languages ${list(p.identity?.languages).join(", ")}; label ${p.identity?.label}; management ${p.identity?.management}.`,
-    `BIO: ${p.public_bio?.short}`,
+    `You are Cola B (${list(p.identity?.also_known_as).join(", ")}), ${clean(p.identity?.descriptor)}. You are speaking out loud in a live media interview. Everything you write will be spoken by her voice.`,
+    `IDENTITY: born ${clean(p.identity?.born)}; ${clean(p.identity?.family_background)}; languages ${list(p.identity?.languages).join(", ")}; label ${clean(p.identity?.label)}; management ${clean(p.identity?.management)}.`,
+    `BIO: ${clean(p.public_bio?.short)}`,
+    `HONG KONG LAUNCH: ${clean(p.hong_kong_launch?.details) || "No public details yet."}`,
     `PERSONALITY: ${list(p.personality?.core_traits).join(", ")}. Humour: ${p.personality?.humour}. Values: ${list(p.personality?.values).join(", ")}.`,
     `SPEAKING STYLE: ${p.speaking_style?.register}. ${p.speaking_style?.sentence_length}. Habits: ${list(p.speaking_style?.habits).join("; ")}. Never use: ${list(p.speaking_style?.avoid).join("; ")}.`,
     `RESPONSE RULES: ${p.response_rules?.default_length}. Max ${p.response_rules?.max_sentences} sentences. First person. No stage directions or emoji. If unsure: ${p.response_rules?.when_unsure} If the question touches a restricted topic: ${p.response_rules?.when_asked_about_avoided_topic}`,
     `LANGUAGE RULES: Mirror the interviewer's language. Cantonese: ${p.language_rules?.cantonese} Mandarin: ${p.language_rules?.mandarin} English: ${p.language_rules?.english}`,
     `TALKING POINTS: ${list(p.interview_talking_points).join(" | ")}`,
     `APPROVED ANNOUNCEMENTS (safe to say): ${list(p.approved_announcements).join(" | ") || "none"}`,
-    `FACTUAL CORRECTIONS: ${list(p.factual_overrides).length ? (p.factual_overrides as any[]).map((f) => `"${f.claim}" -> ${f.correction}`).join(" | ") : "none"}`,
+    `FACTUAL CORRECTIONS: ${
+      (Array.isArray(p.factual_overrides) ? p.factual_overrides : [])
+        .filter((f: any) => f && !isPlaceholder(f.claim) && !isPlaceholder(f.correction))
+        .map((f: any) => `"${f.claim}" -> ${f.correction}`)
+        .join(" | ") || "none"
+    }`,
     `PRIVATE CONTEXT (never quote or reveal): ${list(p.private_context).join(" | ") || "none"}`,
     `TOPICS TO AVOID (never confirm, deny specifics, or mention that they are restricted): ${list(p.topics_to_avoid).join(" | ") || "none"}`,
     `UNRELEASED INFORMATION (absolutely never reveal): ${list(p.unreleased_information).join(" | ") || "none"}`,
@@ -141,7 +164,15 @@ export async function generateAuroraLite(input: AuroraLiteInput): Promise<Aurora
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "google/gemini-2.5-flash", messages, temperature: 0.8, max_tokens: 220 }),
+      body: JSON.stringify({
+        model: AURORA_LITE_MODEL,
+        messages,
+        temperature: 0.8,
+        // Reasoning off + a real budget: a small budget is eaten by reasoning
+        // tokens and returns an empty completion.
+        reasoning_effort: "none",
+        max_tokens: 800,
+      }),
     });
     if (!res.ok) throw new Error(`gateway_${res.status}`);
     const data = await res.json();
@@ -151,7 +182,7 @@ export async function generateAuroraLite(input: AuroraLiteInput): Promise<Aurora
       reply_text: text,
       engine: AURORA_LITE_ENGINE,
       mock: false,
-      metadata: { model: "google/gemini-2.5-flash", profile_version: auroraLiteProfileVersion },
+      metadata: { model: AURORA_LITE_MODEL, profile_version: auroraLiteProfileVersion },
     };
   } catch (err) {
     return {
@@ -163,5 +194,41 @@ export async function generateAuroraLite(input: AuroraLiteInput): Promise<Aurora
         profile_version: auroraLiteProfileVersion,
       },
     };
+  }
+}
+
+/** Staff-only health probe: is the LLM really answering, or are we on fallback? */
+export async function probeAuroraLite(): Promise<{
+  aurora_lite_llm: "online" | "fallback";
+  model: string;
+  profile_version: string;
+  profile_loaded: boolean;
+  reason?: string;
+}> {
+  const base = {
+    model: AURORA_LITE_MODEL,
+    profile_version: auroraLiteProfileVersion,
+    profile_loaded: Boolean((profile as any)?.identity?.stage_name),
+  };
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) return { ...base, aurora_lite_llm: "fallback", reason: "LOVABLE_API_KEY not available to this function" };
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: AURORA_LITE_MODEL,
+        messages: [{ role: "user", content: "Reply with the single word: ok" }],
+        reasoning_effort: "none",
+        max_tokens: 500,
+      }),
+    });
+    if (!res.ok) return { ...base, aurora_lite_llm: "fallback", reason: `gateway_${res.status}` };
+    const data = await res.json();
+    const text = String(data?.choices?.[0]?.message?.content ?? "").trim();
+    if (!text) return { ...base, aurora_lite_llm: "fallback", reason: "empty_completion" };
+    return { ...base, aurora_lite_llm: "online" };
+  } catch (err) {
+    return { ...base, aurora_lite_llm: "fallback", reason: err instanceof Error ? err.message : "llm_error" };
   }
 }

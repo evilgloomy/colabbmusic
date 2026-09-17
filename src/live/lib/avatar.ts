@@ -29,3 +29,10 @@ export interface LiveAvatarProps {
 export type LiveAvatarComponent = (props: LiveAvatarProps) => JSX.Element;
 
 export const AVATAR_PROVIDER_ID = "cola-editorial-portrait-v1";
+
+/**
+ * Honest label for staff diagnostics: this is a styled still portrait with
+ * breathing, lighting and audio-reactive treatment — NOT a realtime avatar and
+ * NOT lip sync. A streaming avatar provider will register against LiveAvatarProps.
+ */
+export const AVATAR_PROVIDER_LABEL = "Editorial Portrait Placeholder (no lip sync)";
