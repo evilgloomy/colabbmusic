@@ -1,29 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  getAuroraAdapter,
-  getLemoAdapter,
-  getSpeechAdapter,
-  getVoiceAdapter,
-  AURORA_ENGINE_LABEL,
-  AVATAR_PROVIDER_LABEL,
-  VOICE_PROVIDER_LABEL,
-  VOICESTUDIO_STATUS_NOTE,
-  LIVE_MOCK_MODE,
-  type SpeechMode,
-} from "@/live/adapters/registry";
+import { getSpeechAdapter, type SpeechMode } from "@/live/adapters/registry";
 import { speechRecognitionSupported } from "@/live/adapters/speech/browserSpeech";
-import { realtimeAvatarBridge, REALTIME_AVATAR_PROVIDER_LABEL } from "@/live/avatar/realtimeAvatar";
-import {
-  NEUTRAL_LEMO,
-  type LatencySample,
-  type LemoState,
-  type LiveSessionConfig,
-  type LiveState,
-  type ServiceStatusMap,
-  type TranscriptTurn,
-} from "@/live/lib/types";
-
+import { createColaSession } from "@/live/runtime";
+import { NEUTRAL_LEMO, type LiveSessionConfig, type LiveState, type LemoState, type LatencySample, type TranscriptTurn, type ServiceStatusMap } from "./types";
 export interface LiveControlEvent {
   action:
     | "stop_cola"
@@ -39,17 +19,14 @@ export interface LiveControlEvent {
   payload?: { text?: string; muted?: boolean };
 }
 
-const uid = () => Math.random().toString(36).slice(2);
 
-export function useLiveConversation(opts: {
-  sessionId: string;
-  config: LiveSessionConfig | null;
-  /** Producer consoles observe only; the guest room runs the engine. */
-  observerOnly?: boolean;
-  speechMode?: SpeechMode;
-}) {
+const INITIAL_SERVICES: ServiceStatusMap = {
+  speech: { health: "unknown" }, aurora: { health: "unknown", note: "Aurora Lite" },
+  lemo: { health: "unknown", note: "LEMO Lite" }, voice: { health: "unknown", note: "MiniMax" },
+  avatar: { health: "unknown", note: "Shiba Native Avatar" },
+};
+export function useLiveConversation(opts: { sessionId: string; config: LiveSessionConfig | null; observerOnly?: boolean; speechMode?: SpeechMode }) {
   const { sessionId, config, observerOnly = false } = opts;
-  // Microphone is the normal mode. Typed input is a staff/debug fallback only.
   const [speechMode, setSpeechMode] = useState<SpeechMode>(opts.speechMode ?? "browser");
   const [state, setState] = useState<LiveState>("IDLE");
   const [turns, setTurns] = useState<TranscriptTurn[]>([]);
@@ -59,488 +36,102 @@ export function useLiveConversation(opts: {
   const [latency, setLatency] = useState<LatencySample>({});
   const [latencyHistory, setLatencyHistory] = useState<LatencySample[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [amplitude, setAmplitude] = useState(0);
-  const [services, setServices] = useState<ServiceStatusMap>({
-    speech: { health: "unknown" },
-    aurora: { health: "unknown", note: AURORA_ENGINE_LABEL },
-    lemo: { health: LIVE_MOCK_MODE ? "mock" : "unknown", note: "LEMO Lite" },
-    voice: { health: "ok", note: `${VOICE_PROVIDER_LABEL} · ${VOICESTUDIO_STATUS_NOTE}` },
-    avatar: { health: "unknown", note: AVATAR_PROVIDER_LABEL },
-  });
-
-  const speechRef = useRef(getSpeechAdapter(speechMode));
-  const auroraRef = useRef(getAuroraAdapter());
-  const lemoRef = useRef(getLemoAdapter());
-  const voiceRef = useRef(getVoiceAdapter());
+  const [services, setServices] = useState<ServiceStatusMap>(INITIAL_SERVICES);
+  const mic = useMemo(() => getSpeechAdapter(speechMode), [speechMode]);
+  const runtime = useMemo(() => createColaSession(sessionId, mic, config?.primary_language, config?.silence_threshold_ms),
+    [sessionId, mic, config?.primary_language, config?.silence_threshold_ms]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const stateRef = useRef<LiveState>("IDLE");
-  const lastReplyRef = useRef<{ text: string; lemo: LemoState } | null>(null);
-  const interruptedRef = useRef(false);
-  const turnsRef = useRef<TranscriptTurn[]>([]);
-  const speechEndRef = useRef(0);
-  const startedRef = useRef(false);
-
-  turnsRef.current = turns;
-
+  const controlRef = useRef<(event: LiveControlEvent) => void>(() => {});
   const broadcast = useCallback((event: string, payload: unknown) => {
-    channelRef.current?.send({ type: "broadcast", event, payload });
-  }, []);
-
-  const go = useCallback(
-    (next: LiveState) => {
-      stateRef.current = next;
-      setState(next);
-      if (!observerOnly) broadcast("state", { state: next });
-    },
-    [broadcast, observerOnly],
-  );
-
-  const addTurn = useCallback(
-    (turn: TranscriptTurn) => {
-      setTurns((t) => [...t, turn]);
-      if (!observerOnly) broadcast("turn", turn);
-    },
-    [broadcast, observerOnly],
-  );
-
-  /* ------------------------------- realtime ------------------------------- */
+    if (!observerOnly) void channelRef.current?.send({ type: "broadcast", event, payload });
+  }, [observerOnly]);
+  const addTurn = useCallback((role: "interviewer" | "cola", content: string, id: string = crypto.randomUUID()) => {
+    const turn: TranscriptTurn = { id, role, content, isFinal: true, interrupted: false, createdAt: new Date().toISOString() };
+    setTurns(turns => [...turns, turn]); broadcast("turn", turn);
+  }, [broadcast]);
+  useEffect(() => {
+    if (observerOnly) return;
+    const unsubscribe = runtime.subscribe(event => {
+      switch (event.type) {
+        case "state": {
+          const next: LiveState = event.state === "THINKING" ? "AURORA_PROCESSING" : event.state === "SPEAKING" ? "COLA_SPEAKING" : event.state;
+          setState(next); broadcast("state", { state: next }); break;
+        }
+        case "session.connected": setServices(s => ({ ...s, speech: { health: speechMode === "simulated" ? "mock" : "ok", note: speechMode } })); break;
+        case "user.speech.partial": setPartial(event.text); broadcast("partial", { text: event.text }); break;
+        case "user.speech.final": setPartial(""); addTurn("interviewer", event.text); break;
+        case "brain.completed":
+          addTurn("cola", event.result.reply_text, event.result.response_id);
+          setServices(s => ({ ...s, aurora: { health: event.result.mock ? "degraded" : "ok",
+            note: `${event.result.provider} · ${event.result.model} · profile ${event.result.metadata?.profile_version ?? "—"}` } })); break;
+        case "emotion.updated": setLemo(event.emotion); broadcast("lemo", event.emotion);
+          setServices(s => ({ ...s, lemo: { health: event.emotion.is_fallback ? "degraded" : "ok", note: "LEMO Lite" } })); break;
+        case "speech.chunk": setServices(s => ({ ...s, voice: { health: "ok", note: "MiniMax Speech 2.8 Turbo" } })); break;
+        case "telemetry": setLatency(current => ({ ...current, ...event.metrics }));
+          if (event.metrics.total_ms != null) setLatencyHistory(h => [...h.slice(-19), event.metrics]);
+          broadcast("latency", event.metrics); break;
+        case "session.interrupted": setTurns(current => current.map((t, i) => i === current.length - 1 && t.role === "cola" ? { ...t, interrupted: true } : t)); break;
+        case "runtime.error": {
+          const messages = { AvatarUnavailable: "", SpeechUnavailable: "Cola’s usual voice is unavailable. Using the backup voice.",
+            BrainUnavailable: "Cola could not reply. Please try again.", MicrophoneUnavailable: "The microphone is unavailable. Allow access or use typed input.",
+            SessionExpired: "Please sign in again.", NetworkUnavailable: "Connection lost. Please try again." };
+          if (messages[event.error.code]) setError(messages[event.error.code]);
+          if (event.error.code === "SpeechUnavailable") setServices(s => ({ ...s, voice: { health: "degraded", note: "Browser TTS emergency fallback" } }));
+          break;
+        }
+      }
+    });
+    const avatarUnsubscribe = runtime.options.avatar.subscribe(() => {
+      const status = runtime.options.avatar.getStatus();
+      const metrics = Object.entries(status.metrics ?? {}).map(([key, value]) => `${key}: ${value ?? "unmeasured"}`).join(" · ");
+      setServices(s => ({ ...s, avatar: { health: status.streamReady ? "ok" : "degraded",
+        note: `Shiba Native Avatar · ${status.status}${metrics ? ` · ${metrics}` : ""}` } }));
+    });
+    return () => { unsubscribe(); avatarUnsubscribe(); void runtime.stop(); };
+  }, [runtime, observerOnly, addTurn, broadcast, speechMode]);
+  useEffect(() => { broadcast("services", services); }, [services, broadcast]);
   useEffect(() => {
     if (!sessionId) return;
-    const channel = supabase.channel(`live-room-${sessionId}`, {
-      config: { broadcast: { self: false } },
-    });
-    channel
-      .on("broadcast", { event: "state" }, ({ payload }) => {
-        if (observerOnly) {
-          stateRef.current = payload.state;
-          setState(payload.state);
-        }
-      })
-      .on("broadcast", { event: "turn" }, ({ payload }) => {
-        if (observerOnly) setTurns((t) => [...t, payload as TranscriptTurn]);
-      })
-      .on("broadcast", { event: "partial" }, ({ payload }) => {
-        if (observerOnly) setPartial(payload.text);
-      })
-      .on("broadcast", { event: "lemo" }, ({ payload }) => {
-        if (observerOnly) setLemo(payload as LemoState);
-      })
-      .on("broadcast", { event: "latency" }, ({ payload }) => {
-        if (observerOnly) {
-          setLatency(payload as LatencySample);
-          setLatencyHistory((h) => [...h.slice(-19), payload as LatencySample]);
-        }
-      })
-      .on("broadcast", { event: "services" }, ({ payload }) => {
-        if (observerOnly) setServices(payload as ServiceStatusMap);
-      })
-      .on("broadcast", { event: "control" }, ({ payload }) => {
-        if (!observerOnly) handleControl(payload as LiveControlEvent);
-      })
-      .subscribe();
+    const channel = supabase.channel(`live-room-${sessionId}`, { config: { broadcast: { self: false } } });
+    channel.on("broadcast", { event: "state" }, ({ payload }) => { if (observerOnly) setState(payload.state); })
+      .on("broadcast", { event: "turn" }, ({ payload }) => { if (observerOnly) setTurns(t => [...t, payload]); })
+      .on("broadcast", { event: "partial" }, ({ payload }) => { if (observerOnly) setPartial(payload.text); })
+      .on("broadcast", { event: "lemo" }, ({ payload }) => { if (observerOnly) setLemo(payload); })
+      .on("broadcast", { event: "latency" }, ({ payload }) => { if (observerOnly) { setLatency(p => ({ ...p, ...payload })); setLatencyHistory(h => [...h.slice(-19), payload]); } })
+      .on("broadcast", { event: "services" }, ({ payload }) => { if (observerOnly) setServices(payload); })
+      .on("broadcast", { event: "control" }, ({ payload }) => { if (!observerOnly) controlRef.current(payload); }).subscribe();
     channelRef.current = channel;
-    return () => {
-      supabase.removeChannel(channel);
-      channelRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => { void supabase.removeChannel(channel); channelRef.current = null; };
   }, [sessionId, observerOnly]);
-
-  useEffect(() => {
-    if (!observerOnly) broadcast("services", services);
-  }, [services, broadcast, observerOnly]);
-
-  // Keep the staff/provider view honest. Failure to connect an avatar is
-  // deliberately non-fatal: Cola continues with her portrait + MiniMax voice.
-  useEffect(() => {
-    if (observerOnly) return;
-    const syncAvatarStatus = () => {
-      const avatar = realtimeAvatarBridge.getSnapshot();
-      const health =
-        avatar.status === "connected" || avatar.status === "speaking"
-          ? "ok"
-          : avatar.status === "fallback"
-            ? "degraded"
-            : avatar.status === "error"
-              ? "down"
-              : "unknown";
-      const fallbackNote = avatar.status === "fallback" ? " · editorial portrait fallback" : "";
-      const reason = avatar.reason ? ` · ${avatar.reason}` : "";
-      setServices((current) => ({
-        ...current,
-        avatar: {
-          health,
-          note: `${REALTIME_AVATAR_PROVIDER_LABEL}${fallbackNote}${reason}`,
-        },
-      }));
-    };
-    syncAvatarStatus();
-    return realtimeAvatarBridge.subscribe(syncAvatarStatus);
-  }, [observerOnly]);
-
-  /* --------------------- outgoing local audio level -------------------- */
-  useEffect(() => {
-    if (observerOnly || state !== "COLA_SPEAKING") {
-      setAmplitude(0);
-      return;
+  const handleControl = (event: LiveControlEvent) => {
+    switch (event.action) {
+      case "stop_cola": case "cancel_response": runtime.interrupt(); break;
+      case "force_listening": runtime.interrupt(); runtime.setMuted(false); setMuted(false); break;
+      case "mute": runtime.setMuted(true); setMuted(true); break;
+      case "resume": runtime.setMuted(false); setMuted(false); break;
+      case "replay_last": runtime.replay(); break;
+      case "clear_context": runtime.clearHistory(); setTurns([]); setPartial(""); break;
+      case "end_session": void runtime.stop(); break;
+      case "speak_exact": case "manual_response": if (event.payload?.text) {
+        addTurn("cola", event.payload.text); void runtime.say(event.payload.text, lemo ?? NEUTRAL_LEMO);
+      } break;
     }
-    let raf = 0;
-    const tick = () => {
-      setAmplitude(voiceRef.current.getAmplitude?.() ?? 0);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [state, observerOnly]);
-
-  /* -------------------------------- speaking ------------------------------- */
-  const speak = useCallback(
-    async (text: string, emotion: LemoState, turnStarted: number, partialLatency: LatencySample) => {
-      lastReplyRef.current = { text, lemo: emotion };
-      go("VOICE_CONNECTING");
-      const voiceStart = performance.now();
-      let ttfa: number | undefined;
-      await voiceRef.current.speak(
-        { text, voice_id: "", lemo: emotion, stream: true, language: config?.primary_language },
-        {
-          onFirstAudio: () => {
-            ttfa = Math.round(performance.now() - voiceStart);
-            const sample: LatencySample = {
-              ...partialLatency,
-              voice_ttfa_ms: ttfa,
-              total_ms: Math.round(performance.now() - turnStarted),
-            };
-            setLatency(sample);
-            setLatencyHistory((h) => [...h.slice(-19), sample]);
-            if (!observerOnly) broadcast("latency", sample);
-            go("COLA_SPEAKING");
-          },
-          onDone: () => {
-            if (stateRef.current === "COLA_SPEAKING" || stateRef.current === "VOICE_CONNECTING") {
-              go(startedRef.current ? "LISTENING" : "IDLE");
-            }
-          },
-          onError: (msg) => {
-            setServices((s) => ({ ...s, voice: { health: "degraded", note: msg } }));
-            setError(`Voice playback failed — the reply text is still in the transcript. ${msg}`);
-            go(startedRef.current ? "LISTENING" : "IDLE");
-          },
-        },
-      );
+  };
+  controlRef.current = handleControl;
+  const sendControl = (event: LiveControlEvent) => {
+    void channelRef.current?.send({ type: "broadcast", event: "control", payload: event });
+    if (!observerOnly) handleControl(event);
+  };
+  return { state, turns, partial, muted, amplitude: 0, lemo, latency, latencyHistory, services, error,
+    speechMode, canSimulate: speechMode === "simulated", mockMode: false, setSpeechMode,
+    avatar: runtime.options.avatar,
+    start: async () => {
+      if (observerOnly) return; setError(null);
+      if (speechMode === "browser" && !speechRecognitionSupported()) { setSpeechMode("simulated"); setError("Live listening is unavailable. Select Start again to use typed input."); return; }
+      await runtime.start();
     },
-    [broadcast, config?.primary_language, go, observerOnly],
-  );
-
-  /* --------------------------------- a turn -------------------------------- */
-  const runTurn = useCallback(
-    async (userText: string, finalizationMs: number) => {
-      const turnStarted = speechEndRef.current || performance.now();
-      addTurn({
-        id: uid(),
-        role: "interviewer",
-        content: userText,
-        isFinal: true,
-        interrupted: false,
-        createdAt: new Date().toISOString(),
-      });
-      setPartial("");
-      go("AURORA_PROCESSING");
-
-      let sample: LatencySample = { speech_finalization_ms: finalizationMs };
-      try {
-        const history = turnsRef.current.slice(-12).map((t) => ({ role: t.role, content: t.content }));
-        const auroraStart = performance.now();
-        const result = await auroraRef.current.generate({
-          session_id: sessionId,
-          character_id: "cola_b",
-          mode: "live_interview",
-          user_text: userText,
-          conversation_history: history,
-          interrupted_previous_turn: interruptedRef.current,
-          speech_finalization_ms: finalizationMs,
-        });
-        interruptedRef.current = false;
-        sample = {
-          ...sample,
-          aurora_ms: result.latency?.aurora_ms ?? Math.round(performance.now() - auroraStart),
-        };
-        setServices((s) => ({
-          ...s,
-          aurora: {
-            health: result.mock ? "mock" : "ok",
-            note: `${AURORA_ENGINE_LABEL}${result.mock ? " · fallback replies" : ""}`,
-          },
-        }));
-
-        go("LEMO_PROCESSING");
-        let emotion = result.lemo;
-        const lemoStart = performance.now();
-        if (!emotion) {
-          try {
-            emotion = await lemoRef.current.analyze({
-              session_id: sessionId,
-              user_text: userText,
-              reply_text: result.reply_text,
-            });
-            setServices((s) => ({ ...s, lemo: { health: "mock" } }));
-          } catch {
-            emotion = { ...NEUTRAL_LEMO };
-            setServices((s) => ({ ...s, lemo: { health: "degraded", note: "Neutral fallback in use" } }));
-          }
-        }
-        sample = { ...sample, lemo_ms: result.latency?.lemo_ms ?? Math.round(performance.now() - lemoStart) };
-        setLemo(emotion);
-        if (!observerOnly) broadcast("lemo", emotion);
-
-        addTurn({
-          id: result.message_id || uid(),
-          role: "cola",
-          content: result.reply_text,
-          isFinal: true,
-          interrupted: false,
-          createdAt: new Date().toISOString(),
-        });
-        await speak(result.reply_text, emotion, turnStarted, sample);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        setServices((s) => ({ ...s, aurora: { health: "down", note: msg } }));
-        setError(`Cola could not generate a reply. Use MANUAL RESPONSE or try again. (${msg})`);
-        go("ERROR");
-      }
-    },
-    [addTurn, broadcast, go, observerOnly, sessionId, speak],
-  );
-
-  /* -------------------------------- controls ------------------------------- */
-  const stopCola = useCallback(
-    (markInterrupted = true) => {
-      // MiniMax adapter also interrupts LiveAvatar, but calling the bridge here
-      // makes STOP COLA robust if the audio provider changes later.
-      realtimeAvatarBridge.interrupt();
-      voiceRef.current.cancel();
-      if (markInterrupted && stateRef.current === "COLA_SPEAKING") {
-        interruptedRef.current = true;
-        setTurns((t) => {
-          const copy = [...t];
-          for (let i = copy.length - 1; i >= 0; i--) {
-            if (copy[i].role === "cola") {
-              copy[i] = { ...copy[i], interrupted: true };
-              break;
-            }
-          }
-          return copy;
-        });
-      }
-      go(startedRef.current ? "LISTENING" : "IDLE");
-    },
-    [go],
-  );
-
-  const handleControl = useCallback(
-    (evt: LiveControlEvent) => {
-      switch (evt.action) {
-        case "stop_cola":
-          stopCola(true);
-          break;
-        case "cancel_response":
-          realtimeAvatarBridge.interrupt();
-          voiceRef.current.cancel();
-          go(startedRef.current ? "LISTENING" : "IDLE");
-          break;
-        case "force_listening":
-          realtimeAvatarBridge.interrupt();
-          voiceRef.current.cancel();
-          speechRef.current.setMuted(false);
-          setMuted(false);
-          realtimeAvatarBridge.startListening();
-          go("LISTENING");
-          break;
-        case "mute":
-          speechRef.current.setMuted(true);
-          setMuted(true);
-          break;
-        case "resume":
-          speechRef.current.setMuted(false);
-          setMuted(false);
-          break;
-        case "replay_last":
-          if (lastReplyRef.current) {
-            void speak(lastReplyRef.current.text, lastReplyRef.current.lemo, performance.now(), {});
-          }
-          break;
-        case "clear_context":
-          setTurns([]);
-          setPartial("");
-          break;
-        case "end_session":
-          void stop();
-          break;
-        case "speak_exact":
-        case "manual_response":
-          if (evt.payload?.text) {
-            const emotion = evt.action === "speak_exact" ? { ...NEUTRAL_LEMO } : lemo || { ...NEUTRAL_LEMO };
-            addTurn({
-              id: uid(),
-              role: "cola",
-              content: evt.payload.text,
-              isFinal: true,
-              interrupted: false,
-              source: evt.action,
-              createdAt: new Date().toISOString(),
-            });
-            void speak(evt.payload.text, emotion, performance.now(), {});
-          }
-          break;
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [go, lemo, speak, stopCola],
-  );
-
-  const sendControl = useCallback(
-    (evt: LiveControlEvent) => {
-      broadcast("control", evt);
-      if (!observerOnly) handleControl(evt);
-    },
-    [broadcast, handleControl, observerOnly],
-  );
-
-  /* ------------------------------ session life ----------------------------- */
-  const startWithMode: (mode: SpeechMode) => Promise<void> = useCallback(
-    async (mode: SpeechMode) => {
-      const adapter = getSpeechAdapter(mode);
-      speechRef.current = adapter;
-      await adapter.start(
-        {
-          onSpeechStart: () => {
-            // Barge-in: interviewer talks while Cola speaks.
-            if (stateRef.current === "COLA_SPEAKING" || stateRef.current === "VOICE_CONNECTING") {
-              stopCola(true);
-            }
-            go("USER_SPEAKING");
-          },
-          onPartial: (text) => {
-            setPartial(text);
-            broadcast("partial", { text });
-          },
-          onFinal: (text, meta) => {
-            speechEndRef.current = performance.now();
-            go("FINALIZING_TRANSCRIPT");
-            void runTurn(text, meta.finalizationMs);
-          },
-          onError: (msg) => {
-            // Never leave the room stuck in LISTENING when speech cannot run.
-            if (msg.startsWith("unsupported:") || msg.startsWith("mic-denied:")) {
-              const reason = msg.split(":").slice(1).join(":").trim();
-              void adapter.stop();
-              setSpeechMode("simulated");
-              setServices((s) => ({ ...s, speech: { health: "degraded", note: reason } }));
-              setError(`${reason} Typed input is active.`);
-              void startWithMode("simulated");
-              return;
-            }
-            setServices((s) => ({ ...s, speech: { health: "degraded", note: msg } }));
-            setError(msg);
-          },
-        },
-        { silenceThresholdMs: config?.silence_threshold_ms ?? 750, language: config?.primary_language },
-      );
-      setServices((s) => ({
-        ...s,
-        speech: {
-          health: adapter.isMock ? "mock" : "ok",
-          note: adapter.isMock ? "Typed input fallback" : adapter.id,
-        },
-      }));
-      go("LISTENING");
-    },
-    [broadcast, config, go, runTurn, stopCola],
-  );
-
-  const start = useCallback(async () => {
-    if (observerOnly) return;
-    setError(null);
-    startedRef.current = true;
-    go("CONNECTING");
-
-    // Start the renderer on the user's click so remote audio is eligible for
-    // browser autoplay. Do not block microphone/chat if LiveAvatar is absent.
-    void realtimeAvatarBridge.connect();
-
-    let mode = speechMode;
-    if (mode === "browser") {
-      if (!speechRecognitionSupported()) {
-        mode = "simulated";
-        setSpeechMode("simulated");
-        setError("This browser cannot listen live. Typed input is active — Chrome or Edge supports the microphone.");
-      } else {
-        // Explicit permission prompt, so mic denial is distinguishable from
-        // SpeechRecognition failures. Release the probe stream immediately.
-        try {
-          const probe = await navigator.mediaDevices.getUserMedia({ audio: true });
-          probe.getTracks().forEach((t) => t.stop());
-        } catch {
-          mode = "simulated";
-          setSpeechMode("simulated");
-          setServices((s) => ({ ...s, speech: { health: "degraded", note: "Microphone permission denied" } }));
-          setError("Microphone access was blocked. Allow it in the browser, or use typed input.");
-        }
-      }
-    }
-    await startWithMode(mode);
-  }, [go, observerOnly, speechMode, startWithMode]);
-
-  const stop = useCallback(async () => {
-    startedRef.current = false;
-    realtimeAvatarBridge.interrupt();
-    voiceRef.current.cancel();
-    await speechRef.current.stop();
-    await realtimeAvatarBridge.disconnect();
-    setPartial("");
-    go("IDLE");
-  }, [go]);
-
-  const toggleMute = useCallback(() => {
-    const next = !muted;
-    speechRef.current.setMuted(next);
-    setMuted(next);
-  }, [muted]);
-
-  const simulateSpeech = useCallback((text: string) => {
-    speechRef.current.simulate?.(text);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      voiceRef.current.cancel();
-      void speechRef.current.stop();
-      void realtimeAvatarBridge.disconnect();
-    };
-  }, []);
-
-  const canSimulate = useMemo(() => speechMode === "simulated", [speechMode]);
-
-  return {
-    state,
-    turns,
-    partial,
-    muted,
-    amplitude,
-    lemo,
-    latency,
-    latencyHistory,
-    services,
-    error,
-    speechMode,
-    canSimulate,
-    mockMode: LIVE_MOCK_MODE,
-    setSpeechMode,
-    start,
-    stop,
-    toggleMute,
-    stopCola: () => sendControl({ action: "stop_cola" }),
-    sendControl,
-    simulateSpeech,
-    clearError: () => setError(null),
+    stop: () => runtime.stop(), toggleMute: () => { runtime.setMuted(!muted); setMuted(!muted); },
+    stopCola: () => sendControl({ action: "stop_cola" }), sendControl,
+    simulateSpeech: (text: string) => mic.simulate?.(text), clearError: () => setError(null),
   };
 }

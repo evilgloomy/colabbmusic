@@ -21,6 +21,7 @@ const BodySchema = z.object({
   language: z.string().max(20).optional(),
   speaking_rate: z.number().min(0.5).max(2).optional(),
   stream: z.boolean().default(true),
+  format: z.enum(["mp3", "pcm"]).default("mp3"),
   lemo: z
     .object({
       emotion: z.string().max(40).optional(),
@@ -91,15 +92,18 @@ Deno.serve(async (req) => {
       stream: body.stream,
       language_boost: languageBoost(body.language),
       voice_setting: { voice_id: voiceId, speed, vol: 1, pitch: 0 },
-      audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3", channel: 1 },
+      audio_setting: { sample_rate: body.format === "pcm" ? 16000 : 32000, bitrate: 128000, format: body.format, channel: 1 },
     };
     if (!body.stream) payload.output_format = "hex";
 
+    const aborter = new AbortController();
+    req.signal.addEventListener("abort", () => aborter.abort(), { once: true });
     const started = Date.now();
     const upstream = await fetch(`${host}/v1/t2a_v2`, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      signal: aborter.signal,
     });
 
     if (!upstream.ok || !upstream.body) {
@@ -120,7 +124,7 @@ Deno.serve(async (req) => {
         ok: true,
         provider: "minimax",
         model,
-        format: "mp3",
+        format: body.format,
         latency_ms: Date.now() - started,
         audio_base64: hexToBase64(hex),
       });
@@ -130,6 +134,7 @@ Deno.serve(async (req) => {
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     const stream = new ReadableStream({
+      cancel() { aborter.abort(); },
       async start(controller) {
         const send = (obj: unknown) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
         const reader = upstream.body!.getReader();
@@ -154,7 +159,6 @@ Deno.serve(async (req) => {
               const status = evt?.base_resp?.status_code;
               if (status && status !== 0) {
                 send({ type: "error", error: "voice_provider_error", provider_status: status });
-                controller.close();
                 return;
               }
               // status 2 repeats the full audio with extra_info — skip it.
@@ -171,9 +175,11 @@ Deno.serve(async (req) => {
           send({ type: "done", total_ms: Date.now() - started });
         } catch (err) {
           console.error("minimax stream error", err);
-          send({ type: "error", error: "voice_stream_error" });
+          try { send({ type: "error", error: "voice_stream_error" }); } catch { /* downstream cancelled */ }
         } finally {
-          controller.close();
+          await reader.cancel().catch(() => undefined);
+          reader.releaseLock();
+          try { controller.close(); } catch { /* downstream cancelled */ }
         }
       },
     });
@@ -183,6 +189,6 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("cola-voice error", err);
-    return json({ ok: false, error: err instanceof Error ? err.message : "error" }, 500);
+    return json({ ok: false, error: "SpeechUnavailable" }, 500);
   }
 });

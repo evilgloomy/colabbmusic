@@ -1,4 +1,4 @@
-const LIVEAVATAR_SAMPLE_RATE = 24_000;
+const NATIVE_AVATAR_SAMPLE_RATE = 16_000;
 
 /** Collapse an AudioBuffer to mono without changing its sample rate. */
 export function audioBufferToMono(buffer: AudioBuffer): Float32Array {
@@ -15,13 +15,13 @@ export function audioBufferToMono(buffer: AudioBuffer): Float32Array {
 
 /**
  * Small deterministic linear resampler. Speech does not need a heavyweight
- * DSP dependency here; LiveAvatar requires 24 kHz mono PCM16 and MiniMax's
+ * DSP dependency here; NativeAvatar requires 16 kHz mono PCM16 and MiniMax's
  * decoded speech normally arrives at 32 kHz.
  */
 export function resampleLinear(
   input: Float32Array,
   fromSampleRate: number,
-  toSampleRate = LIVEAVATAR_SAMPLE_RATE,
+  toSampleRate = NATIVE_AVATAR_SAMPLE_RATE,
 ): Float32Array {
   if (!input.length || fromSampleRate <= 0 || toSampleRate <= 0) return new Float32Array();
   if (fromSampleRate === toSampleRate) return new Float32Array(input);
@@ -52,7 +52,7 @@ export function float32ToPcm16Bytes(samples: Float32Array): Uint8Array {
   return bytes;
 }
 
-/** LiveAvatar's SDK expects a byte-preserving JS binary string. */
+/** Legacy binary transports expect a byte-preserving JS binary string. */
 export function bytesToBinaryString(bytes: Uint8Array): string {
   let output = "";
   const chunkSize = 0x8000;
@@ -65,14 +65,14 @@ export function bytesToBinaryString(bytes: Uint8Array): string {
 
 /**
  * Convert one or more decoded MiniMax AudioBuffers into the format required by
- * LiveAvatar LITE: raw signed 16-bit mono PCM at 24 kHz.
+ * Native Avatar: raw signed 16-bit mono PCM at 16 kHz.
  */
-export function audioBuffersToLiveAvatarPcm(buffers: AudioBuffer[]): string {
+export function audioBuffersToNativeAvatarPcm(buffers: AudioBuffer[]): string {
   if (!buffers.length) return "";
 
   const parts = buffers.map((buffer) => {
     const mono = audioBufferToMono(buffer);
-    const resampled = resampleLinear(mono, buffer.sampleRate, LIVEAVATAR_SAMPLE_RATE);
+    const resampled = resampleLinear(mono, buffer.sampleRate, NATIVE_AVATAR_SAMPLE_RATE);
     return float32ToPcm16Bytes(resampled);
   });
 
@@ -86,4 +86,4 @@ export function audioBuffersToLiveAvatarPcm(buffers: AudioBuffer[]): string {
   return bytesToBinaryString(joined);
 }
 
-export const LIVEAVATAR_PCM_SAMPLE_RATE = LIVEAVATAR_SAMPLE_RATE;
+export const NATIVE_AVATAR_PCM_SAMPLE_RATE = NATIVE_AVATAR_SAMPLE_RATE;

@@ -1,3 +1,4 @@
+import type { RuntimeTelemetry } from "@/shiba/digital-human/contracts/session";
 // Cola Live — shared types for the private interview MVP.
 // Everything here is provider-agnostic: adapters implement these contracts.
 
@@ -54,7 +55,7 @@ export const NEUTRAL_LEMO: LemoState = {
   is_fallback: true,
 };
 
-export interface LatencySample {
+export interface LatencySample extends RuntimeTelemetry {
   speech_finalization_ms?: number;
   aurora_ms?: number;
   lemo_ms?: number;
