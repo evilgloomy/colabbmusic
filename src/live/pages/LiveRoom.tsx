@@ -29,7 +29,8 @@ export default function LiveRoom() {
   const { config, loading, error } = useLiveSession(sessionId);
   const convo = useLiveConversation({ sessionId, config });
   const [simText, setSimText] = useState("");
-  const [showTranscript, setShowTranscript] = useState(true);
+  const [showTranscript, setShowTranscript] = useState(false);
+  const [showDiag, setShowDiag] = useState(false);
 
   const active = convo.state !== "IDLE";
   const speaking = convo.state === "COLA_SPEAKING";
