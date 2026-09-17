@@ -7,7 +7,7 @@ import "@/live/avatar/realtimeAvatar.css";
 /**
  * Cola's visual surface.
  *
- * When a LiveAvatar LITE session is available this component renders the actual
+ * When a ShibaCompute session is available this component renders the actual
  * WebRTC media stream. The editorial portrait remains the graceful fallback for
  * configuration, network, or provider failures. We never fake lip sync with CSS.
  */

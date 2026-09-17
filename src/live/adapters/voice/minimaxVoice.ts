@@ -1,302 +1,105 @@
 import { supabase } from "@/integrations/supabase/client";
 import { realtimeAvatarBridge } from "@/live/avatar/realtimeAvatar";
+import { setVoiceDiagnostics } from "./voiceDiagnostics";
 import type { VoiceAdapter, VoiceHandlers, VoiceRequest } from "@/live/lib/types";
 
-/**
- * MiniMaxColaVoiceAdapter — Cola's real voice (MiniMax speech-2.8-turbo).
- *
- * MiniMax remains the voice identity. When LiveAvatar LITE is connected, the
- * exact decoded MiniMax utterance is sent to the avatar for provider-native lip
- * sync and the LiveAvatar media stream becomes the audible output. If the
- * avatar is unavailable we keep the existing low-latency local MiniMax
- * playback. Browser speechSynthesis is only an emergency fallback if MiniMax
- * itself fails.
- */
 export const MINIMAX_VOICE_LABEL = "MiniMax Speech 2.8 Turbo — Cola B";
 
+/** MiniMax owns the voice. Only one of WebRTC or local WebAudio plays a reply. */
 export function createMinimaxColaVoiceAdapter(fallback: VoiceAdapter): VoiceAdapter {
   let ctx: AudioContext | null = null;
   let analyser: AnalyserNode | null = null;
   let current: AudioBufferSourceNode | null = null;
-  let speaking = false;
-  let usingFallback = false;
-  let usingAvatar = false;
-  let generation = 0;
+  let controller: AbortController | null = null;
+  let finishLocal: (() => void) | null = null;
+  let speaking = false, usingFallback = false, usingAvatar = false, generation = 0;
   let lastTtfa: number | null = null;
   const levels = new Uint8Array(128);
-
-  const ensureCtx = () => {
+  const ensureCtx = async () => {
     if (!ctx) {
-      ctx = new AudioContext();
-      analyser = ctx.createAnalyser();
-      analyser.fftSize = 256;
-      analyser.connect(ctx.destination);
+      ctx = new AudioContext(); analyser = ctx.createAnalyser(); analyser.fftSize = 256; analyser.connect(ctx.destination);
     }
-    if (ctx.state === "suspended") void ctx.resume();
+    if (ctx.state === "suspended") await ctx.resume();
     return ctx;
   };
-
-  const readLevel = () => {
-    if (usingAvatar || !analyser || !speaking) return 0;
-    analyser.getByteTimeDomainData(levels);
-    let peak = 0;
-    for (let i = 0; i < levels.length; i++) peak = Math.max(peak, Math.abs(levels[i] - 128) / 128);
-    return Math.min(1, peak * 2.2);
+  const stopLocal = () => {
+    try { current?.stop(); } catch { /* already stopped */ }
+    current?.disconnect(); current = null; finishLocal?.(); finishLocal = null;
   };
-
-  const stopCurrent = () => {
-    try {
-      current?.stop();
-    } catch {
-      /* noop */
-    }
-    current?.disconnect();
-    current = null;
+  const cancel = () => {
+    generation++; controller?.abort(); controller = null; speaking = false; usingAvatar = false;
+    stopLocal(); realtimeAvatarBridge.interrupt(); fallback.cancel();
+    setVoiceDiagnostics({ browserTtsFallback: false });
   };
-
-  const base64ToBytes = (b64: string) => {
-    const bin = atob(b64);
-    const out = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-    return out;
-  };
-
-  const concatBytes = (parts: Uint8Array[]) => {
-    const size = parts.reduce((sum, part) => sum + part.length, 0);
-    const joined = new Uint8Array(size);
-    let offset = 0;
-    for (const part of parts) {
-      joined.set(part, offset);
-      offset += part.length;
-    }
-    return joined;
-  };
-
-  /** Sequential WebAudio player used when realtime avatar rendering is unavailable. */
-  const makeLocalPlayer = (gen: number) => {
-    let tail: Promise<void> = Promise.resolve();
-    const enqueue = (audio: AudioBuffer) => {
-      tail = tail.then(
-        () =>
-          new Promise<void>((resolve) => {
-            if (gen !== generation || !ctx || !analyser) return resolve();
-            const node = ctx.createBufferSource();
-            node.buffer = audio;
-            node.connect(analyser);
-            node.onended = () => resolve();
-            current = node;
-            node.start();
-          }),
-      );
-      return tail;
-    };
-    return { enqueue, drained: () => tail };
-  };
-
-  const playLocally = async (
-    buffers: AudioBuffer[],
-    req: VoiceRequest,
-    gen: number,
-    handlers: VoiceHandlers,
-    alreadyStarted = false,
-  ) => {
-    if (!buffers.length) throw new Error("cola_voice_decode_failed");
+  const localPlay = async (audio: AudioBuffer, gen: number, handlers: VoiceHandlers) => {
+    if (gen !== generation || !ctx || !analyser) return;
     usingAvatar = false;
-    const player = makeLocalPlayer(gen);
-    let first = !alreadyStarted;
-
-    for (const audio of buffers) {
-      if (gen !== generation) return;
-      if (first) {
-        first = false;
-        if (req.lemo.pause_before_ms) {
-          await new Promise((resolve) => setTimeout(resolve, Math.min(600, req.lemo.pause_before_ms)));
-          if (gen !== generation) return;
-        }
-        handlers.onFirstAudio();
-      }
-      void player.enqueue(audio);
-    }
-    await player.drained();
-  };
-
-  const streamFromEdge = async (
-    req: VoiceRequest,
-    gen: number,
-    handlers: VoiceHandlers,
-  ): Promise<void> => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token;
-    if (!accessToken) throw new Error("cola_voice_unauthenticated");
-
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cola-voice`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        text: req.text,
-        language: req.language,
-        speaking_rate: req.lemo.speaking_rate,
-        stream: true,
-        lemo: req.lemo,
-      }),
+    const node = ctx.createBufferSource(); node.buffer = audio; node.connect(analyser); current = node;
+    await new Promise<void>(resolve => {
+      finishLocal = resolve; node.onended = () => { finishLocal = null; resolve(); };
+      node.start(); handlers.onFirstAudio();
     });
-    if (!res.ok || !res.body) throw new Error("cola_voice_unavailable");
-
-    const audioCtx = ensureCtx();
-    const preferAvatar = realtimeAvatarBridge.isReady();
-    usingAvatar = preferAvatar;
-    const localPlayer = makeLocalPlayer(gen);
-    const decodedForAvatar: AudioBuffer[] = [];
-    const rawParts: Uint8Array[] = [];
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let textBuffer = "";
-    let pendingBytes: Uint8Array | null = null;
-    let received = 0;
-    let localStarted = false;
-
-    const decodeChunk = async (bytes: Uint8Array) => {
-      rawParts.push(bytes);
-      const merged = pendingBytes ? concatBytes([pendingBytes, bytes]) : bytes;
-      try {
-        const audio = await audioCtx.decodeAudioData(merged.buffer.slice(0) as ArrayBuffer);
-        pendingBytes = null;
-        if (gen !== generation) return;
-
-        if (preferAvatar) {
-          decodedForAvatar.push(audio);
-          return;
-        }
-
-        if (!localStarted) {
-          localStarted = true;
-          if (req.lemo.pause_before_ms) {
-            await new Promise((resolve) => setTimeout(resolve, Math.min(600, req.lemo.pause_before_ms)));
-            if (gen !== generation) return;
-          }
-          handlers.onFirstAudio();
-        }
-        void localPlayer.enqueue(audio);
-      } catch {
-        // MiniMax can split on an MP3 frame boundary. Hold bytes until the next
-        // event instead of dropping audio.
-        pendingBytes = merged;
-      }
-    };
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (gen !== generation) {
-        void reader.cancel();
-        return;
-      }
-      textBuffer += decoder.decode(value, { stream: true });
-      let idx: number;
-      while ((idx = textBuffer.indexOf("\n\n")) >= 0) {
-        const raw = textBuffer.slice(0, idx).trim();
-        textBuffer = textBuffer.slice(idx + 2);
-        if (!raw.startsWith("data:")) continue;
-        let evt: { type?: string; audio_base64?: string; ttfa_ms?: number };
-        try {
-          evt = JSON.parse(raw.slice(5));
-        } catch {
-          continue;
-        }
-        if (evt.type === "meta" && typeof evt.ttfa_ms === "number") lastTtfa = evt.ttfa_ms;
-        if (evt.type === "error") throw new Error("cola_voice_provider_error");
-        if (evt.type === "chunk" && evt.audio_base64) {
-          received++;
-          await decodeChunk(base64ToBytes(evt.audio_base64));
-        }
-      }
-    }
-
-    if (!received) throw new Error("cola_voice_empty");
-
-    // If individual MP3 response chunks were not independently decodable, the
-    // complete MP3 byte stream normally is.
-    if (preferAvatar && decodedForAvatar.length === 0 && rawParts.length) {
-      const whole = concatBytes(rawParts);
-      const audio = await audioCtx.decodeAudioData(whole.buffer.slice(0) as ArrayBuffer);
-      decodedForAvatar.push(audio);
-    }
-
-    if (!preferAvatar) {
-      await localPlayer.drained();
-      return;
-    }
-
-    if (gen !== generation) return;
-    if (req.lemo.pause_before_ms) {
-      await new Promise((resolve) => setTimeout(resolve, Math.min(600, req.lemo.pause_before_ms)));
-      if (gen !== generation) return;
-    }
-
-    const rendered = await realtimeAvatarBridge.speakAudioBuffers(decodedForAvatar, () => {
-      if (gen === generation) handlers.onFirstAudio();
-    });
-
-    if (rendered) return;
-
-    // Avatar/provider failed after MiniMax succeeded. Preserve Cola's real voice
-    // and fall back to local MiniMax playback — not browser TTS.
-    usingAvatar = false;
-    await playLocally(decodedForAvatar, { ...req, lemo: { ...req.lemo, pause_before_ms: 0 } }, gen, handlers);
   };
-
   return {
-    id: "minimax-cola-voice",
-    label: MINIMAX_VOICE_LABEL,
-    isMock: false,
+    id: "minimax-cola-voice", label: MINIMAX_VOICE_LABEL, isMock: false,
     isSpeaking: () => speaking || fallback.isSpeaking(),
-    getAmplitude: () => (usingFallback ? (fallback.getAmplitude?.() ?? 0) : readLevel()),
+    getAmplitude: () => {
+      if (usingFallback) return fallback.getAmplitude?.() ?? 0;
+      if (usingAvatar || !analyser || !speaking) return 0;
+      analyser.getByteTimeDomainData(levels);
+      return Math.min(1, Math.max(...levels.map(n => Math.abs(n - 128))) / 128 * 2.2);
+    },
     getTimeToFirstAudioMs: () => lastTtfa,
     async speak(req: VoiceRequest, handlers: VoiceHandlers) {
-      const gen = ++generation;
-      speaking = true;
-      usingFallback = false;
-      usingAvatar = false;
-      lastTtfa = null;
+      cancel();
+      const gen = generation, started = performance.now();
+      controller = new AbortController(); speaking = true; usingFallback = false; usingAvatar = false; lastTtfa = null;
+      setVoiceDiagnostics({ browserTtsFallback: false, error: undefined });
       try {
-        await streamFromEdge(req, gen, handlers);
+        const { data } = await supabase.auth.getSession();
+        if (!data.session?.access_token) throw Error("voice_unauthenticated");
+        const response = await fetch(import.meta.env.VITE_SUPABASE_URL + "/functions/v1/cola-voice", {
+          method: "POST", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(60_000)]),
+          headers: { Authorization: "Bearer " + data.session.access_token,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" },
+          body: JSON.stringify({ text: req.text, language: req.language, speaking_rate: req.lemo.speaking_rate, lemo: req.lemo, stream: false }),
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload.ok || !payload.audio_base64) {
+          if (typeof payload.minimax_voice_id_present === "boolean") setVoiceDiagnostics({ voiceIdConfigured: payload.minimax_voice_id_present });
+          throw Error("minimax_provider_error");
+        }
+        // Decode a complete MP3 exactly once. Never feed MP3 fragments to MuseTalk.
+        const audioContext = await ensureCtx();
+        const bytes = Uint8Array.from(atob(payload.audio_base64), c => c.charCodeAt(0));
+        const audio = await audioContext.decodeAudioData(bytes.buffer);
         if (gen !== generation) return;
-        speaking = false;
-        handlers.onDone();
+        setVoiceDiagnostics({ state: "online", voiceIdConfigured: true, browserTtsFallback: false, error: undefined });
+        if (req.lemo.pause_before_ms) await new Promise(resolve => setTimeout(resolve, Math.min(600, req.lemo.pause_before_ms)));
+        if (gen !== generation) return;
+        usingAvatar = realtimeAvatarBridge.isReady();
+        const first = () => { if (gen === generation) { lastTtfa = Math.round(performance.now() - started); handlers.onFirstAudio(); } };
+        const rendered = usingAvatar && await realtimeAvatarBridge.speakAudioBuffers([audio], first, { ...req.lemo });
+        if (gen !== generation) return;
+        if (!rendered) {
+          // The client closes/detaches failed remote media before returning false.
+          await localPlay(audio, gen, { ...handlers, onFirstAudio: first });
+        }
+        if (gen === generation) { speaking = false; handlers.onDone(); }
       } catch {
         if (gen !== generation) return;
-        // Only MiniMax failure reaches the generic browser voice fallback.
-        usingFallback = true;
-        usingAvatar = false;
-        stopCurrent();
-        realtimeAvatarBridge.interrupt();
+        stopLocal(); realtimeAvatarBridge.interrupt();
+        usingAvatar = false; usingFallback = true;
+        setVoiceDiagnostics({ state: "fallback", browserTtsFallback: true, error: "minimax_voice_unavailable" });
         try {
-          await fallback.speak(req, handlers);
-        } finally {
-          speaking = false;
-        }
+          await fallback.speak(req, { ...handlers, onError: message => {
+            setVoiceDiagnostics({ state: "error", error: "browser_tts_failed" }); handlers.onError(message);
+          } });
+        } catch { setVoiceDiagnostics({ state: "error", error: "browser_tts_failed" }); handlers.onError("Voice unavailable"); }
+        finally { speaking = false; setVoiceDiagnostics({ browserTtsFallback: false }); }
       }
     },
-    cancel() {
-      generation++;
-      speaking = false;
-      usingAvatar = false;
-      stopCurrent();
-      realtimeAvatarBridge.interrupt();
-      fallback.cancel();
-    },
-    flush() {
-      generation++;
-      speaking = false;
-      usingAvatar = false;
-      stopCurrent();
-      realtimeAvatarBridge.interrupt();
-      fallback.flush();
-    },
+    cancel,
+    flush: cancel,
   } as VoiceAdapter & { getTimeToFirstAudioMs(): number | null };
 }

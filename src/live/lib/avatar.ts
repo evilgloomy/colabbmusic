@@ -1,5 +1,5 @@
 // Contract every Cola avatar presentation implements.
-// The realtime provider is HeyGen LiveAvatar LITE; the editorial portrait remains
+// The realtime provider is ShibaCompute; the editorial portrait remains
 // a no-secrets/no-network fallback. Future providers can use the same surface.
 
 import type { LemoState, LiveState } from "@/live/lib/types";
@@ -29,5 +29,5 @@ export interface LiveAvatarProps {
 
 export type LiveAvatarComponent = (props: LiveAvatarProps) => JSX.Element;
 
-export const AVATAR_PROVIDER_ID = "liveavatar-lite-cola-v1";
-export const AVATAR_PROVIDER_LABEL = "LiveAvatar LITE — Cola B · editorial portrait fallback";
+export const AVATAR_PROVIDER_ID = "shiba-native-avatar-v01";
+export const AVATAR_PROVIDER_LABEL = "Shiba Native Avatar — Cola B · editorial portrait fallback";

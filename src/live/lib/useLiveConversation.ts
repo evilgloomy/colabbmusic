@@ -1,3 +1,4 @@
+import { getVoiceDiagnostics, subscribeVoiceDiagnostics } from "@/live/adapters/voice/voiceDiagnostics";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -64,7 +65,7 @@ export function useLiveConversation(opts: {
     speech: { health: "unknown" },
     aurora: { health: "unknown", note: AURORA_ENGINE_LABEL },
     lemo: { health: LIVE_MOCK_MODE ? "mock" : "unknown", note: "LEMO Lite" },
-    voice: { health: "ok", note: `${VOICE_PROVIDER_LABEL} · ${VOICESTUDIO_STATUS_NOTE}` },
+    voice: { health: "unknown", note: `${VOICE_PROVIDER_LABEL} · ${VOICESTUDIO_STATUS_NOTE}` },
     avatar: { health: "unknown", note: AVATAR_PROVIDER_LABEL },
   });
 
@@ -149,6 +150,19 @@ export function useLiveConversation(opts: {
   useEffect(() => {
     if (!observerOnly) broadcast("services", services);
   }, [services, broadcast, observerOnly]);
+
+  useEffect(() => {
+    if (observerOnly) return;
+    const syncVoice = () => {
+      const voice = getVoiceDiagnostics();
+      setServices(current => ({ ...current, voice: {
+        health: voice.state === "online" ? "ok" : voice.state === "error" ? "down" : voice.state === "fallback" ? "degraded" : "unknown",
+        note: voice.provider + " · " + voice.state + " · Browser TTS fallback: " + (voice.browserTtsFallback ? "active" : "inactive"),
+      } }));
+    };
+    syncVoice();
+    return subscribeVoiceDiagnostics(syncVoice);
+  }, [observerOnly]);
 
   // Keep the staff/provider view honest. Failure to connect an avatar is
   // deliberately non-fatal: Cola continues with her portrait + MiniMax voice.
@@ -314,7 +328,7 @@ export function useLiveConversation(opts: {
   /* -------------------------------- controls ------------------------------- */
   const stopCola = useCallback(
     (markInterrupted = true) => {
-      // MiniMax adapter also interrupts LiveAvatar, but calling the bridge here
+      // MiniMax adapter also interrupts ShibaCompute, but calling the bridge here
       // makes STOP COLA robust if the audio provider changes later.
       realtimeAvatarBridge.interrupt();
       voiceRef.current.cancel();
@@ -464,8 +478,8 @@ export function useLiveConversation(opts: {
     go("CONNECTING");
 
     // Start the renderer on the user's click so remote audio is eligible for
-    // browser autoplay. Do not block microphone/chat if LiveAvatar is absent.
-    void realtimeAvatarBridge.connect();
+    // browser autoplay. Do not block microphone/chat if ShibaCompute is absent.
+    void realtimeAvatarBridge.connect(sessionId);
 
     let mode = speechMode;
     if (mode === "browser") {
@@ -488,7 +502,7 @@ export function useLiveConversation(opts: {
       }
     }
     await startWithMode(mode);
-  }, [go, observerOnly, speechMode, startWithMode]);
+  }, [go, observerOnly, sessionId, speechMode, startWithMode]);
 
   const stop = useCallback(async () => {
     startedRef.current = false;

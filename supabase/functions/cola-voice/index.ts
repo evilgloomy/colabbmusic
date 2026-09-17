@@ -100,6 +100,8 @@ Deno.serve(async (req) => {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      signal: AbortSignal.any([req.signal, AbortSignal.timeout(60_000)]),
+      redirect: "error",
     });
 
     if (!upstream.ok || !upstream.body) {
@@ -112,7 +114,7 @@ Deno.serve(async (req) => {
       const status = data?.base_resp?.status_code;
       const hex: string | undefined = data?.data?.audio;
       if (status && status !== 0) {
-        console.error("minimax api error", status, data?.base_resp?.status_msg);
+        console.error("minimax api error", { status });
         return json({ ok: false, error: "voice_provider_error", provider_status: status }, 502);
       }
       if (!hex) return json({ ok: false, error: "voice_empty_audio" }, 502);
@@ -154,7 +156,8 @@ Deno.serve(async (req) => {
               const status = evt?.base_resp?.status_code;
               if (status && status !== 0) {
                 send({ type: "error", error: "voice_provider_error", provider_status: status });
-                controller.close();
+                console.error("minimax stream provider error", { status });
+                await reader.cancel();
                 return;
               }
               // status 2 repeats the full audio with extra_info — skip it.
@@ -170,7 +173,7 @@ Deno.serve(async (req) => {
           }
           send({ type: "done", total_ms: Date.now() - started });
         } catch (err) {
-          console.error("minimax stream error", err);
+          console.error("minimax stream error", { error_class: "stream_failed" });
           send({ type: "error", error: "voice_stream_error" });
         } finally {
           controller.close();
@@ -182,7 +185,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
     });
   } catch (err) {
-    console.error("cola-voice error", err);
-    return json({ ok: false, error: err instanceof Error ? err.message : "error" }, 500);
+    console.error("cola-voice error", { error_class: "request_failed" });
+    return json({ ok: false, error: "voice_request_failed" }, 500);
   }
 });

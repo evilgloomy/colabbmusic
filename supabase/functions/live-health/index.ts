@@ -28,9 +28,7 @@ Deno.serve(async (req) => {
   const aurora = await probeAuroraLite();
   const apiKeyPresent = Boolean(Deno.env.get("MINIMAX_API_KEY"));
   const voiceIdPresent = Boolean(Deno.env.get("MINIMAX_VOICE_ID"));
-  const liveAvatarApiKeyPresent = Boolean(Deno.env.get("LIVEAVATAR_API_KEY"));
-  const liveAvatarIdPresent = Boolean(Deno.env.get("LIVEAVATAR_AVATAR_ID"));
-  const liveAvatarConfigured = liveAvatarApiKeyPresent && liveAvatarIdPresent;
+  const computeConfigured = Boolean(Deno.env.get("SHIBA_COMPUTE_API_URL") && Deno.env.get("SHIBA_COMPUTE_API_KEY"));
 
   // Reachability probe: short TTS call, no audio retained.
   let ttsReachable = false;
@@ -57,7 +55,7 @@ Deno.serve(async (req) => {
       ttsReachable = res.ok && !body?.base_resp?.status_code && Boolean(body?.data?.audio);
       if (!ttsReachable) voiceReason = `provider_status_${body?.base_resp?.status_code ?? res.status}`;
     } catch (err) {
-      voiceReason = err instanceof Error ? err.message : "probe_failed";
+      voiceReason = "probe_failed";
     }
   } else {
     voiceReason = "secrets_missing";
@@ -88,12 +86,11 @@ Deno.serve(async (req) => {
           fallback: "Browser TTS (emergency fallback only)",
         },
         avatar: {
-          health: liveAvatarConfigured ? "configured" : "fallback",
-          provider: "LiveAvatar LITE — Cola B",
-          liveavatar_api_key_present: liveAvatarApiKeyPresent,
-          liveavatar_avatar_id_present: liveAvatarIdPresent,
-          fallback: "Editorial Portrait Placeholder",
-          reason: liveAvatarConfigured ? undefined : "liveavatar_secrets_missing",
+          health: computeConfigured ? "configured" : "fallback",
+          provider: "Shiba Native Avatar — Cola B",
+          compute_configured: computeConfigured,
+          fallback: "Editorial Portrait + MiniMax",
+          reason: computeConfigured ? "See session diagnostics for actual readiness" : "shibacompute_not_configured",
         },
       },
     }),
