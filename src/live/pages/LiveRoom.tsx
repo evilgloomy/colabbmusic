@@ -182,6 +182,23 @@ export default function LiveRoom() {
                     </dd>
                   </div>
                 ))}
+                {health && (
+                  <>
+                    <dt className="uppercase tracking-wider">voice server</dt>
+                    <dd>
+                      {health.services?.voice?.health} · key: {health.services?.voice?.minimax_api_key_present ? "yes" : "no"} ·
+                      Cola voice ID configured: {health.services?.voice?.minimax_voice_id_present ? "yes" : "no"} · reachable:{" "}
+                      {health.services?.voice?.minimax_tts_reachable ? "yes" : "no"}
+                      {health.services?.voice?.reason ? ` · ${health.services.voice.reason}` : ""}
+                    </dd>
+                    <dt className="uppercase tracking-wider">aurora server</dt>
+                    <dd>
+                      {health.aurora_lite?.aurora_lite_llm} · {health.aurora_lite?.model} · profile{" "}
+                      {health.aurora_lite?.profile_version}
+                      {health.aurora_lite?.reason ? ` · ${health.aurora_lite.reason}` : ""}
+                    </dd>
+                  </>
+                )}
               </dl>
             )}
           </section>
