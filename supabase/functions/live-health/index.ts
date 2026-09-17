@@ -26,9 +26,7 @@ Deno.serve(async (req) => {
   }
 
   const aurora = await probeAuroraLite();
-  const voicestudioConfigured = Boolean(
-    Deno.env.get("VOICESTUDIO_API_URL") && Deno.env.get("VOICESTUDIO_API_KEY") && Deno.env.get("VOICESTUDIO_VOICE_ID"),
-  );
+  const minimaxConfigured = Boolean(Deno.env.get("MINIMAX_API_KEY"));
 
   return new Response(
     JSON.stringify({
@@ -46,9 +44,10 @@ Deno.serve(async (req) => {
         },
         lemo: { health: "online", provider: "LEMO Lite (heuristic)" },
         voice: {
-          health: "placeholder",
-          provider: "Browser TTS Placeholder",
-          voicestudio: voicestudioConfigured ? "secrets present, mapping pending" : "not configured",
+          health: minimaxConfigured ? "online" : "placeholder",
+          provider: minimaxConfigured ? "Cola Voice (MiniMax speech-02-hd)" : "Browser TTS Placeholder",
+          voice_id: Deno.env.get("MINIMAX_VOICE_ID") ?? "moss_audio_baae1c62-…(default)",
+          fallback: "Browser TTS Placeholder",
         },
         avatar: { health: "placeholder", provider: "Editorial Portrait Placeholder (no lip sync)" },
       },
