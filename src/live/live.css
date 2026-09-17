@@ -116,24 +116,9 @@
   transition: filter 0.12s linear, transform 0.12s linear;
 }
 
-/* Soft eyelid sweep — no cartoon overlay, just a believable blink. */
-.live-root .live-avatar-eyelids {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 26%;
-  height: 11%;
-  background: linear-gradient(to bottom, hsl(var(--live-ink) / 0.72), hsl(var(--live-ink) / 0));
-  opacity: 0;
-  transform: scaleY(0.2);
-  transform-origin: top;
-  transition: opacity 90ms ease, transform 90ms ease;
-  pointer-events: none;
-}
-.live-root .live-avatar[data-blink="true"] .live-avatar-eyelids {
-  opacity: 1;
-  transform: scaleY(1);
-}
+/* No blink: a still portrait cannot fake one without an eye-specific mask.
+   Breathing, lighting and the audio-reactive aura carry the presence instead. */
+
 
 .live-root .live-avatar-light {
   position: absolute;
