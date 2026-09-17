@@ -45,7 +45,8 @@ export function useLiveConversation(opts: {
   speechMode?: SpeechMode;
 }) {
   const { sessionId, config, observerOnly = false } = opts;
-  const [speechMode, setSpeechMode] = useState<SpeechMode>(opts.speechMode ?? "simulated");
+  // Microphone is the normal mode. Typed input is a staff/debug fallback only.
+  const [speechMode, setSpeechMode] = useState<SpeechMode>(opts.speechMode ?? "browser");
   const [state, setState] = useState<LiveState>("IDLE");
   const [turns, setTurns] = useState<TranscriptTurn[]>([]);
   const [partial, setPartial] = useState("");
