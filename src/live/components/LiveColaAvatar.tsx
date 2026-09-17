@@ -16,6 +16,7 @@ export default function LiveColaAvatar({
   emotion,
   amplitude,
   speaking,
+  nativeSpeaking = false,
   listening,
   className = "",
 }: ColaAvatarProps) {
@@ -31,7 +32,7 @@ export default function LiveColaAvatar({
     return () => provider.attachVideo(null);
   }, [provider]);
 
-  const showingRealtime = avatar.streamReady && (avatar.status === "connected" || avatar.status === "speaking");
+  const showingRealtime = (!speaking || nativeSpeaking) && avatar.streamReady && (avatar.status === "connected" || avatar.status === "speaking");
   const level = showingRealtime ? 0 : speaking ? Math.max(0.08, Math.min(1, amplitude)) : 0;
   const thinking =
     state === "AURORA_PROCESSING" || state === "LEMO_PROCESSING" || state === "VOICE_CONNECTING";

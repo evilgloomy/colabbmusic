@@ -105,6 +105,7 @@ export default function LiveRoom() {
             emotion={convo.lemo}
             amplitude={convo.amplitude}
             speaking={speaking}
+            nativeSpeaking={convo.nativeSpeaking}
             listening={listening}
             partialTranscript={convo.partial}
           />

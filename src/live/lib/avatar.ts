@@ -16,6 +16,7 @@ export interface ColaAvatarProps {
   /** 0-1 outgoing local audio level; realtime video may use provider-native lip sync instead. */
   amplitude: number;
   speaking: boolean;
+  nativeSpeaking?: boolean;
   listening: boolean;
   /** Partial interviewer transcript, for providers that react to it. */
   partialTranscript?: string;

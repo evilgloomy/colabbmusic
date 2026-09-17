@@ -30,6 +30,7 @@ export function useLiveConversation(opts: { sessionId: string; config: LiveSessi
   const [speechMode, setSpeechMode] = useState<SpeechMode>(opts.speechMode ?? "browser");
   const [state, setState] = useState<LiveState>("IDLE");
   const [turns, setTurns] = useState<TranscriptTurn[]>([]);
+  const [nativeSpeaking, setNativeSpeaking] = useState(false);
   const [partial, setPartial] = useState("");
   const [muted, setMuted] = useState(false);
   const [lemo, setLemo] = useState<LemoState | null>(null);
@@ -58,6 +59,8 @@ export function useLiveConversation(opts: { sessionId: string; config: LiveSessi
           const next: LiveState = event.state === "THINKING" ? "AURORA_PROCESSING" : event.state === "SPEAKING" ? "COLA_SPEAKING" : event.state;
           setState(next); broadcast("state", { state: next }); break;
         }
+        case "brain.started": case "session.disconnected": setNativeSpeaking(false); break;
+        case "avatar.speaking.started": setNativeSpeaking(true); break;
         case "session.connected": setServices(s => ({ ...s, speech: { health: speechMode === "simulated" ? "mock" : "ok", note: speechMode } })); break;
         case "user.speech.partial": setPartial(event.text); broadcast("partial", { text: event.text }); break;
         case "user.speech.final": setPartial(""); addTurn("interviewer", event.text); break;
@@ -71,7 +74,7 @@ export function useLiveConversation(opts: { sessionId: string; config: LiveSessi
         case "telemetry": setLatency(current => ({ ...current, ...event.metrics }));
           if (event.metrics.total_ms != null) setLatencyHistory(h => [...h.slice(-19), event.metrics]);
           broadcast("latency", event.metrics); break;
-        case "session.interrupted": setTurns(current => current.map((t, i) => i === current.length - 1 && t.role === "cola" ? { ...t, interrupted: true } : t)); break;
+        case "session.interrupted": setNativeSpeaking(false); setTurns(current => current.map((t, i) => i === current.length - 1 && t.role === "cola" ? { ...t, interrupted: true } : t)); break;
         case "runtime.error": {
           const messages = { AvatarUnavailable: "", SpeechUnavailable: "Cola’s usual voice is unavailable. Using the backup voice.",
             BrainUnavailable: "Cola could not reply. Please try again.", MicrophoneUnavailable: "The microphone is unavailable. Select Start again to use typed input.",
@@ -134,7 +137,7 @@ export function useLiveConversation(opts: { sessionId: string; config: LiveSessi
       void channelRef.current?.send({ type: "broadcast", event: "control", payload: { ticket: data.ticket } });
     });
   };
-  return { state, turns, partial, muted, amplitude: 0, lemo, latency, latencyHistory, services, error,
+  return { state, turns, partial, muted, nativeSpeaking, amplitude: 0, lemo, latency, latencyHistory, services, error,
     speechMode, canSimulate: speechMode === "simulated", mockMode: false, setSpeechMode,
     avatar: runtime.options.avatar,
     start: async () => {
