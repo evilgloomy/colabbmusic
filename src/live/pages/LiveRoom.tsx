@@ -88,14 +88,14 @@ export default function LiveRoom() {
             )}
           </div>
 
-          {!active && (
-            <label className="mt-5 flex items-center gap-2 text-xs opacity-60">
+          {!active && isStaff && (
+            <label className="mt-5 flex items-center gap-2 text-xs opacity-50">
               <input
                 type="checkbox"
-                checked={convo.speechMode === "browser"}
-                onChange={(e) => convo.setSpeechMode(e.target.checked ? "browser" : "simulated")}
+                checked={convo.speechMode === "simulated"}
+                onChange={(e) => convo.setSpeechMode(e.target.checked ? "simulated" : "browser")}
               />
-              Use microphone (otherwise type your questions)
+              Type instead of speaking (debug)
             </label>
           )}
 
