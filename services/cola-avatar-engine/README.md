@@ -1,52 +1,94 @@
-# Shiba native avatar worker (Cola package)
+# Standalone avatar engine
 
-**Implementation available; GPU acceptance pending.** This service runs on a Shiba-controlled NVIDIA host, independently of the web host. It uses MuseTalk 1.5 for face rendering and returns original MiniMax PCM plus video in one WebRTC stream. An unavailable renderer returns 503 so the browser uses the editorial portrait and local MiniMax voice.
+**Next milestone: real offline CUDA render. Not yet demonstrated.** This directory is the entire service build context. Copy it to any accessible NVIDIA host; no application repository, browser, backend account or ShibaOS installation is required. ShibaOS is a future container host only.
 
-## NVIDIA setup
+Development order is mandatory:
 
-Target: Linux x86-64, NVIDIA RTX 4080, current compatible NVIDIA driver, Docker with NVIDIA Container Toolkit. CUDA 12.1 / PyTorch 2.2.2 image is pinned in Dockerfile. At least 16 GB VRAM is the intended development target; capacity/performance is not yet measured.
+1. Approved source motion + real character voice WAV → offline CUDA MP4; inspect it.
+2. After that succeeds, finish the local service test page at `http://localhost:8000/test` with WAV upload, Interrupt and measured telemetry.
+3. Deploy the same image to an accessible CUDA host and test from another computer.
+4. Only after remote acceptance, connect the website.
 
-1. Copy `.env.example` to `.env`, set a random 32+ byte `AVATAR_JWT_SECRET` matching Supabase, allowed web origins and ICE settings. Never commit `.env`.
-2. `docker compose build avatar`.
-3. Download audited weights into a writable host mount, as your host UID:
+The existing signaling implementation is experimental draft code. `/test` is **not implemented yet**. Do not infer GPU acceptance from CPU tests, a health response, or the presence of WebRTC code. Website integration work is paused.
 
-   ```sh
-   mkdir -p models
-   docker compose run --rm --user "$(id -u):$(id -g)" -e HF_HOME=/tmp/huggingface -v "$PWD/models:/app/models:rw" avatar python tools/download_models.py
-   ```
+## First test: offline render
 
-4. Supply a Shiba-approved 1280×720, 25fps neutral motion clip, 1–4 seconds, with natural breathing, blinks and restrained head motion. The fallback website portrait is retained but does not create a natural motion source. Do not use upstream demo/test footage.
-5. Preprocess once on the GPU. Choose a face crop after inspecting your actual clip; there is deliberately no invented Cola crop:
+Target environment: Linux x86-64 with an NVIDIA GPU, compatible driver and NVIDIA Container Toolkit. The Dockerfile pins PyTorch 2.2.2 / CUDA 12.1. An RTX 4080 with 16 GB is an intended development target, not a measured requirement or performance claim. No GPU rental is provisioned automatically.
 
-   ```sh
-   docker compose run --rm --user "$(id -u):$(id -g)" -v "$PWD/avatar_packages:/app/avatar_packages:rw" -v /absolute/approved-media:/media:ro avatar python tools/build_avatar.py --character cola_b --source /media/cola.mp4 --crop X1,Y1,X2,Y2
-   ```
+From this directory:
 
-   Review every cached crop, mouth blend, color seam, and ping-pong loop. The current builder uses a fixed operator-reviewed crop and a geometric lower-face mask. Large head movement requires per-frame crop tracking or an independently audited face parser; it is not production approved by default.
-6. `docker compose up -d avatar`.
-7. Put HTTPS/WSS reverse proxy in front of port 8080. Configure WebSocket upgrade, body size limits, connection rate limits and timeouts. Signaling is bound to loopback in the example compose file. Media requires TURN or routable UDP; Docker bridge mode alone will not work for arbitrary internet clients. Worker-side TURN credentials stay on the GPU host; browser credentials are short-lived coturn REST credentials minted by the edge function using `AVATAR_TURN_SECRET`.
-8. Check `/health`: `ok`, `model_loaded` and `avatar_loaded` must all be true. Missing cache, weights or CUDA keeps them false. `fps: null` means not measured.
+```sh
+docker compose build avatar
+mkdir -p models results
+# This installation step needs network access. Rendering below does not.
+docker compose run --rm --user "$(id -u):$(id -g)" \
+  -e HF_HOME=/tmp/huggingface -e HF_HUB_OFFLINE=0 -e TRANSFORMERS_OFFLINE=0 \
+  -v "$PWD/models:/app/models:rw" avatar python tools/download_models.py
+```
+
+Supply the approved source clip (1280×720, 25 fps, 1–4 seconds) and real voice WAV. Choose a face crop by inspecting that clip; no crop is fabricated. A website portrait cannot establish natural source motion. Preprocess the source on CUDA:
+
+```sh
+docker compose run --rm --user "$(id -u):$(id -g)" \
+  -v "$PWD/avatar_packages:/app/avatar_packages:rw" \
+  -v /absolute/approved-media:/media:ro \
+  avatar python tools/build_avatar.py --avatar cola_b \
+  --source /media/cola.mp4 --crop X1,Y1,X2,Y2
+```
+
+The cache contains frames, fixed face boxes, geometric anchors (not detected landmarks), a lower-face mask, VAE latents, source SHA-256, motion and colour metadata. The crop must stay aligned throughout the clip. Substantial head motion requires better tracking after this milestone; inspect seams, mouth shape, blinks, identity and the ping-pong loop manually.
+
+Render the actual WAV with model downloads disabled:
+
+```sh
+docker compose run --rm --user "$(id -u):$(id -g)" \
+  -v /absolute/approved-media:/media:ro -v "$PWD/results:/results:rw" \
+  --entrypoint python avatar tools/test_render.py \
+  --avatar cola_b --audio /media/test.wav --output /results/cola_test.mp4
+```
+
+The command forces Hugging Face and Transformers offline mode. To prove full network isolation, run the built image directly (replace the tag with your build's image name):
+
+```sh
+docker build -t cola-avatar-engine:offline .
+docker run --rm --gpus all --network none --user "$(id -u):$(id -g)" \
+  -v "$PWD/models:/app/models:ro" -v "$PWD/avatar_packages:/app/avatar_packages:ro" \
+  -v /absolute/approved-media:/media:ro -v "$PWD/results:/results:rw" \
+  cola-avatar-engine:offline python tools/test_render.py \
+  --avatar cola_b --audio /media/test.wav --output /results/cola_test.mp4
+```
+
+The input must be uncompressed PCM16, mono, 16 kHz, greater than zero and at most 45 seconds. Retain the real source WAV. If conversion is necessary, explicitly create a separate file with `ffmpeg -i original.wav -ac 1 -ar 16000 -c:a pcm_s16le test.wav`. The CLI never silently changes the input samples. The MP4 uses H.264 and AAC; AAC is lossy and carries the input voice, not regenerated speech.
+
+Outputs:
+
+- `cola_test.mp4`: real generated video, only published after complete render and successful encoding.
+- `cola_test.metrics.json`: GPU, PyTorch CUDA version, model load/warmup time, first frame latency, render FPS excluding encoding, end-to-end FPS/latency, PyTorch peak allocated/reserved VRAM and source/audio hashes. Allocator peaks are not total device usage. Failed runs produce a failure report and no MP4.
+
+Inspect and listen to the MP4, recording lip/audio alignment, identity, mouth/teeth artifacts, crop seams, blink continuity and source-loop discontinuities. The CLI leaves visual review and milestone acceptance pending even when rendering succeeds. Do not label a CPU fixture or an unrelated character/audio clip as Cola acceptance.
 
 ## Local Python alternative
 
-Use Python 3.10/3.11 on the NVIDIA host and an isolated venv. Install torch 2.2.2/torchvision 0.17.2 from the official CUDA 12.1 wheel index, then `pip install -r requirements.txt`. Clone MuseTalk at the exact revision in `models.lock.json` and set `PYTHONPATH` to it. Run `python tools/download_models.py`, then the builder above, then `python server.py`. FFmpeg must be installed. No Lovable compute or AI agent is involved.
-
-## CPU tests
+Use Python 3.10/3.11 on the NVIDIA host in an isolated environment. Install PyTorch 2.2.2 / torchvision 0.17.2 CUDA 12.1 wheels, then `pip install -r requirements.txt`. Install FFmpeg, clone MuseTalk at the revision in `models.lock.json`, and set `PYTHONPATH` to that checkout. Install weights once, preprocess the clip, then run:
 
 ```sh
-python -m venv .venv
-. .venv/bin/activate
+python tools/test_render.py --avatar cola_b --audio test.wav --output cola_test.mp4
+```
+
+No server, ticket, application secret or external API is used by this command.
+
+## Service startup (subsequent milestone)
+
+`python server.py` or `docker compose up` starts the service on port 8000. Compose's optional `.env` file requires Docker Compose 2.24 or newer. Missing models/cache/CUDA yields unhealthy `/health`; it never claims a loaded renderer. Exactly one installed package is auto-selected, or set `AVATAR_ID` to choose one. Package identity is data under `avatar_packages/`.
+
+For authenticated sessions, copy `.env.example` to `.env` and configure a random 32+ byte ticket key, issuer, audience and allowed origins. The service validates the generic ticket contract in `ARCHITECTURE.md`; it never queries the issuer's backend. Offline rendering needs none of these settings. Do not expose the service until offline and local-page acceptance succeed. Later deployments need HTTPS/WSS and routable media or TURN.
+
+## CPU verification
+
+```sh
 pip install -r requirements-test.txt
 python -m pytest tests -q
 python tools/check_licenses.py
 ```
 
-The WebRTC test opens local UDP sockets and sends synthetic images/audio. It tests transport and timestamp handling, **not CUDA inference, Cola appearance, real lip sync or provider credentials**.
-
-## Performance / operational limits
-
-One active session per worker by default. Tokens expire after 15 minutes and teardown connections; reconnect for another interview. Audio is capped at 45 seconds per utterance. Control messages and queues are bounded. Barge-in clears queued media and invalidates the inference generation immediately; an already-running CUDA kernel finishes in its thread and its stale output is discarded. The global inference lock remains held until that work exits.
-
-This first implementation buffers a short utterance before Whisper feature extraction and streams generated frames in batches. Therefore the <1.5s voice target for the native path is **not yet achieved or measured**. Future rolling-window audio conditioning is required if measured latency is too high. Local MiniMax fallback streams PCM as it arrives. Source motion is replayed gently at state-dependent speeds; dedicated listening nods/thinking gaze clips remain artistic work.
-
-Do not promote to production until the Cantonese acceptance conversation, mid-sentence barge-in, 10-minute soak, real TURN connectivity, audio single-authority, FPS and AV offset have been checked on the deployed worker.
+These checks cover WAV fidelity/rejection, honest failure reports, generic package lookup, tickets, cancellation and media transport. They do **not** establish model loading, GPU throughput, appearance, lip sync, real voice provenance or Docker deployment. Current streaming draft buffers a whole short utterance; sub-1.5-second response latency is unmeasured.

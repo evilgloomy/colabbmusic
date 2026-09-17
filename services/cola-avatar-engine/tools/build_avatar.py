@@ -2,24 +2,34 @@
 import argparse
 import hashlib
 import json
+import os
+import sys
 from pathlib import Path
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from assets import ROOT, avatar_package
+
+
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--avatar", "--character", dest="avatar", required=True)
+    parser.add_argument("--source", required=True, help="Approved 1280x720, 25fps neutral motion clip")
+    parser.add_argument("--crop", required=True, help="Face crop x1,y1,x2,y2; must remain aligned for entire clip")
+    parser.add_argument("--models", default=str(ROOT / "models"))
+    args = parser.parse_args()
+    os.environ["HF_HUB_OFFLINE"] = "1"
+    os.environ["TRANSFORMERS_OFFLINE"] = "1"
     import cv2
     import numpy as np
     import torch
     from musetalk.models.vae import VAE
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--character", choices=["cola_b"], default="cola_b")
-    parser.add_argument("--source", required=True, help="Approved 1280x720, 25fps neutral motion clip")
-    parser.add_argument("--crop", required=True, help="Face crop x1,y1,x2,y2; must remain aligned for entire clip")
-    parser.add_argument("--models", default="models")
-    args = parser.parse_args()
+    if not torch.cuda.is_available():
+        raise RuntimeError("CUDA unavailable; preprocessing requires an NVIDIA GPU")
     box = [int(value) for value in args.crop.split(",")]
     if len(box) != 4 or not (0 <= box[0] < box[2] <= 1280 and 0 <= box[1] < box[3] <= 720):
         raise ValueError("Invalid crop")
-    package = Path("avatar_packages") / args.character
+    package = avatar_package(args.avatar)
     cache = package / "cache"
     if cache.exists(): raise ValueError("Cache already exists; move it aside before rebuilding")
     cap = cv2.VideoCapture(args.source)

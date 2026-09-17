@@ -1,5 +1,6 @@
 """MuseTalk-specific implementation, isolated from signaling and media transport."""
 import json
+import os
 import time
 from pathlib import Path
 from media import motion_index, split_pcm
@@ -7,6 +8,8 @@ from media import motion_index, split_pcm
 
 class MuseTalkRenderer:
     def __init__(self, models: Path, package: Path):
+        os.environ["HF_HUB_OFFLINE"] = "1"
+        os.environ["TRANSFORMERS_OFFLINE"] = "1"
         import torch
         import cv2
         import numpy as np
@@ -30,7 +33,7 @@ class MuseTalkRenderer:
         self.boxes = json.loads((cache / "geometry.json").read_text())["boxes"]
         self.mask = np.load(cache / "mask.npy", allow_pickle=False)
         self.latents = torch.load(cache / "latents.pt", map_location="cpu", weights_only=True)
-        if not self.frames or len(self.frames) != len(self.boxes) or len(self.frames) != len(self.latents):
+        if not self.frames or any(frame is None for frame in self.frames) or len(self.frames) != len(self.boxes) or len(self.frames) != len(self.latents):
             raise RuntimeError("invalid avatar cache")
         self.frame_ms = None
         self.inference_fps = None

@@ -4,3 +4,8 @@ models
 **/cache
 __pycache__
 .pytest_cache
+
+results
+*.mp4
+*.wav
+*.metrics.json

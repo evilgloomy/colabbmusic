@@ -7,6 +7,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from assets import ROOT, configured_package
 from security import validate_token
 from media import Timeline, AVFrame, tracks
 
@@ -14,7 +15,7 @@ sessions = {}
 used_tokens = {}
 renderer = None
 render_lock = asyncio.Lock()
-origins = os.environ.get("AVATAR_ALLOWED_ORIGINS", "https://colabbmusic.com").split(",")
+origins = [value.strip() for value in os.environ.get("AVATAR_ALLOWED_ORIGINS", "http://localhost:8000").split(",") if value.strip()]
 
 
 @asynccontextmanager
@@ -22,7 +23,7 @@ async def lifespan(app):
     global renderer
     try:
         from renderer import MuseTalkRenderer
-        renderer = await asyncio.to_thread(MuseTalkRenderer, Path(os.getenv("MODEL_DIR", "models")), Path("avatar_packages/cola_b"))
+        renderer = await asyncio.to_thread(MuseTalkRenderer, Path(os.getenv("MODEL_DIR", ROOT / "models")), configured_package())
     except Exception:
         # Offline worker is explicitly unhealthy; never claim a renderer loaded.
         renderer = None
@@ -119,6 +120,7 @@ async def offer(body: Offer, request: Request):
         raise HTTPException(401, "unauthorized")
     if body.session_id != claims["session_id"]: raise HTTPException(403, "session_scope")
     if renderer is None: raise HTTPException(503, "renderer_unavailable")
+    if claims["avatar_id"] != renderer.manifest["id"]: raise HTTPException(403, "avatar_scope")
     now = time.time()
     for token, expires in list(used_tokens.items()):
         if expires < now: used_tokens.pop(token, None)
@@ -209,4 +211,4 @@ async def control(ws: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080, ws_max_size=65536)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8000")), ws_max_size=65536)

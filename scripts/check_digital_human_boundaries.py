@@ -1,6 +1,6 @@
 from pathlib import Path
 import re
-root = Path(__file__).resolve().parents[3]
+root = Path(__file__).resolve().parents[1]
 for directory in (root / "src", root / "dist"):
     for path in directory.rglob("*"):
         if path.suffix not in (".ts", ".tsx", ".js", ".json"): continue

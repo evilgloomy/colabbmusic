@@ -8,7 +8,7 @@ SECRET = "test-signing-secret-with-more-than-32-bytes"
 
 
 def token(**changes):
-    claims = {"sub": "user", "jti": "session", "session_id": "session", "live_session_id": "live",
+    claims = {"sub": "user", "jti": "session", "session_id": "session", "permissions": ["avatar:render"],
               "avatar_id": "cola_b", "iat": int(time.time()), "exp": int(time.time())+60,
               "aud": "shiba-avatar", "iss": "shiba-live"}
     claims.update(changes)
@@ -21,7 +21,7 @@ def secret(monkeypatch): monkeypatch.setenv("AVATAR_JWT_SECRET", SECRET)
 
 def test_scope_and_expiry():
     assert validate_token(token())["sub"] == "user"
-    for changes in ({"exp": int(time.time())-1}, {"aud": "other"}, {"avatar_id": "other"}, {"jti": "other"}, {"exp": int(time.time())+1000}):
+    for changes in ({"exp": int(time.time())-1}, {"aud": "other"}, {"avatar_id": "other"}, {"jti": "other"}, {"permissions": []}, {"permissions": "avatar:render"}, {"iss": "other"}, {"exp": int(time.time())+1000}):
         with pytest.raises(Exception): validate_token(token(**changes))
     with pytest.raises(Exception): validate_token(token() + "tampered")
 
@@ -44,3 +44,14 @@ def test_websocket_rejects_untrusted_origin():
     client = TestClient(server.app)
     with pytest.raises(Exception):
         with client.websocket_connect("/control", headers={"Origin": "https://attacker.invalid"}): pass
+
+
+def test_ticket_can_use_generic_avatar_and_no_application_claim(tmp_path, monkeypatch):
+    import json
+    package = tmp_path / "another_character"
+    package.mkdir()
+    (package / "manifest.json").write_text(json.dumps({"id": package.name, "fps": 25, "sample_rate": 16000, "audio_format": "pcm_s16le"}))
+    monkeypatch.setenv("AVATAR_PACKAGE_DIR", str(tmp_path))
+    claims = validate_token(token(avatar_id="another_character"))
+    assert claims["avatar_id"] == "another_character"
+    assert "live_session_id" not in claims

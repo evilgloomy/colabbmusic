@@ -4,9 +4,11 @@
 
 Implementation branch: `codex/cola-shiba-mvp`. **Not production complete.** Runtime and service tests can run without provider keys. Real OpenAI/MiniMax calls, CUDA rendering, visual approval, external TURN and the requested 10-minute conversation require deployment credentials, an NVIDIA GPU host and approved source media. Do not merge/promote based only on mocks.
 
+**Architecture correction:** The next gate is an offline MP4 from the approved Cola source and real Cola MiniMax WAV on CUDA. Website integration is frozen until offline, local-page and remote-container acceptance. The existing ShibaOS worker is unrelated; the same standalone image may be hosted there in the future. See `services/cola-avatar-engine/README.md` for the current runnable command and deferred work.
+
 ## Architecture
 
-Browser microphone → server Aurora Lite context → configured LLM → LEMO Lite → MiniMax trained Cola voice → Shiba native renderer → one synchronized WebRTC stream. If native rendering is unavailable, the browser uses the same MiniMax PCM with the existing editorial portrait. If MiniMax fails, it uses emergency browser speech and the portrait. No hosted avatar service is used.
+Browser microphone → server Aurora Lite context → configured LLM → LEMO Lite → MiniMax trained Cola voice → standalone native renderer → one synchronized WebRTC stream. If native rendering is unavailable, the browser uses the same MiniMax PCM with the existing editorial portrait. If MiniMax fails, it uses emergency browser speech and the portrait. No hosted avatar service is used.
 
 `src/shiba/digital-human/` owns provider contracts, session lifecycle, turn cancellation, events, error normalization, telemetry and audio authority. React (`useLiveConversation`) subscribes and forwards producer commands. `src/live/runtime.ts` injects the Supabase transport and Cola package configuration. Brain, emotion, voice and avatar remain separate.
 
@@ -38,7 +40,7 @@ MINIMAX_API_KEY=existing-server-only
 MINIMAX_VOICE_ID=existing-trained-cola-voice
 MINIMAX_MODEL=speech-2.8-turbo
 AVATAR_JWT_SECRET=32-or-more-random-bytes
-AVATAR_ENGINE_URL=https://your-shiba-worker-host
+AVATAR_ENGINE_URL=https://your-standalone-gpu-host
 AVATAR_STUN_URL=stun:your-coturn-host:3478
 AVATAR_TURN_URL=turn:your-coturn-host:3478
 AVATAR_TURN_SECRET=coturn-static-auth-secret-server-only
@@ -46,11 +48,11 @@ AVATAR_TURN_SECRET=coturn-static-auth-secret-server-only
 
 Browser env remains the existing public Supabase URL and publishable key. Never define a VITE provider secret. TURN uses short-lived coturn REST browser credentials; the worker can use its own static `AVATAR_TURN_USERNAME/PASSWORD` configured only on that host.
 
-`native-avatar-session` authenticates the user, checks staff or membership in the exact live session, rejects ended sessions and signs a 15-minute audience/issuer/character-scoped JWT. The worker validates it and consumes an offer ticket once. JWT secrets, voice IDs and provider keys never enter frontend source or bundles. No auth/RLS tables were rewritten. Producer commands are signed by the staff-only `live-control` issuer and verified for session/expiry before execution; unsigned/replayed commands are discarded. The existing broadcast topology remains for non-secret transcript/state observation.
+`native-avatar-session` authenticates the user, checks staff or membership in the exact live session, rejects ended sessions and signs a 15-minute audience/issuer/character-scoped JWT. The service now additionally requires `permissions: ["avatar:render"]`. The existing draft application issuer has not been adapted; its tickets fail closed until integration resumes after GPU acceptance. JWT secrets, voice IDs and provider keys never enter frontend source or bundles. No auth/RLS tables were rewritten. Producer commands are signed by the staff-only `live-control` issuer and verified for session/expiry before execution; unsigned/replayed commands are discarded. The existing broadcast topology remains for non-secret transcript/state observation.
 
 ## Deployment order and acceptance
 
-1. Build/preprocess and privately deploy the GPU worker; verify health and asset quality, SSL and TURN.
+1. First run `tools/test_render.py` with approved source cache and real voice WAV on CUDA; inspect the MP4 and record GPU, CUDA, load time, FPS, VRAM, latency and visual issues. Only after success implement the localhost:8000 test page, then deploy the same container to any accessible NVIDIA host and verify it from another computer. ShibaOS is not involved.
 2. Configure server secrets through authorized Supabase administration, never via frontend env.
 3. Run all checks, review the PR, and perform authenticated staging acceptance using the Cantonese question from the brief. Test interruption during brain generation, synthesis and playback; measure at least 10 minutes on GPU. Record actual FPS, AV offset, speech-to-audio and perceived interruption.
 4. Merge to `main` only after acceptance and CI pass. Lovable consumes GitHub source as-is. Verify its synchronized SHA equals the merge commit; do not ask its AI agent to regenerate code.
