@@ -134,7 +134,27 @@ export default function LiveRoom() {
         </section>
 
         {isStaff && (
-          <p className="live-eyebrow live-accent mt-8 text-center">Rehearsal · staff view</p>
+          <section className="mt-8 w-full border-t live-hairline pt-5 text-center">
+            <p className="live-eyebrow live-accent">Rehearsal · staff view</p>
+            <div className="mt-3 flex justify-center gap-4 text-xs opacity-60">
+              <Link to={`/live/producer/${sessionId}`}>Producer</Link>
+              <Link to="/live/sessions">Sessions</Link>
+              <button onClick={() => setShowDiag((v) => !v)}>Diagnostics {showDiag ? "−" : "+"}</button>
+            </div>
+            {showDiag && (
+              <dl className="mx-auto mt-4 grid max-w-xl grid-cols-2 gap-x-6 gap-y-2 text-left text-xs opacity-70">
+                {(["speech", "aurora", "lemo", "voice", "avatar"] as const).map((k) => (
+                  <div key={k} className="contents">
+                    <dt className="uppercase tracking-wider">{k}</dt>
+                    <dd>
+                      {convo.services[k]?.health}
+                      {convo.services[k]?.note ? ` · ${convo.services[k]?.note}` : ""}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </section>
         )}
       </main>
     </LiveLayout>
