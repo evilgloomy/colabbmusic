@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import portrait from "@/assets/campaign/portrait-close.jpg";
 import type { LiveAvatarProps } from "@/live/lib/avatar";
 import { realtimeAvatarBridge } from "@/live/avatar/realtimeAvatar";
+import "@/live/avatar/realtimeAvatar.css";
 
 /**
  * Cola's visual surface.
