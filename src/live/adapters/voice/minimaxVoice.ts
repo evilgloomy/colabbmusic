@@ -1,14 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
+import { realtimeAvatarBridge } from "@/live/avatar/realtimeAvatar";
 import type { VoiceAdapter, VoiceHandlers, VoiceRequest } from "@/live/lib/types";
 
 /**
  * MiniMaxColaVoiceAdapter — Cola's real voice (MiniMax speech-2.8-turbo).
  *
- * Credentials never reach the browser: audio is streamed from the `cola-voice`
- * edge function as base64 MP3 chunks. Playback runs through an AudioContext +
- * AnalyserNode so LiveColaAvatar receives REAL output amplitude. Cancel/flush
- * stop playback instantly and discard queued audio (barge-in / STOP COLA).
- * The browser TTS placeholder is used only as an emergency fallback.
+ * MiniMax remains the voice identity. When LiveAvatar LITE is connected, the
+ * exact decoded MiniMax utterance is sent to the avatar for provider-native lip
+ * sync and the LiveAvatar media stream becomes the audible output. If the
+ * avatar is unavailable we keep the existing low-latency local MiniMax
+ * playback. Browser speechSynthesis is only an emergency fallback if MiniMax
+ * itself fails.
  */
 export const MINIMAX_VOICE_LABEL = "MiniMax Speech 2.8 Turbo — Cola B";
 
@@ -18,6 +20,7 @@ export function createMinimaxColaVoiceAdapter(fallback: VoiceAdapter): VoiceAdap
   let current: AudioBufferSourceNode | null = null;
   let speaking = false;
   let usingFallback = false;
+  let usingAvatar = false;
   let generation = 0;
   let lastTtfa: number | null = null;
   const levels = new Uint8Array(128);
@@ -34,7 +37,7 @@ export function createMinimaxColaVoiceAdapter(fallback: VoiceAdapter): VoiceAdap
   };
 
   const readLevel = () => {
-    if (!analyser || !speaking) return 0;
+    if (usingAvatar || !analyser || !speaking) return 0;
     analyser.getByteTimeDomainData(levels);
     let peak = 0;
     for (let i = 0; i < levels.length; i++) peak = Math.max(peak, Math.abs(levels[i] - 128) / 128);
@@ -58,8 +61,19 @@ export function createMinimaxColaVoiceAdapter(fallback: VoiceAdapter): VoiceAdap
     return out;
   };
 
-  /** Sequential playback queue: each decoded chunk plays right after the previous. */
-  const makePlayer = (gen: number) => {
+  const concatBytes = (parts: Uint8Array[]) => {
+    const size = parts.reduce((sum, part) => sum + part.length, 0);
+    const joined = new Uint8Array(size);
+    let offset = 0;
+    for (const part of parts) {
+      joined.set(part, offset);
+      offset += part.length;
+    }
+    return joined;
+  };
+
+  /** Sequential WebAudio player used when realtime avatar rendering is unavailable. */
+  const makeLocalPlayer = (gen: number) => {
     let tail: Promise<void> = Promise.resolve();
     const enqueue = (audio: AudioBuffer) => {
       tail = tail.then(
@@ -77,6 +91,33 @@ export function createMinimaxColaVoiceAdapter(fallback: VoiceAdapter): VoiceAdap
       return tail;
     };
     return { enqueue, drained: () => tail };
+  };
+
+  const playLocally = async (
+    buffers: AudioBuffer[],
+    req: VoiceRequest,
+    gen: number,
+    handlers: VoiceHandlers,
+    alreadyStarted = false,
+  ) => {
+    if (!buffers.length) throw new Error("cola_voice_decode_failed");
+    usingAvatar = false;
+    const player = makeLocalPlayer(gen);
+    let first = !alreadyStarted;
+
+    for (const audio of buffers) {
+      if (gen !== generation) return;
+      if (first) {
+        first = false;
+        if (req.lemo.pause_before_ms) {
+          await new Promise((resolve) => setTimeout(resolve, Math.min(600, req.lemo.pause_before_ms)));
+          if (gen !== generation) return;
+        }
+        handlers.onFirstAudio();
+      }
+      void player.enqueue(audio);
+    }
+    await player.drained();
   };
 
   const streamFromEdge = async (
@@ -107,31 +148,43 @@ export function createMinimaxColaVoiceAdapter(fallback: VoiceAdapter): VoiceAdap
     if (!res.ok || !res.body) throw new Error("cola_voice_unavailable");
 
     const audioCtx = ensureCtx();
-    const player = makePlayer(gen);
+    const preferAvatar = realtimeAvatarBridge.isReady();
+    usingAvatar = preferAvatar;
+    const localPlayer = makeLocalPlayer(gen);
+    const decodedForAvatar: AudioBuffer[] = [];
+    const rawParts: Uint8Array[] = [];
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = "";
-    let first = true;
+    let textBuffer = "";
     let pendingBytes: Uint8Array | null = null;
     let received = 0;
+    let localStarted = false;
 
     const decodeChunk = async (bytes: Uint8Array) => {
-      // A rare partial MP3 frame is merged into the next chunk instead of dropped.
-      const merged = pendingBytes ? new Uint8Array([...pendingBytes, ...bytes]) : bytes;
+      rawParts.push(bytes);
+      const merged = pendingBytes ? concatBytes([pendingBytes, bytes]) : bytes;
       try {
         const audio = await audioCtx.decodeAudioData(merged.buffer.slice(0) as ArrayBuffer);
         pendingBytes = null;
         if (gen !== generation) return;
-        if (first) {
-          first = false;
+
+        if (preferAvatar) {
+          decodedForAvatar.push(audio);
+          return;
+        }
+
+        if (!localStarted) {
+          localStarted = true;
           if (req.lemo.pause_before_ms) {
-            await new Promise((r) => setTimeout(r, Math.min(600, req.lemo.pause_before_ms)));
+            await new Promise((resolve) => setTimeout(resolve, Math.min(600, req.lemo.pause_before_ms)));
+            if (gen !== generation) return;
           }
-          if (gen !== generation) return;
           handlers.onFirstAudio();
         }
-        void player.enqueue(audio);
+        void localPlayer.enqueue(audio);
       } catch {
+        // MiniMax can split on an MP3 frame boundary. Hold bytes until the next
+        // event instead of dropping audio.
         pendingBytes = merged;
       }
     };
@@ -143,11 +196,11 @@ export function createMinimaxColaVoiceAdapter(fallback: VoiceAdapter): VoiceAdap
         void reader.cancel();
         return;
       }
-      buffer += decoder.decode(value, { stream: true });
+      textBuffer += decoder.decode(value, { stream: true });
       let idx: number;
-      while ((idx = buffer.indexOf("\n\n")) >= 0) {
-        const raw = buffer.slice(0, idx).trim();
-        buffer = buffer.slice(idx + 2);
+      while ((idx = textBuffer.indexOf("\n\n")) >= 0) {
+        const raw = textBuffer.slice(0, idx).trim();
+        textBuffer = textBuffer.slice(idx + 2);
         if (!raw.startsWith("data:")) continue;
         let evt: { type?: string; audio_base64?: string; ttfa_ms?: number };
         try {
@@ -165,7 +218,36 @@ export function createMinimaxColaVoiceAdapter(fallback: VoiceAdapter): VoiceAdap
     }
 
     if (!received) throw new Error("cola_voice_empty");
-    await player.drained();
+
+    // If individual MP3 response chunks were not independently decodable, the
+    // complete MP3 byte stream normally is.
+    if (preferAvatar && decodedForAvatar.length === 0 && rawParts.length) {
+      const whole = concatBytes(rawParts);
+      const audio = await audioCtx.decodeAudioData(whole.buffer.slice(0) as ArrayBuffer);
+      decodedForAvatar.push(audio);
+    }
+
+    if (!preferAvatar) {
+      await localPlayer.drained();
+      return;
+    }
+
+    if (gen !== generation) return;
+    if (req.lemo.pause_before_ms) {
+      await new Promise((resolve) => setTimeout(resolve, Math.min(600, req.lemo.pause_before_ms)));
+      if (gen !== generation) return;
+    }
+
+    const rendered = await realtimeAvatarBridge.speakAudioBuffers(decodedForAvatar, () => {
+      if (gen === generation) handlers.onFirstAudio();
+    });
+
+    if (rendered) return;
+
+    // Avatar/provider failed after MiniMax succeeded. Preserve Cola's real voice
+    // and fall back to local MiniMax playback — not browser TTS.
+    usingAvatar = false;
+    await playLocally(decodedForAvatar, { ...req, lemo: { ...req.lemo, pause_before_ms: 0 } }, gen, handlers);
   };
 
   return {
@@ -179,6 +261,7 @@ export function createMinimaxColaVoiceAdapter(fallback: VoiceAdapter): VoiceAdap
       const gen = ++generation;
       speaking = true;
       usingFallback = false;
+      usingAvatar = false;
       lastTtfa = null;
       try {
         await streamFromEdge(req, gen, handlers);
@@ -187,9 +270,11 @@ export function createMinimaxColaVoiceAdapter(fallback: VoiceAdapter): VoiceAdap
         handlers.onDone();
       } catch {
         if (gen !== generation) return;
-        // Emergency fallback only.
+        // Only MiniMax failure reaches the generic browser voice fallback.
         usingFallback = true;
+        usingAvatar = false;
         stopCurrent();
+        realtimeAvatarBridge.interrupt();
         try {
           await fallback.speak(req, handlers);
         } finally {
@@ -200,12 +285,17 @@ export function createMinimaxColaVoiceAdapter(fallback: VoiceAdapter): VoiceAdap
     cancel() {
       generation++;
       speaking = false;
+      usingAvatar = false;
       stopCurrent();
+      realtimeAvatarBridge.interrupt();
       fallback.cancel();
     },
     flush() {
       generation++;
+      speaking = false;
+      usingAvatar = false;
       stopCurrent();
+      realtimeAvatarBridge.interrupt();
       fallback.flush();
     },
   } as VoiceAdapter & { getTimeToFirstAudioMs(): number | null };

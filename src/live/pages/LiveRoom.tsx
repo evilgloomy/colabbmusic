@@ -9,7 +9,7 @@ import { useLiveAuth } from "@/live/LiveAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { LiveState } from "@/live/lib/types";
 
-/** Staff-only server health payload (never contains secret values). */
+/** Staff-only server health payload. It contains presence flags, never secret values. */
 type LiveHealth = {
   aurora_lite?: { aurora_lite_llm?: string; model?: string; profile_version?: string; reason?: string };
   services?: {
@@ -19,6 +19,13 @@ type LiveHealth = {
       minimax_api_key_present?: boolean;
       minimax_voice_id_present?: boolean;
       minimax_tts_reachable?: boolean;
+      reason?: string;
+    };
+    avatar?: {
+      health?: string;
+      provider?: string;
+      liveavatar_api_key_present?: boolean;
+      liveavatar_avatar_id_present?: boolean;
       reason?: string;
     };
   };
@@ -59,7 +66,6 @@ export default function LiveRoom() {
       cancelled = true;
     };
   }, [showDiag, isStaff, health]);
-
 
   const active = convo.state !== "IDLE";
   const speaking = convo.state === "COLA_SPEAKING";
@@ -190,6 +196,12 @@ export default function LiveRoom() {
                       Cola voice ID configured: {health.services?.voice?.minimax_voice_id_present ? "yes" : "no"} · reachable:{" "}
                       {health.services?.voice?.minimax_tts_reachable ? "yes" : "no"}
                       {health.services?.voice?.reason ? ` · ${health.services.voice.reason}` : ""}
+                    </dd>
+                    <dt className="uppercase tracking-wider">avatar server</dt>
+                    <dd>
+                      {health.services?.avatar?.health} · key: {health.services?.avatar?.liveavatar_api_key_present ? "yes" : "no"} ·
+                      avatar ID configured: {health.services?.avatar?.liveavatar_avatar_id_present ? "yes" : "no"}
+                      {health.services?.avatar?.reason ? ` · ${health.services.avatar.reason}` : ""}
                     </dd>
                     <dt className="uppercase tracking-wider">aurora server</dt>
                     <dd>

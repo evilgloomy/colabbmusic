@@ -28,8 +28,11 @@ Deno.serve(async (req) => {
   const aurora = await probeAuroraLite();
   const apiKeyPresent = Boolean(Deno.env.get("MINIMAX_API_KEY"));
   const voiceIdPresent = Boolean(Deno.env.get("MINIMAX_VOICE_ID"));
+  const liveAvatarApiKeyPresent = Boolean(Deno.env.get("LIVEAVATAR_API_KEY"));
+  const liveAvatarIdPresent = Boolean(Deno.env.get("LIVEAVATAR_AVATAR_ID"));
+  const liveAvatarConfigured = liveAvatarApiKeyPresent && liveAvatarIdPresent;
 
-  // Reachability probe: HEAD-equivalent cheap auth check, no audio generated.
+  // Reachability probe: short TTS call, no audio retained.
   let ttsReachable = false;
   let voiceReason: string | undefined;
   if (apiKeyPresent && voiceIdPresent) {
@@ -84,7 +87,14 @@ Deno.serve(async (req) => {
           reason: voiceReason,
           fallback: "Browser TTS (emergency fallback only)",
         },
-        avatar: { health: "placeholder", provider: "Editorial Portrait Placeholder (no lip sync)" },
+        avatar: {
+          health: liveAvatarConfigured ? "configured" : "fallback",
+          provider: "LiveAvatar LITE — Cola B",
+          liveavatar_api_key_present: liveAvatarApiKeyPresent,
+          liveavatar_avatar_id_present: liveAvatarIdPresent,
+          fallback: "Editorial Portrait Placeholder",
+          reason: liveAvatarConfigured ? undefined : "liveavatar_secrets_missing",
+        },
       },
     }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } },
