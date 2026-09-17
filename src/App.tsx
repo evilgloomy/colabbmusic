@@ -122,7 +122,8 @@ const AppInner = () => {
             <Suspense fallback={null}>
               <Routes>
                 <Route path="login" element={<LiveLogin />} />
-                <Route path="" element={<LiveGuard><LiveLobby /></LiveGuard>} />
+                <Route path="" element={<LiveGuard><LiveDirect /></LiveGuard>} />
+                <Route path="sessions" element={<LiveGuard><LiveLobby /></LiveGuard>} />
                 <Route path="session/:sessionId" element={<LiveGuard><LiveRoom /></LiveGuard>} />
                 <Route path="producer/:sessionId" element={<LiveGuard staffOnly><LiveProducer /></LiveGuard>} />
                 <Route path="*" element={<Navigate to="/live" replace />} />
