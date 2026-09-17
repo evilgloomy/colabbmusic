@@ -1,3 +1,5 @@
+> Superseded on 2026-09-17 by [SHIBACOMPUTE.md](SHIBACOMPUTE.md). The active implementation uses the native Shiba renderer. This document is historical.
+
 # Codex Task — Cola Live Realtime Avatar
 
 Work only on branch `codex/cola-live-avatar` in repository `evilgloomy/colabbmusic`.
