@@ -1,5 +1,6 @@
-// Contract every Cola avatar provider implements. Today: LiveColaAvatar (CSS/DOM).
-// Later: realtime viseme avatar, Live2D, WebGL or a 3D model — same props.
+// Contract every Cola avatar presentation implements.
+// The realtime provider is HeyGen LiveAvatar LITE; the editorial portrait remains
+// a no-secrets/no-network fallback. Future providers can use the same surface.
 
 import type { LemoState, LiveState } from "@/live/lib/types";
 
@@ -15,24 +16,18 @@ export interface AvatarViseme {
 export interface LiveAvatarProps {
   state: LiveState;
   emotion: LemoState | null;
-  /** 0-1 outgoing audio level; 0 when no analyser is available. */
+  /** 0-1 outgoing local audio level; realtime video may use provider-native lip sync instead. */
   amplitude: number;
   speaking: boolean;
   listening: boolean;
   /** Partial interviewer transcript, for providers that react to it. */
   partialTranscript?: string;
-  /** Optional viseme stream for future lip-sync providers. */
+  /** Optional viseme stream for future local-rendered providers. */
   visemes?: AvatarViseme[];
   className?: string;
 }
 
 export type LiveAvatarComponent = (props: LiveAvatarProps) => JSX.Element;
 
-export const AVATAR_PROVIDER_ID = "cola-editorial-portrait-v1";
-
-/**
- * Honest label for staff diagnostics: this is a styled still portrait with
- * breathing, lighting and audio-reactive treatment — NOT a realtime avatar and
- * NOT lip sync. A streaming avatar provider will register against LiveAvatarProps.
- */
-export const AVATAR_PROVIDER_LABEL = "Editorial Portrait Placeholder (no lip sync)";
+export const AVATAR_PROVIDER_ID = "liveavatar-lite-cola-v1";
+export const AVATAR_PROVIDER_LABEL = "LiveAvatar LITE — Cola B · editorial portrait fallback";
