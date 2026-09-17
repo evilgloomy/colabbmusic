@@ -106,7 +106,7 @@ export default function LiveProducer() {
           </div>
           <div className="flex gap-2">
             <Link className="live-btn" to={`/live/session/${sessionId}`}>Open room</Link>
-            <Link className="live-btn" to="/live">Lobby</Link>
+            <Link className="live-btn" to="/live/sessions">Sessions</Link>
           </div>
         </header>
 
