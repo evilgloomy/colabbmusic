@@ -26,7 +26,39 @@ Deno.serve(async (req) => {
   }
 
   const aurora = await probeAuroraLite();
-  const minimaxConfigured = Boolean(Deno.env.get("MINIMAX_API_KEY"));
+  const apiKeyPresent = Boolean(Deno.env.get("MINIMAX_API_KEY"));
+  const voiceIdPresent = Boolean(Deno.env.get("MINIMAX_VOICE_ID"));
+
+  // Reachability probe: HEAD-equivalent cheap auth check, no audio generated.
+  let ttsReachable = false;
+  let voiceReason: string | undefined;
+  if (apiKeyPresent && voiceIdPresent) {
+    try {
+      const host = (Deno.env.get("MINIMAX_API_HOST") ?? "https://api.minimax.io").replace(/\/$/, "");
+      const res = await fetch(`${host}/v1/t2a_v2`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${Deno.env.get("MINIMAX_API_KEY")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: Deno.env.get("MINIMAX_MODEL") ?? "speech-2.8-turbo",
+          text: "Hi.",
+          stream: false,
+          output_format: "hex",
+          voice_setting: { voice_id: Deno.env.get("MINIMAX_VOICE_ID"), speed: 1, vol: 1, pitch: 0 },
+          audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3", channel: 1 },
+        }),
+      });
+      const body = await res.json();
+      ttsReachable = res.ok && !body?.base_resp?.status_code && Boolean(body?.data?.audio);
+      if (!ttsReachable) voiceReason = `provider_status_${body?.base_resp?.status_code ?? res.status}`;
+    } catch (err) {
+      voiceReason = err instanceof Error ? err.message : "probe_failed";
+    }
+  } else {
+    voiceReason = "secrets_missing";
+  }
 
   return new Response(
     JSON.stringify({
@@ -44,10 +76,13 @@ Deno.serve(async (req) => {
         },
         lemo: { health: "online", provider: "LEMO Lite (heuristic)" },
         voice: {
-          health: minimaxConfigured ? "online" : "placeholder",
-          provider: minimaxConfigured ? "Cola Voice (MiniMax speech-02-hd)" : "Browser TTS Placeholder",
-          voice_id: Deno.env.get("MINIMAX_VOICE_ID") ?? "moss_audio_baae1c62-…(default)",
-          fallback: "Browser TTS Placeholder",
+          health: ttsReachable ? "online" : apiKeyPresent ? "error" : "fallback",
+          provider: "MiniMax Speech 2.8 Turbo — Cola B",
+          minimax_api_key_present: apiKeyPresent,
+          minimax_voice_id_present: voiceIdPresent,
+          minimax_tts_reachable: ttsReachable,
+          reason: voiceReason,
+          fallback: "Browser TTS (emergency fallback only)",
         },
         avatar: { health: "placeholder", provider: "Editorial Portrait Placeholder (no lip sync)" },
       },
