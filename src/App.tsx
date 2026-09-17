@@ -55,6 +55,7 @@ import { LiveAuthProvider } from "@/live/LiveAuthContext";
 import LiveGuard from "@/live/components/LiveGuard";
 const LiveLogin = lazy(() => import("@/live/pages/LiveLogin"));
 const LiveLobby = lazy(() => import("@/live/pages/LiveLobby"));
+const LiveDirect = lazy(() => import("@/live/pages/LiveDirect"));
 const LiveRoom = lazy(() => import("@/live/pages/LiveRoom"));
 const LiveProducer = lazy(() => import("@/live/pages/LiveProducer"));
 
