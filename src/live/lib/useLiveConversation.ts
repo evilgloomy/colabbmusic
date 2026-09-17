@@ -371,7 +371,7 @@ export function useLiveConversation(opts: {
   );
 
   /* ------------------------------ session life ----------------------------- */
-  const startWithMode = useCallback(
+  const startWithMode: (mode: SpeechMode) => Promise<void> = useCallback(
     async (mode: SpeechMode) => {
       const adapter = getSpeechAdapter(mode);
       speechRef.current = adapter;
