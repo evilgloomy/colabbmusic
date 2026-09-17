@@ -13,6 +13,7 @@ import {
   type SpeechMode,
 } from "@/live/adapters/registry";
 import { speechRecognitionSupported } from "@/live/adapters/speech/browserSpeech";
+import { realtimeAvatarBridge, REALTIME_AVATAR_PROVIDER_LABEL } from "@/live/avatar/realtimeAvatar";
 import {
   NEUTRAL_LEMO,
   type LatencySample,
@@ -64,7 +65,7 @@ export function useLiveConversation(opts: {
     aurora: { health: "unknown", note: AURORA_ENGINE_LABEL },
     lemo: { health: LIVE_MOCK_MODE ? "mock" : "unknown", note: "LEMO Lite" },
     voice: { health: "ok", note: `${VOICE_PROVIDER_LABEL} · ${VOICESTUDIO_STATUS_NOTE}` },
-    avatar: { health: "ok", note: AVATAR_PROVIDER_LABEL },
+    avatar: { health: "unknown", note: AVATAR_PROVIDER_LABEL },
   });
 
   const speechRef = useRef(getSpeechAdapter(speechMode));
@@ -149,7 +150,35 @@ export function useLiveConversation(opts: {
     if (!observerOnly) broadcast("services", services);
   }, [services, broadcast, observerOnly]);
 
-  /* --------------------- outgoing audio level for the avatar -------------------- */
+  // Keep the staff/provider view honest. Failure to connect an avatar is
+  // deliberately non-fatal: Cola continues with her portrait + MiniMax voice.
+  useEffect(() => {
+    if (observerOnly) return;
+    const syncAvatarStatus = () => {
+      const avatar = realtimeAvatarBridge.getSnapshot();
+      const health =
+        avatar.status === "connected" || avatar.status === "speaking"
+          ? "ok"
+          : avatar.status === "fallback"
+            ? "degraded"
+            : avatar.status === "error"
+              ? "down"
+              : "unknown";
+      const fallbackNote = avatar.status === "fallback" ? " · editorial portrait fallback" : "";
+      const reason = avatar.reason ? ` · ${avatar.reason}` : "";
+      setServices((current) => ({
+        ...current,
+        avatar: {
+          health,
+          note: `${REALTIME_AVATAR_PROVIDER_LABEL}${fallbackNote}${reason}`,
+        },
+      }));
+    };
+    syncAvatarStatus();
+    return realtimeAvatarBridge.subscribe(syncAvatarStatus);
+  }, [observerOnly]);
+
+  /* --------------------- outgoing local audio level -------------------- */
   useEffect(() => {
     if (observerOnly || state !== "COLA_SPEAKING") {
       setAmplitude(0);
@@ -285,6 +314,9 @@ export function useLiveConversation(opts: {
   /* -------------------------------- controls ------------------------------- */
   const stopCola = useCallback(
     (markInterrupted = true) => {
+      // MiniMax adapter also interrupts LiveAvatar, but calling the bridge here
+      // makes STOP COLA robust if the audio provider changes later.
+      realtimeAvatarBridge.interrupt();
       voiceRef.current.cancel();
       if (markInterrupted && stateRef.current === "COLA_SPEAKING") {
         interruptedRef.current = true;
@@ -311,13 +343,16 @@ export function useLiveConversation(opts: {
           stopCola(true);
           break;
         case "cancel_response":
+          realtimeAvatarBridge.interrupt();
           voiceRef.current.cancel();
           go(startedRef.current ? "LISTENING" : "IDLE");
           break;
         case "force_listening":
+          realtimeAvatarBridge.interrupt();
           voiceRef.current.cancel();
           speechRef.current.setMuted(false);
           setMuted(false);
+          realtimeAvatarBridge.startListening();
           go("LISTENING");
           break;
         case "mute":
@@ -428,6 +463,10 @@ export function useLiveConversation(opts: {
     startedRef.current = true;
     go("CONNECTING");
 
+    // Start the renderer on the user's click so remote audio is eligible for
+    // browser autoplay. Do not block microphone/chat if LiveAvatar is absent.
+    void realtimeAvatarBridge.connect();
+
     let mode = speechMode;
     if (mode === "browser") {
       if (!speechRecognitionSupported()) {
@@ -453,8 +492,10 @@ export function useLiveConversation(opts: {
 
   const stop = useCallback(async () => {
     startedRef.current = false;
+    realtimeAvatarBridge.interrupt();
     voiceRef.current.cancel();
     await speechRef.current.stop();
+    await realtimeAvatarBridge.disconnect();
     setPartial("");
     go("IDLE");
   }, [go]);
@@ -473,6 +514,7 @@ export function useLiveConversation(opts: {
     return () => {
       voiceRef.current.cancel();
       void speechRef.current.stop();
+      void realtimeAvatarBridge.disconnect();
     };
   }, []);
 
