@@ -4,8 +4,7 @@ import { createMockAuroraAdapter } from "./aurora/mockAurora";
 import { createServerAuroraAdapter } from "./aurora/serverAurora";
 import { createMockLemoAdapter } from "./lemo/mockLemo";
 import { createBrowserTtsPlaceholderAdapter } from "./voice/browserTtsVoice";
-import { createVoiceStudioAdapter } from "./voice/voiceStudio";
-import { createMinimaxVoiceAdapter } from "./voice/minimaxVoice";
+import { createMinimaxColaVoiceAdapter, MINIMAX_VOICE_LABEL } from "./voice/minimaxVoice";
 import { AVATAR_PROVIDER_LABEL as AVATAR_LABEL } from "@/live/lib/avatar";
 import type { AuroraAdapter, LemoAdapter, SpeechInputAdapter, VoiceAdapter } from "@/live/lib/types";
 
@@ -17,28 +16,20 @@ export const LIVE_MOCK_MODE =
   (import.meta.env.VITE_LIVE_MOCK_MODE ?? "true").toString().toLowerCase() !== "false";
 
 /**
- * Cola's real voice: MiniMax T2A via the `cola-voice` edge function.
- * Set VITE_COLA_VOICE_ENABLED=false to fall back to the browser placeholder.
+ * Cola's real voice: MiniMax speech-2.8-turbo via the `cola-voice` edge
+ * function. Set VITE_COLA_VOICE_ENABLED=false to force the emergency
+ * browser-TTS fallback. The old VoiceStudio stub is deprecated and never
+ * called on a turn.
  */
 export const COLA_VOICE_ENABLED =
   (import.meta.env.VITE_COLA_VOICE_ENABLED ?? "true").toString().toLowerCase() !== "false";
 
-/** Legacy VoiceStudio stub stays OFF until a real provider contract exists. */
-export const VOICESTUDIO_ENABLED =
-  (import.meta.env.VITE_VOICESTUDIO_ENABLED ?? "false").toString().toLowerCase() === "true";
-
 export const AURORA_ENGINE_LABEL = "Aurora Lite";
 export const AVATAR_PROVIDER_LABEL = AVATAR_LABEL;
-export const VOICE_PROVIDER_LABEL = COLA_VOICE_ENABLED
-  ? "Cola Voice (MiniMax)"
-  : VOICESTUDIO_ENABLED
-    ? "VoiceStudio (Cola voice)"
-    : "Browser TTS Placeholder";
+export const VOICE_PROVIDER_LABEL = COLA_VOICE_ENABLED ? MINIMAX_VOICE_LABEL : "Browser TTS (emergency fallback)";
 export const VOICESTUDIO_STATUS_NOTE = COLA_VOICE_ENABLED
-  ? "MiniMax speech-02-hd · browser TTS fallback"
-  : VOICESTUDIO_ENABLED
-    ? "VoiceStudio: enabled"
-    : "VoiceStudio: not configured";
+  ? "Browser TTS: emergency fallback only · VoiceStudio: deprecated"
+  : "MiniMax disabled by config · VoiceStudio: deprecated";
 
 export type SpeechMode = "browser" | "simulated";
 
@@ -56,7 +47,6 @@ export function getLemoAdapter(): LemoAdapter {
 }
 
 export function getVoiceAdapter(): VoiceAdapter {
-  const placeholder = createBrowserTtsPlaceholderAdapter();
-  if (COLA_VOICE_ENABLED) return createMinimaxVoiceAdapter(placeholder);
-  return VOICESTUDIO_ENABLED ? createVoiceStudioAdapter(placeholder) : placeholder;
+  const emergencyFallback = createBrowserTtsPlaceholderAdapter();
+  return COLA_VOICE_ENABLED ? createMinimaxColaVoiceAdapter(emergencyFallback) : emergencyFallback;
 }

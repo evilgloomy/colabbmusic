@@ -1,3 +1,4 @@
+/** @deprecated Unused. Cola's production voice is MiniMax via minimaxVoice.ts. */
 import { supabase } from "@/integrations/supabase/client";
 import type { VoiceAdapter, VoiceHandlers, VoiceRequest } from "@/live/lib/types";
 

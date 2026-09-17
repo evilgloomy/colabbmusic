@@ -3,35 +3,28 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "npm:zod@3";
 
 /**
- * Cola Voice server proxy — MiniMax T2A v2.
+ * Cola Voice server proxy — MiniMax T2A v2 (speech-2.8-turbo).
  *
- * The browser never holds credentials: MINIMAX_API_KEY stays server-side.
- * Normalized contract in / normalized audio out, so the provider can be
- * swapped without touching the client adapter.
+ * The browser never receives MINIMAX_API_KEY or MINIMAX_VOICE_ID. Two modes:
+ *   stream=true  -> SSE of base64 MP3 chunks (low time-to-first-audio)
+ *   stream=false -> single JSON payload with base64 MP3
  *
  * Secrets: MINIMAX_API_KEY (required), MINIMAX_VOICE_ID, MINIMAX_MODEL,
  *          MINIMAX_API_HOST (optional overrides).
  */
 
-const DEFAULT_VOICE_ID = "moss_audio_baae1c62-e8f1-11ef-98b1-0a984ed190a1";
-const DEFAULT_MODEL = "speech-02-hd";
+const DEFAULT_MODEL = "speech-2.8-turbo";
 const DEFAULT_HOST = "https://api.minimax.io";
-
-const MINIMAX_EMOTIONS = ["happy", "sad", "angry", "fearful", "disgusted", "surprised", "neutral"] as const;
 
 const BodySchema = z.object({
   text: z.string().min(1).max(4000),
-  voice_id: z.string().max(200).optional(),
   language: z.string().max(20).optional(),
   speaking_rate: z.number().min(0.5).max(2).optional(),
-  stream: z.boolean().default(false),
+  stream: z.boolean().default(true),
   lemo: z
     .object({
       emotion: z.string().max(40).optional(),
-      valence: z.number().optional(),
-      arousal: z.number().optional(),
       warmth: z.number().optional(),
-      confidence: z.number().optional(),
       energy: z.number().optional(),
       speaking_rate: z.number().optional(),
       pause_before_ms: z.number().optional(),
@@ -40,15 +33,21 @@ const BodySchema = z.object({
     .optional(),
 });
 
-function mapEmotion(raw?: string): string {
-  const e = (raw ?? "").toLowerCase();
-  if (MINIMAX_EMOTIONS.includes(e as (typeof MINIMAX_EMOTIONS)[number])) return e;
-  if (/joy|excite|warm|playful|bright|amused/.test(e)) return "happy";
-  if (/sad|melanchol|wistful|tender|somber/.test(e)) return "sad";
-  if (/anger|frustrat|firm/.test(e)) return "angry";
-  if (/surpris|awe|curious/.test(e)) return "surprised";
-  if (/anxious|nervous|fear/.test(e)) return "fearful";
-  return "neutral";
+function languageBoost(language?: string): string {
+  const l = (language ?? "").toLowerCase();
+  if (!l) return "auto";
+  if (l.startsWith("yue") || l.includes("hk") || l.startsWith("zh") || l.includes("canton")) return "Chinese,Yue";
+  if (l.startsWith("en")) return "English";
+  return "auto";
+}
+
+function hexToBase64(hex: string): string {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+  let binary = "";
+  const step = 0x8000;
+  for (let i = 0; i < bytes.length; i += step) binary += String.fromCharCode(...bytes.subarray(i, i + step));
+  return btoa(binary);
 }
 
 Deno.serve(async (req) => {
@@ -68,65 +67,119 @@ Deno.serve(async (req) => {
     const body = parsed.data;
 
     const apiKey = Deno.env.get("MINIMAX_API_KEY");
-    if (!apiKey) return json({ ok: false, error: "voice_not_configured", configured: false }, 503);
+    const voiceId = Deno.env.get("MINIMAX_VOICE_ID");
+    if (!apiKey || !voiceId) {
+      return json(
+        {
+          ok: false,
+          error: "voice_not_configured",
+          minimax_api_key_present: Boolean(apiKey),
+          minimax_voice_id_present: Boolean(voiceId),
+        },
+        503,
+      );
+    }
 
     const host = (Deno.env.get("MINIMAX_API_HOST") ?? DEFAULT_HOST).replace(/\/$/, "");
     const model = Deno.env.get("MINIMAX_MODEL") ?? DEFAULT_MODEL;
-    const voiceId = body.voice_id || Deno.env.get("MINIMAX_VOICE_ID") || DEFAULT_VOICE_ID;
-    const rate = Math.max(0.5, Math.min(2, body.speaking_rate ?? body.lemo?.speaking_rate ?? 1));
+    const rawRate = body.speaking_rate ?? body.lemo?.speaking_rate ?? 1;
+    const speed = Math.max(0.85, Math.min(1.15, Number.isFinite(rawRate) ? rawRate : 1));
+
+    const payload: Record<string, unknown> = {
+      model,
+      text: body.text,
+      stream: body.stream,
+      language_boost: languageBoost(body.language),
+      voice_setting: { voice_id: voiceId, speed, vol: 1, pitch: 0 },
+      audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3", channel: 1 },
+    };
+    if (!body.stream) payload.output_format = "hex";
 
     const started = Date.now();
     const upstream = await fetch(`${host}/v1/t2a_v2`, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        text: body.text,
-        stream: false,
-        language_boost: body.language === "zh" ? "Chinese,Yue" : "auto",
-        voice_setting: {
-          voice_id: voiceId,
-          speed: rate,
-          vol: 1,
-          pitch: 0,
-          emotion: mapEmotion(body.lemo?.emotion),
-        },
-        audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3", channel: 1 },
-      }),
+      body: JSON.stringify(payload),
     });
 
-    if (!upstream.ok) {
-      const detail = await upstream.text();
-      console.error("minimax http error", upstream.status, detail.slice(0, 300));
+    if (!upstream.ok || !upstream.body) {
+      console.error("minimax http error", upstream.status);
       return json({ ok: false, error: "voice_provider_error", status: upstream.status }, 502);
     }
 
-    const payload = await upstream.json();
-    const statusCode = payload?.base_resp?.status_code;
-    const hex: string | undefined = payload?.data?.audio;
-    if (statusCode && statusCode !== 0) {
-      console.error("minimax api error", statusCode, payload?.base_resp?.status_msg);
-      return json({ ok: false, error: "voice_provider_error", provider_status: statusCode }, 502);
+    if (!body.stream) {
+      const data = await upstream.json();
+      const status = data?.base_resp?.status_code;
+      const hex: string | undefined = data?.data?.audio;
+      if (status && status !== 0) {
+        console.error("minimax api error", status, data?.base_resp?.status_msg);
+        return json({ ok: false, error: "voice_provider_error", provider_status: status }, 502);
+      }
+      if (!hex) return json({ ok: false, error: "voice_empty_audio" }, 502);
+      return json({
+        ok: true,
+        provider: "minimax",
+        model,
+        format: "mp3",
+        latency_ms: Date.now() - started,
+        audio_base64: hexToBase64(hex),
+      });
     }
-    if (!hex) return json({ ok: false, error: "voice_empty_audio" }, 502);
 
-    // hex -> bytes -> base64 (client decodes to an AudioBuffer)
-    const bytes = new Uint8Array(hex.length / 2);
-    for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
-    let binary = "";
-    const chunk = 0x8000;
-    for (let i = 0; i < bytes.length; i += chunk) {
-      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-    }
+    // Streaming: forward MiniMax's incremental hex chunks as base64 SSE events.
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        const send = (obj: unknown) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+        const reader = upstream.body!.getReader();
+        let buffer = "";
+        let firstAt = 0;
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            let idx: number;
+            while ((idx = buffer.indexOf("\n")) >= 0) {
+              const line = buffer.slice(0, idx).trim();
+              buffer = buffer.slice(idx + 1);
+              if (!line.startsWith("data:")) continue;
+              let evt: any;
+              try {
+                evt = JSON.parse(line.slice(5));
+              } catch {
+                continue;
+              }
+              const status = evt?.base_resp?.status_code;
+              if (status && status !== 0) {
+                send({ type: "error", error: "voice_provider_error", provider_status: status });
+                controller.close();
+                return;
+              }
+              // status 2 repeats the full audio with extra_info — skip it.
+              if (evt?.extra_info || evt?.data?.status === 2) continue;
+              const hex: string | undefined = evt?.data?.audio;
+              if (!hex) continue;
+              if (!firstAt) {
+                firstAt = Date.now();
+                send({ type: "meta", provider: "minimax", model, ttfa_ms: firstAt - started });
+              }
+              send({ type: "chunk", audio_base64: hexToBase64(hex) });
+            }
+          }
+          send({ type: "done", total_ms: Date.now() - started });
+        } catch (err) {
+          console.error("minimax stream error", err);
+          send({ type: "error", error: "voice_stream_error" });
+        } finally {
+          controller.close();
+        }
+      },
+    });
 
-    return json({
-      ok: true,
-      provider: "minimax",
-      model,
-      voice_id: voiceId,
-      format: "mp3",
-      latency_ms: Date.now() - started,
-      audio_base64: btoa(binary),
+    return new Response(stream, {
+      headers: { ...corsHeaders, "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
     });
   } catch (err) {
     console.error("cola-voice error", err);
