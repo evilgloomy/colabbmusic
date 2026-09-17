@@ -47,6 +47,19 @@ export default function LiveRoom() {
   const [simText, setSimText] = useState("");
   const [showTranscript, setShowTranscript] = useState(false);
   const [showDiag, setShowDiag] = useState(false);
+  const [health, setHealth] = useState<LiveHealth | null>(null);
+
+  useEffect(() => {
+    if (!showDiag || !isStaff || health) return;
+    let cancelled = false;
+    void supabase.functions.invoke("live-health").then(({ data }) => {
+      if (!cancelled && data) setHealth(data as LiveHealth);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [showDiag, isStaff, health]);
+
 
   const active = convo.state !== "IDLE";
   const speaking = convo.state === "COLA_SPEAKING";
