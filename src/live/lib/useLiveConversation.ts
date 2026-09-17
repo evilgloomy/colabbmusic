@@ -60,7 +60,7 @@ export function useLiveConversation(opts: {
     speech: { health: "unknown" },
     aurora: { health: "unknown", note: AURORA_ENGINE_LABEL },
     lemo: { health: LIVE_MOCK_MODE ? "mock" : "unknown", note: "LEMO Lite" },
-    voice: { health: "mock", note: "Browser TTS Placeholder" },
+    voice: { health: "mock", note: `${VOICE_PROVIDER_LABEL} · ${VOICESTUDIO_STATUS_NOTE}` },
     avatar: { health: "ok", note: AVATAR_PROVIDER_LABEL },
   });
 
