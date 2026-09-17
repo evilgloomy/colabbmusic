@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import LiveLayout from "@/live/LiveLayout";
 import LiveColaAvatar from "@/live/components/LiveColaAvatar";
@@ -6,7 +6,23 @@ import TranscriptView from "@/live/components/TranscriptView";
 import { useLiveSession } from "@/live/lib/useLiveSession";
 import { useLiveConversation } from "@/live/lib/useLiveConversation";
 import { useLiveAuth } from "@/live/LiveAuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import type { LiveState } from "@/live/lib/types";
+
+/** Staff-only server health payload (never contains secret values). */
+type LiveHealth = {
+  aurora_lite?: { aurora_lite_llm?: string; model?: string; profile_version?: string; reason?: string };
+  services?: {
+    voice?: {
+      health?: string;
+      provider?: string;
+      minimax_api_key_present?: boolean;
+      minimax_voice_id_present?: boolean;
+      minimax_tts_reachable?: boolean;
+      reason?: string;
+    };
+  };
+};
 
 /** Plain, non-technical status for the guest. */
 const STATUS: Record<LiveState, string> = {
