@@ -878,6 +878,7 @@ export type Database = {
           created_by: string
           id: string
           interviewer_name: string | null
+          is_direct: boolean
           media_organization: string | null
           mock_mode: boolean
           music_releases: string | null
@@ -900,6 +901,7 @@ export type Database = {
           created_by: string
           id?: string
           interviewer_name?: string | null
+          is_direct?: boolean
           media_organization?: string | null
           mock_mode?: boolean
           music_releases?: string | null
@@ -922,6 +924,7 @@ export type Database = {
           created_by?: string
           id?: string
           interviewer_name?: string | null
+          is_direct?: boolean
           media_organization?: string | null
           mock_mode?: boolean
           music_releases?: string | null
@@ -1173,6 +1176,7 @@ export type Database = {
         Args: { _code: string; _payload: Json }
         Returns: Json
       }
+      live_get_or_create_direct_session: { Args: never; Returns: Json }
       live_guest_session_view: { Args: { _session_id: string }; Returns: Json }
     }
     Enums: {

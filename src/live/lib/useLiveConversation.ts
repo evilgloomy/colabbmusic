@@ -7,9 +7,12 @@ import {
   getVoiceAdapter,
   AURORA_ENGINE_LABEL,
   AVATAR_PROVIDER_LABEL,
+  VOICE_PROVIDER_LABEL,
+  VOICESTUDIO_STATUS_NOTE,
   LIVE_MOCK_MODE,
   type SpeechMode,
 } from "@/live/adapters/registry";
+import { speechRecognitionSupported } from "@/live/adapters/speech/browserSpeech";
 import {
   NEUTRAL_LEMO,
   type LatencySample,
@@ -45,7 +48,8 @@ export function useLiveConversation(opts: {
   speechMode?: SpeechMode;
 }) {
   const { sessionId, config, observerOnly = false } = opts;
-  const [speechMode, setSpeechMode] = useState<SpeechMode>(opts.speechMode ?? "simulated");
+  // Microphone is the normal mode. Typed input is a staff/debug fallback only.
+  const [speechMode, setSpeechMode] = useState<SpeechMode>(opts.speechMode ?? "browser");
   const [state, setState] = useState<LiveState>("IDLE");
   const [turns, setTurns] = useState<TranscriptTurn[]>([]);
   const [partial, setPartial] = useState("");
@@ -59,7 +63,7 @@ export function useLiveConversation(opts: {
     speech: { health: "unknown" },
     aurora: { health: "unknown", note: AURORA_ENGINE_LABEL },
     lemo: { health: LIVE_MOCK_MODE ? "mock" : "unknown", note: "LEMO Lite" },
-    voice: { health: "mock", note: "Browser TTS Placeholder" },
+    voice: { health: "mock", note: `${VOICE_PROVIDER_LABEL} · ${VOICESTUDIO_STATUS_NOTE}` },
     avatar: { health: "ok", note: AVATAR_PROVIDER_LABEL },
   });
 
@@ -367,44 +371,85 @@ export function useLiveConversation(opts: {
   );
 
   /* ------------------------------ session life ----------------------------- */
+  const startWithMode: (mode: SpeechMode) => Promise<void> = useCallback(
+    async (mode: SpeechMode) => {
+      const adapter = getSpeechAdapter(mode);
+      speechRef.current = adapter;
+      await adapter.start(
+        {
+          onSpeechStart: () => {
+            // Barge-in: interviewer talks while Cola speaks.
+            if (stateRef.current === "COLA_SPEAKING" || stateRef.current === "VOICE_CONNECTING") {
+              stopCola(true);
+            }
+            go("USER_SPEAKING");
+          },
+          onPartial: (text) => {
+            setPartial(text);
+            broadcast("partial", { text });
+          },
+          onFinal: (text, meta) => {
+            speechEndRef.current = performance.now();
+            go("FINALIZING_TRANSCRIPT");
+            void runTurn(text, meta.finalizationMs);
+          },
+          onError: (msg) => {
+            // Never leave the room stuck in LISTENING when speech cannot run.
+            if (msg.startsWith("unsupported:") || msg.startsWith("mic-denied:")) {
+              const reason = msg.split(":").slice(1).join(":").trim();
+              void adapter.stop();
+              setSpeechMode("simulated");
+              setServices((s) => ({ ...s, speech: { health: "degraded", note: reason } }));
+              setError(`${reason} Typed input is active.`);
+              void startWithMode("simulated");
+              return;
+            }
+            setServices((s) => ({ ...s, speech: { health: "degraded", note: msg } }));
+            setError(msg);
+          },
+        },
+        { silenceThresholdMs: config?.silence_threshold_ms ?? 750, language: config?.primary_language },
+      );
+      setServices((s) => ({
+        ...s,
+        speech: {
+          health: adapter.isMock ? "mock" : "ok",
+          note: adapter.isMock ? "Typed input fallback" : adapter.id,
+        },
+      }));
+      go("LISTENING");
+    },
+    [broadcast, config, go, runTurn, stopCola],
+  );
+
   const start = useCallback(async () => {
     if (observerOnly) return;
     setError(null);
     startedRef.current = true;
     go("CONNECTING");
-    const adapter = getSpeechAdapter(speechMode);
-    speechRef.current = adapter;
-    await adapter.start(
-      {
-        onSpeechStart: () => {
-          // Barge-in: interviewer talks while Cola speaks.
-          if (stateRef.current === "COLA_SPEAKING" || stateRef.current === "VOICE_CONNECTING") {
-            stopCola(true);
-          }
-          go("USER_SPEAKING");
-        },
-        onPartial: (text) => {
-          setPartial(text);
-          broadcast("partial", { text });
-        },
-        onFinal: (text, meta) => {
-          speechEndRef.current = performance.now();
-          go("FINALIZING_TRANSCRIPT");
-          void runTurn(text, meta.finalizationMs);
-        },
-        onError: (msg) => {
-          setServices((s) => ({ ...s, speech: { health: "degraded", note: msg } }));
-          setError(msg);
-        },
-      },
-      { silenceThresholdMs: config?.silence_threshold_ms ?? 750, language: config?.primary_language },
-    );
-    setServices((s) => ({
-      ...s,
-      speech: { health: adapter.isMock ? "mock" : "ok", note: adapter.id },
-    }));
-    go("LISTENING");
-  }, [broadcast, config, go, observerOnly, runTurn, speechMode, stopCola]);
+
+    let mode = speechMode;
+    if (mode === "browser") {
+      if (!speechRecognitionSupported()) {
+        mode = "simulated";
+        setSpeechMode("simulated");
+        setError("This browser cannot listen live. Typed input is active — Chrome or Edge supports the microphone.");
+      } else {
+        // Explicit permission prompt, so mic denial is distinguishable from
+        // SpeechRecognition failures. Release the probe stream immediately.
+        try {
+          const probe = await navigator.mediaDevices.getUserMedia({ audio: true });
+          probe.getTracks().forEach((t) => t.stop());
+        } catch {
+          mode = "simulated";
+          setSpeechMode("simulated");
+          setServices((s) => ({ ...s, speech: { health: "degraded", note: "Microphone permission denied" } }));
+          setError("Microphone access was blocked. Allow it in the browser, or use typed input.");
+        }
+      }
+    }
+    await startWithMode(mode);
+  }, [go, observerOnly, speechMode, startWithMode]);
 
   const stop = useCallback(async () => {
     startedRef.current = false;

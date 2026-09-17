@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import LiveLayout from "@/live/LiveLayout";
 import LiveColaAvatar from "@/live/components/LiveColaAvatar";
 import TranscriptView from "@/live/components/TranscriptView";
@@ -29,7 +29,8 @@ export default function LiveRoom() {
   const { config, loading, error } = useLiveSession(sessionId);
   const convo = useLiveConversation({ sessionId, config });
   const [simText, setSimText] = useState("");
-  const [showTranscript, setShowTranscript] = useState(true);
+  const [showTranscript, setShowTranscript] = useState(false);
+  const [showDiag, setShowDiag] = useState(false);
 
   const active = convo.state !== "IDLE";
   const speaking = convo.state === "COLA_SPEAKING";
@@ -88,14 +89,14 @@ export default function LiveRoom() {
             )}
           </div>
 
-          {!active && (
-            <label className="mt-5 flex items-center gap-2 text-xs opacity-60">
+          {!active && isStaff && (
+            <label className="mt-5 flex items-center gap-2 text-xs opacity-50">
               <input
                 type="checkbox"
-                checked={convo.speechMode === "browser"}
-                onChange={(e) => convo.setSpeechMode(e.target.checked ? "browser" : "simulated")}
+                checked={convo.speechMode === "simulated"}
+                onChange={(e) => convo.setSpeechMode(e.target.checked ? "simulated" : "browser")}
               />
-              Use microphone (otherwise type your questions)
+              Type instead of speaking (debug)
             </label>
           )}
 
@@ -134,7 +135,27 @@ export default function LiveRoom() {
         </section>
 
         {isStaff && (
-          <p className="live-eyebrow live-accent mt-8 text-center">Rehearsal · staff view</p>
+          <section className="mt-8 w-full border-t live-hairline pt-5 text-center">
+            <p className="live-eyebrow live-accent">Rehearsal · staff view</p>
+            <div className="mt-3 flex justify-center gap-4 text-xs opacity-60">
+              <Link to={`/live/producer/${sessionId}`}>Producer</Link>
+              <Link to="/live/sessions">Sessions</Link>
+              <button onClick={() => setShowDiag((v) => !v)}>Diagnostics {showDiag ? "−" : "+"}</button>
+            </div>
+            {showDiag && (
+              <dl className="mx-auto mt-4 grid max-w-xl grid-cols-2 gap-x-6 gap-y-2 text-left text-xs opacity-70">
+                {(["speech", "aurora", "lemo", "voice", "avatar"] as const).map((k) => (
+                  <div key={k} className="contents">
+                    <dt className="uppercase tracking-wider">{k}</dt>
+                    <dd>
+                      {convo.services[k]?.health}
+                      {convo.services[k]?.note ? ` · ${convo.services[k]?.note}` : ""}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </section>
         )}
       </main>
     </LiveLayout>

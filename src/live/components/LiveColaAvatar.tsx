@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import portrait from "@/assets/campaign/portrait-close.jpg";
 import type { LiveAvatarProps } from "@/live/lib/avatar";
 
 /**
- * Cola's live presence. Web-native and low latency: idle breathing, semi-random
- * blink, state-driven lighting and an amplitude-reactive speaking treatment.
- * No cartoon mouth overlay — the face is never distorted.
- * Swappable for a realtime viseme / Live2D / WebGL avatar via LiveAvatarProps.
+ * Editorial Portrait Placeholder — Cola's live presence today.
+ * Idle breathing, state-driven lighting and an amplitude-reactive aura/waveform.
+ * There is no blink and no lip sync: a still portrait cannot fake either
+ * convincingly. Swappable for a realtime viseme / Live2D / WebGL / streaming
+ * avatar provider via LiveAvatarProps.
  */
 export default function LiveColaAvatar({
   state,
@@ -16,22 +17,6 @@ export default function LiveColaAvatar({
   listening,
   className = "",
 }: LiveAvatarProps) {
-  const [blink, setBlink] = useState(false);
-  const timer = useRef<number>();
-
-  useEffect(() => {
-    const schedule = () => {
-      const delay = 2600 + Math.random() * 4200;
-      timer.current = window.setTimeout(() => {
-        setBlink(true);
-        window.setTimeout(() => setBlink(false), 130);
-        schedule();
-      }, delay);
-    };
-    schedule();
-    return () => window.clearTimeout(timer.current);
-  }, []);
-
   const level = speaking ? Math.max(0.08, Math.min(1, amplitude)) : 0;
   const thinking =
     state === "AURORA_PROCESSING" || state === "LEMO_PROCESSING" || state === "VOICE_CONNECTING";
@@ -52,7 +37,7 @@ export default function LiveColaAvatar({
     <div
       className={`live-avatar ${className}`}
       data-mood={mood}
-      data-blink={blink}
+      
       style={
         {
           "--level": level.toFixed(3),
@@ -66,7 +51,7 @@ export default function LiveColaAvatar({
       <div className="live-avatar-aura" aria-hidden="true" />
       <div className="live-avatar-frame">
         <img src={portrait} alt="" className="live-avatar-img" />
-        <span className="live-avatar-eyelids" aria-hidden="true" />
+        
         <span className="live-avatar-light" aria-hidden="true" />
       </div>
       <div className="live-avatar-voiceline" aria-hidden="true">

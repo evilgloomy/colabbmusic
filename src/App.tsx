@@ -55,6 +55,7 @@ import { LiveAuthProvider } from "@/live/LiveAuthContext";
 import LiveGuard from "@/live/components/LiveGuard";
 const LiveLogin = lazy(() => import("@/live/pages/LiveLogin"));
 const LiveLobby = lazy(() => import("@/live/pages/LiveLobby"));
+const LiveDirect = lazy(() => import("@/live/pages/LiveDirect"));
 const LiveRoom = lazy(() => import("@/live/pages/LiveRoom"));
 const LiveProducer = lazy(() => import("@/live/pages/LiveProducer"));
 
@@ -122,7 +123,8 @@ const AppInner = () => {
             <Suspense fallback={null}>
               <Routes>
                 <Route path="login" element={<LiveLogin />} />
-                <Route path="" element={<LiveGuard><LiveLobby /></LiveGuard>} />
+                <Route path="" element={<LiveGuard><LiveDirect /></LiveGuard>} />
+                <Route path="sessions" element={<LiveGuard><LiveLobby /></LiveGuard>} />
                 <Route path="session/:sessionId" element={<LiveGuard><LiveRoom /></LiveGuard>} />
                 <Route path="producer/:sessionId" element={<LiveGuard staffOnly><LiveProducer /></LiveGuard>} />
                 <Route path="*" element={<Navigate to="/live" replace />} />
