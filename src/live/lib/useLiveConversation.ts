@@ -7,9 +7,12 @@ import {
   getVoiceAdapter,
   AURORA_ENGINE_LABEL,
   AVATAR_PROVIDER_LABEL,
+  VOICE_PROVIDER_LABEL,
+  VOICESTUDIO_STATUS_NOTE,
   LIVE_MOCK_MODE,
   type SpeechMode,
 } from "@/live/adapters/registry";
+import { speechRecognitionSupported } from "@/live/adapters/speech/browserSpeech";
 import {
   NEUTRAL_LEMO,
   type LatencySample,
