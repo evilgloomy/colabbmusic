@@ -50,20 +50,8 @@ const series = [
   },
 ];
 
-const PASSWORD = "chloethecat";
-
 const css = `
   .lvv5-root * { box-sizing: border-box; }
-  .gate { min-height: 100vh; background: #030810; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: Georgia, serif; padding: 2rem; }
-  .gate-eyebrow { color: #6a5c40; font-size: 11px; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 1rem; font-family: sans-serif; }
-  .gate-kanji { font-size: clamp(90px, 18vw, 150px); color: #e4d8c0; font-weight: 400; line-height: 1; margin-bottom: 0.25rem; }
-  .gate-sub { color: #6a5c40; font-size: 12px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 2.5rem; font-family: sans-serif; }
-  .pw-input { background: transparent; border: 1px solid #2e2510; border-radius: 2px; padding: 13px 24px; color: #e4d8c0; font-size: 14px; width: 260px; text-align: center; letter-spacing: 3px; outline: none; margin-bottom: 8px; font-family: Georgia, serif; }
-  .pw-input.err { border-color: #7a2e2e; }
-  .pw-input:focus { border-color: #6a5c40; }
-  .err-msg { color: #7a2e2e; font-size: 12px; margin-bottom: 8px; font-family: sans-serif; }
-  .gate-btn { margin-top: 8px; background: transparent; border: 1px solid #6a5c40; color: #c8a070; padding: 11px 44px; font-size: 11px; letter-spacing: 4px; text-transform: uppercase; cursor: pointer; border-radius: 2px; font-family: sans-serif; }
-  .gate-btn:hover { background: #0d0d14; }
   .page { background: #030810; color: #e4d8c0; font-family: Georgia, serif; min-height: 100vh; max-width: 780px; margin: 0 auto; padding: 0 1.5rem 5rem; }
   .hdr { text-align: center; padding: 4rem 0 2rem; }
   .eyebrow { color: #6a5c40; font-size: 10px; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 1.25rem; font-family: sans-serif; font-weight: 400; }
@@ -104,9 +92,6 @@ const css = `
 `;
 
 export default function LoveVibeVol5() {
-  const [pw, setPw] = useState("");
-  const [open, setOpen] = useState(false);
-  const [err, setErr] = useState(false);
   const [activeTrack, setActiveTrack] = useState(0);
 
   useSEO({
@@ -115,34 +100,8 @@ export default function LoveVibeVol5() {
     noindex: true,
   });
 
-  const tryUnlock = () => {
-    if (pw.trim().toLowerCase() === PASSWORD) { setOpen(true); setErr(false); }
-    else setErr(true);
-  };
-
   const embedUrl = (url: string) =>
     `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23c8a070&auto_play=true&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false&visual=true`;
-
-  if (!open) return (
-    <div className="lvv5-root">
-      <style>{css}</style>
-      <div className="gate">
-        <p className="gate-eyebrow">Cola B — LoveVibe Vol. 5</p>
-        <h1 className="gate-kanji">離</h1>
-        <p className="gate-sub">Private A&amp;R Access</p>
-        <input
-          type="password"
-          placeholder="Password"
-          value={pw}
-          className={`pw-input${err ? " err" : ""}`}
-          onChange={e => { setPw(e.target.value); setErr(false); }}
-          onKeyDown={e => e.key === "Enter" && tryUnlock()}
-        />
-        {err && <p className="err-msg">Incorrect password</p>}
-        <button onClick={tryUnlock} className="gate-btn">Enter</button>
-      </div>
-    </div>
-  );
 
   return (
     <div className="lvv5-root">
