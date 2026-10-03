@@ -146,7 +146,7 @@ const App = () => (
       <Sonner />
       <AipfAuthProvider>
         <ArtistAgentAuthProvider>
-          <BrowserRouter>
+          <BrowserRouter basename={import.meta.env.BASE_URL}>
             <AppInner />
           </BrowserRouter>
         </ArtistAgentAuthProvider>
