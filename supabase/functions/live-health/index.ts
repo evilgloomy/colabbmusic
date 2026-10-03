@@ -28,9 +28,8 @@ Deno.serve(async (req) => {
   const aurora = await probeAuroraLite();
   const apiKeyPresent = Boolean(Deno.env.get("MINIMAX_API_KEY"));
   const voiceIdPresent = Boolean(Deno.env.get("MINIMAX_VOICE_ID"));
-  const liveAvatarApiKeyPresent = Boolean(Deno.env.get("LIVEAVATAR_API_KEY"));
-  const liveAvatarIdPresent = Boolean(Deno.env.get("LIVEAVATAR_AVATAR_ID"));
-  const liveAvatarConfigured = liveAvatarApiKeyPresent && liveAvatarIdPresent;
+  const signingConfigured = Boolean(Deno.env.get("AVATAR_JWT_SECRET"));
+  const workerConfigured = Boolean(Deno.env.get("AVATAR_ENGINE_URL"));
 
   // Reachability probe: short TTS call, no audio retained.
   let ttsReachable = false;
@@ -88,12 +87,13 @@ Deno.serve(async (req) => {
           fallback: "Browser TTS (emergency fallback only)",
         },
         avatar: {
-          health: liveAvatarConfigured ? "configured" : "fallback",
-          provider: "LiveAvatar LITE — Cola B",
-          liveavatar_api_key_present: liveAvatarApiKeyPresent,
-          liveavatar_avatar_id_present: liveAvatarIdPresent,
-          fallback: "Editorial Portrait Placeholder",
-          reason: liveAvatarConfigured ? undefined : "liveavatar_secrets_missing",
+          health: signingConfigured && workerConfigured ? "configured" : "fallback",
+          provider: "Shiba Native Avatar",
+          signing_configured: signingConfigured,
+          worker_configured: workerConfigured,
+          fallback: "Editorial portrait",
+          reason: "Renderer readiness is measured by the authenticated media session",
+
         },
       },
     }),

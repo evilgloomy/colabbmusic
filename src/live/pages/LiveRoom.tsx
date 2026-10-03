@@ -24,8 +24,8 @@ type LiveHealth = {
     avatar?: {
       health?: string;
       provider?: string;
-      liveavatar_api_key_present?: boolean;
-      liveavatar_avatar_id_present?: boolean;
+      signing_configured?: boolean;
+      worker_configured?: boolean;
       reason?: string;
     };
   };
@@ -100,10 +100,12 @@ export default function LiveRoom() {
 
         <section className="mt-8 flex w-full flex-col items-center">
           <LiveColaAvatar
+            avatar={convo.avatar}
             state={convo.state}
             emotion={convo.lemo}
             amplitude={convo.amplitude}
             speaking={speaking}
+            nativeSpeaking={convo.nativeSpeaking}
             listening={listening}
             partialTranscript={convo.partial}
           />
@@ -199,8 +201,8 @@ export default function LiveRoom() {
                     </dd>
                     <dt className="uppercase tracking-wider">avatar server</dt>
                     <dd>
-                      {health.services?.avatar?.health} · key: {health.services?.avatar?.liveavatar_api_key_present ? "yes" : "no"} ·
-                      avatar ID configured: {health.services?.avatar?.liveavatar_avatar_id_present ? "yes" : "no"}
+                      {health.services?.avatar?.health} · key: {health.services?.avatar?.signing_configured ? "yes" : "no"} ·
+                      worker configured: {health.services?.avatar?.worker_configured ? "yes" : "no"}
                       {health.services?.avatar?.reason ? ` · ${health.services.avatar.reason}` : ""}
                     </dd>
                     <dt className="uppercase tracking-wider">aurora server</dt>

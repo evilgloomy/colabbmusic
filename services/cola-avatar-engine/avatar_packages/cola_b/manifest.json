@@ -1,0 +1,13 @@
+{
+  "id": "cola_b",
+  "version": "1",
+  "fps": 25,
+  "output_width": 1280,
+  "output_height": 720,
+  "model": "musetalk-1.5",
+  "audio_format": "pcm_s16le",
+  "sample_rate": 16000,
+  "source": "operator-provided approved Cola motion clip",
+  "cache": "cache/",
+  "status": "requires_preprocessing"
+}

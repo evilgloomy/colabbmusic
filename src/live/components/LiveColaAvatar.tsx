@@ -1,37 +1,38 @@
 import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import portrait from "@/assets/campaign/portrait-close.jpg";
-import type { LiveAvatarProps } from "@/live/lib/avatar";
-import { realtimeAvatarBridge } from "@/live/avatar/realtimeAvatar";
+import type { ColaAvatarProps } from "@/live/lib/avatar";
 import "@/live/avatar/realtimeAvatar.css";
 
 /**
  * Cola's visual surface.
  *
- * When a LiveAvatar LITE session is available this component renders the actual
+ * When a Shiba Native Avatar session is available this component renders the actual
  * WebRTC media stream. The editorial portrait remains the graceful fallback for
  * configuration, network, or provider failures. We never fake lip sync with CSS.
  */
 export default function LiveColaAvatar({
+  avatar: provider,
   state,
   emotion,
   amplitude,
   speaking,
+  nativeSpeaking = false,
   listening,
   className = "",
-}: LiveAvatarProps) {
+}: ColaAvatarProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const avatar = useSyncExternalStore(
-    realtimeAvatarBridge.subscribe,
-    realtimeAvatarBridge.getSnapshot,
-    realtimeAvatarBridge.getSnapshot,
+    provider.subscribe,
+    provider.getStatus,
+    provider.getStatus,
   );
 
   useEffect(() => {
-    realtimeAvatarBridge.bindMediaElement(videoRef.current);
-    return () => realtimeAvatarBridge.bindMediaElement(null);
-  }, []);
+    provider.attachVideo(videoRef.current);
+    return () => provider.attachVideo(null);
+  }, [provider]);
 
-  const showingRealtime = avatar.streamReady && (avatar.status === "connected" || avatar.status === "speaking");
+  const showingRealtime = (!speaking || nativeSpeaking) && avatar.streamReady && (avatar.status === "connected" || avatar.status === "speaking");
   const level = showingRealtime ? 0 : speaking ? Math.max(0.08, Math.min(1, amplitude)) : 0;
   const thinking =
     state === "AURORA_PROCESSING" || state === "LEMO_PROCESSING" || state === "VOICE_CONNECTING";

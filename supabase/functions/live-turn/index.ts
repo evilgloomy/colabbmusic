@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
       conversation_history: body.conversation_history,
       injections: (injections || []) as any,
       interrupted_previous_turn: body.interrupted_previous_turn,
-    });
+    }, req.signal);
     const reply = aurora.reply_text;
     const auroraMs = Date.now() - auroraStart;
 
@@ -128,6 +128,9 @@ Deno.serve(async (req) => {
     return json({
       ok: true,
       reply_text: reply,
+      response_id: colaMsg?.id ?? crypto.randomUUID(),
+      provider: aurora.provider,
+      model: aurora.model,
       lemo,
       message_id: colaMsg?.id,
       engine: aurora.engine,
@@ -136,11 +139,11 @@ Deno.serve(async (req) => {
         ? { mode: body.mode, engine: aurora.engine, profile_version: auroraLiteProfileVersion, injections_applied: (injections || []).length, ...aurora.metadata }
         : { mode: body.mode },
       memory_refs: isStaff ? [`aurora-lite:profile@${auroraLiteProfileVersion}`] : undefined,
-      latency: { aurora_ms: auroraMs, lemo_ms: lemoMs },
+      latency: { aurora_ms: auroraMs, lemo_ms: lemoMs, brain_ms: aurora.metadata.brain_ms },
       mock: aurora.mock,
     });
   } catch (err) {
-    return new Response(JSON.stringify({ ok: false, error: err instanceof Error ? err.message : "error" }), {
+    return new Response(JSON.stringify({ ok: false, error: "BrainUnavailable" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -248,9 +248,13 @@ export default function LiveProducer() {
               <h2 className="live-eyebrow">Latency (last turn)</h2>
               <ul className="mt-3 space-y-1 live-mono">
                 <li>speech final: {convo.latency.speech_finalization_ms ?? "—"} ms</li>
+                <li>brain: {convo.latency.brain_ms ?? "—"} ms</li>
                 <li>aurora: {convo.latency.aurora_ms ?? "—"} ms</li>
                 <li>lemo: {convo.latency.lemo_ms ?? "—"} ms</li>
                 <li>voice TTFA: {convo.latency.voice_ttfa_ms ?? "—"} ms</li>
+                <li>local cancellation: {convo.latency.interrupt_local_ms ?? "—"} ms</li>
+                <li>brain TTFT: {convo.latency.brain_ttft_ms ?? "unmeasured"}</li>
+                <li>first moving frame: {convo.latency.speech_to_frame_ms ?? "unmeasured"}</li>
                 <li className="live-accent">total: {convo.latency.total_ms ?? "—"} ms</li>
               </ul>
               {convo.latencyHistory.length > 1 && (

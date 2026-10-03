@@ -1,0 +1,8 @@
+{
+  "code": {"repository": "https://github.com/TMElyralab/MuseTalk", "revision": "0a89dec45a0192b824e3cf4daf96c239440c5ed8", "license": "MIT"},
+  "models": [
+    {"id": "TMElyralab/MuseTalk", "revision": "3ef28bc5cff08c90ad8178a25f1b570cd800170f", "license": "CreativeML-Open-RAIL-M", "commercial": true, "destination": ".", "files": ["musetalkV15/musetalk.json", "musetalkV15/unet.pth", "README.md"]},
+    {"id": "stabilityai/sd-vae-ft-mse", "revision": "31f26fdeee1355a5c34592e401dd41e45d25a493", "license": "MIT", "commercial": true, "destination": "sd-vae", "files": ["config.json", "diffusion_pytorch_model.bin", "README.md"]},
+    {"id": "openai/whisper-tiny", "revision": "169d4a4341b33bc18d8881c4b69c2e104e1cc0af", "license": "Apache-2.0", "commercial": true, "destination": "whisper", "files": ["config.json", "pytorch_model.bin", "preprocessor_config.json", "README.md"]}
+  ]
+}

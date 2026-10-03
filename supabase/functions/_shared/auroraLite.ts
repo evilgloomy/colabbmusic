@@ -4,6 +4,7 @@
 // The same input/output contract is used by full Aurora later, so the client
 // never changes when the engine is swapped.
 
+import { configuredBrains, generateWithFallback } from "./brainProviders.ts";
 import profile from "./cola-aurora-lite.json" with { type: "json" };
 
 export interface AuroraLiteSession {
@@ -39,6 +40,8 @@ export interface AuroraLiteInput {
 
 export interface AuroraLiteOutput {
   reply_text: string;
+  provider: string;
+  model: string;
   engine: string;
   mock: boolean;
   metadata: Record<string, unknown>;
@@ -49,7 +52,7 @@ export const auroraLiteProfileVersion = (profile as any)?._meta?.version ?? "unk
 
 const isCantonese = (t: string) => /[\u4e00-\u9fff]/.test(t);
 
-export const AURORA_LITE_MODEL = "google/gemini-2.5-flash";
+export const AURORA_LITE_MODEL = "gpt-5.6-luna";
 
 /** Editorial placeholders must never reach the prompt or Cola's mouth. */
 export const isPlaceholder = (v: unknown): boolean => {
@@ -125,110 +128,32 @@ function fallbackReply(input: AuroraLiteInput): string {
   const p = profile as any;
   const zh = isCantonese(input.user_text) || input.session.primary_language === "zh";
   const pool = list(zh ? p.fallback_answers?.zh : p.fallback_answers?.en);
-  const points = list(p.interview_talking_points);
   const turnCount = input.conversation_history.filter((m) => m.role === "cola").length;
-  const base = pool.length ? pool[turnCount % pool.length] : zh ? "我諗一諗先。" : "Let me think about that for a second.";
-  const point = points.length ? points[turnCount % points.length] : "";
-  const facts = input.injections.filter((i) => i.kind === "factual").map((i) => i.content);
-  const extra = facts.length ? ` ${zh ? "另外，" : "Also, "}${facts[facts.length - 1]}` : "";
-  return `${base}${point ? ` ${point}` : ""}${extra}`.trim();
+  // Only approved, localized fallback lines. Never append raw producer material.
+  return pool.length ? pool[turnCount % pool.length] : zh ? "我諗一諗先。" : "Let me think about that for a second.";
 }
 
-/**
- * Generates Cola's next spoken line. Uses the Lovable AI gateway when a key is
- * present; otherwise returns the marked fallback so the full pipeline still runs.
- */
-export async function generateAuroraLite(input: AuroraLiteInput): Promise<AuroraLiteOutput> {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
-  const systemPrompt = buildAuroraLitePrompt(input);
-
-  if (!apiKey) {
-    return {
-      reply_text: fallbackReply(input),
-      engine: AURORA_LITE_ENGINE,
-      mock: true,
-      metadata: { reason: "no_llm_provider", profile_version: auroraLiteProfileVersion },
-    };
-  }
-
-  const messages = [
-    { role: "system", content: systemPrompt },
-    ...input.conversation_history.slice(-12).map((m) => ({
-      role: m.role === "cola" ? "assistant" : "user",
-      content: m.content,
-    })),
-    { role: "user", content: input.user_text },
-  ];
-
-  try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: AURORA_LITE_MODEL,
-        messages,
-        temperature: 0.8,
-        // Reasoning off + a real budget: a small budget is eaten by reasoning
-        // tokens and returns an empty completion.
-        reasoning_effort: "none",
-        max_tokens: 800,
-      }),
-    });
-    if (!res.ok) throw new Error(`gateway_${res.status}`);
-    const data = await res.json();
-    const text = String(data?.choices?.[0]?.message?.content ?? "").trim();
-    if (!text) throw new Error("empty_completion");
-    return {
-      reply_text: text,
-      engine: AURORA_LITE_ENGINE,
-      mock: false,
-      metadata: { model: AURORA_LITE_MODEL, profile_version: auroraLiteProfileVersion },
-    };
-  } catch (err) {
-    return {
-      reply_text: fallbackReply(input),
-      engine: AURORA_LITE_ENGINE,
-      mock: true,
-      metadata: {
-        reason: err instanceof Error ? err.message : "llm_error",
-        profile_version: auroraLiteProfileVersion,
-      },
-    };
-  }
+/** Canonical Aurora context is independent of the selected language engine. */
+export async function generateAuroraLite(input: AuroraLiteInput, signal?: AbortSignal): Promise<AuroraLiteOutput> {
+  const result = await generateWithFallback(configuredBrains((name) => Deno.env.get(name)), {
+    systemPrompt: buildAuroraLitePrompt(input),
+    history: input.conversation_history.slice(-12).filter(m => ["cola", "interviewer"].includes(m.role))
+      .map(m => ({ role: m.role === "cola" ? "assistant" : "user", content: m.content })),
+    userText: input.user_text, signal,
+  }, () => fallbackReply(input));
+  return { reply_text: result.text, provider: result.provider, model: result.model,
+    engine: AURORA_LITE_ENGINE, mock: result.provider === "deterministic",
+    metadata: { provider: result.provider, model: result.model, brain_ms: result.latencyMs,
+      profile_version: auroraLiteProfileVersion } };
 }
 
-/** Staff-only health probe: is the LLM really answering, or are we on fallback? */
-export async function probeAuroraLite(): Promise<{
-  aurora_lite_llm: "online" | "fallback";
-  model: string;
-  profile_version: string;
-  profile_loaded: boolean;
-  reason?: string;
-}> {
-  const base = {
-    model: AURORA_LITE_MODEL,
-    profile_version: auroraLiteProfileVersion,
-    profile_loaded: Boolean((profile as any)?.identity?.stage_name),
-  };
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!apiKey) return { ...base, aurora_lite_llm: "fallback", reason: "LOVABLE_API_KEY not available to this function" };
-  try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: AURORA_LITE_MODEL,
-        messages: [{ role: "user", content: "Reply with the single word: ok" }],
-        reasoning_effort: "none",
-        max_tokens: 500,
-      }),
-    });
-    if (!res.ok) return { ...base, aurora_lite_llm: "fallback", reason: `gateway_${res.status}` };
-    const data = await res.json();
-    const text = String(data?.choices?.[0]?.message?.content ?? "").trim();
-    if (!text) return { ...base, aurora_lite_llm: "fallback", reason: "empty_completion" };
-    return { ...base, aurora_lite_llm: "online" };
-  } catch (err) {
-    return { ...base, aurora_lite_llm: "fallback", reason: err instanceof Error ? err.message : "llm_error" };
-  }
+/** Staff-only probe uses exactly the same provider selection as real turns. */
+export async function probeAuroraLite() {
+  const result = await generateWithFallback(configuredBrains((name) => Deno.env.get(name)), {
+    systemPrompt: "Reply with the single word ok.", history: [], userText: "Hello",
+  }, () => "ok");
+  return { aurora_lite_llm: result.provider === "deterministic" ? "fallback" : "online",
+    reason: result.provider === "deterministic" ? "providers_unavailable" : undefined,
+    provider: result.provider, model: result.model, latency_ms: result.latencyMs,
+    profile_version: auroraLiteProfileVersion, profile_loaded: Boolean(profile.identity.stage_name) };
 }

@@ -87,10 +87,13 @@ export function createBrowserSpeechAdapter(): SpeechInputAdapter {
       recognition = new SR();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = options?.language === "zh" ? "zh-HK" : options?.language || "en-US";
+      recognition.lang = /^(zh|yue)/i.test(options?.language ?? "yue") ? "zh-HK" : options?.language || "en-US";
 
+      recognition.onspeechstart = () => {
+        if (!muted && !stopped && !speaking) { speaking = true; handlers?.onSpeechStart(); }
+      };
       recognition.onresult = (event: any) => {
-        if (muted) return;
+        if (muted || stopped) return;
         let latestInterim = "";
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const res = event.results[i];

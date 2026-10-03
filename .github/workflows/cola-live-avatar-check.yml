@@ -1,28 +1,49 @@
-name: Cola Live Avatar Check
-
+name: Shiba Digital Human Check
 on:
   push:
-    branches:
-      - codex/cola-live-avatar
+    branches: [codex/cola-shiba-mvp]
   pull_request:
     paths:
       - 'src/live/**'
-      - 'supabase/functions/liveavatar-session/**'
-      - 'supabase/functions/live-health/**'
+      - 'src/shiba/**'
+      - 'src/test/**'
+      - 'supabase/functions/**'
+      - 'services/cola-avatar-engine/**'
+      - 'scripts/check_digital_human_boundaries.py'
       - '.github/workflows/cola-live-avatar-check.yml'
-
 jobs:
-  check:
+  frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
-      # This Lovable repo's npm package-lock is stale, while bun.lock is the
-      # maintained dependency lock. Do not rewrite package-lock for this feature.
+          bun-version: 1.3.10
       - run: bun install --frozen-lockfile
       - run: bunx tsc --noEmit -p tsconfig.app.json
       - run: bun run test
       - run: bun run build
+      - run: python3 services/cola-avatar-engine/tools/check_licenses.py
+      - run: python3 scripts/check_digital_human_boundaries.py
+  worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r services/cola-avatar-engine/requirements-test.txt
+      - run: python -m pytest services/cola-avatar-engine/tests -q
+  edge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.2.12
+      - run: deno check --no-lock --node-modules-dir=none supabase/functions/live-turn/index.ts supabase/functions/cola-voice/index.ts supabase/functions/live-health/index.ts supabase/functions/native-avatar-session/index.ts supabase/functions/live-control/index.ts
+        env:
+          DENO_NO_PACKAGE_JSON: '1'
