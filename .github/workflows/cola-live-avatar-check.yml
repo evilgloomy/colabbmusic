@@ -3,11 +3,13 @@ name: Cola Live Avatar Check
 on:
   push:
     branches:
-      - codex/cola-live-avatar
+      - codex/shibacompute-cola-client
   pull_request:
     paths:
       - 'src/live/**'
-      - 'supabase/functions/liveavatar-session/**'
+      - 'supabase/functions/shiba-compute-session/**'
+      - 'supabase/functions/_shared/shibaComputeSession.ts'
+      - 'supabase/functions/cola-voice/**'
       - 'supabase/functions/live-health/**'
       - '.github/workflows/cola-live-avatar-check.yml'
 

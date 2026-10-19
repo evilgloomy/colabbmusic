@@ -67,12 +67,7 @@ export function createBrowserTtsPlaceholderAdapter(): VoiceAdapter {
                 const timer = setTimeout(() => {
                   if (signal.aborted) return done();
                   if (!synth) {
-                    const ms = Math.min(4000, chunk.length * 55);
-                    const t = setTimeout(done, ms);
-                    signal.addEventListener("abort", () => {
-                      clearTimeout(t);
-                      done();
-                    });
+                    fail(new Error("browser_tts_unavailable"));
                     return;
                   }
                   const utter = new SpeechSynthesisUtterance(chunk);
@@ -80,7 +75,7 @@ export function createBrowserTtsPlaceholderAdapter(): VoiceAdapter {
                   utter.pitch = pitch;
                   utter.lang = req.language === "zh" ? "zh-HK" : "en-US";
                   utter.onend = () => done();
-                  utter.onerror = () => done();
+                  utter.onerror = () => fail(new Error("browser_tts_failed"));
                   signal.addEventListener("abort", () => {
                     try {
                       synth.cancel();

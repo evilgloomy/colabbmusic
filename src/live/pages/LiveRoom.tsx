@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { getVoiceDiagnostics, subscribeVoiceDiagnostics } from "@/live/adapters/voice/voiceDiagnostics";
+import { realtimeAvatarBridge } from "@/live/avatar/realtimeAvatar";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Link, useParams } from "react-router-dom";
 import LiveLayout from "@/live/LiveLayout";
 import LiveColaAvatar from "@/live/components/LiveColaAvatar";
@@ -24,8 +26,7 @@ type LiveHealth = {
     avatar?: {
       health?: string;
       provider?: string;
-      liveavatar_api_key_present?: boolean;
-      liveavatar_avatar_id_present?: boolean;
+      compute_configured?: boolean;
       reason?: string;
     };
   };
@@ -48,6 +49,8 @@ const STATUS: Record<LiveState, string> = {
 
 export default function LiveRoom() {
   const { sessionId = "" } = useParams();
+  const voiceRuntime = useSyncExternalStore(subscribeVoiceDiagnostics, getVoiceDiagnostics, getVoiceDiagnostics);
+  const avatarRuntime = useSyncExternalStore(realtimeAvatarBridge.subscribe, realtimeAvatarBridge.getSnapshot, realtimeAvatarBridge.getSnapshot);
   const { isStaff } = useLiveAuth();
   const { config, loading, error } = useLiveSession(sessionId);
   const convo = useLiveConversation({ sessionId, config });
@@ -188,6 +191,15 @@ export default function LiveRoom() {
                     </dd>
                   </div>
                 ))}
+                <dt className="uppercase tracking-wider">Voice provider</dt>
+                <dd>{voiceRuntime.provider}</dd>
+                <dt className="uppercase tracking-wider">Voice state</dt>
+                <dd>{voiceRuntime.state}</dd>
+                <dt className="uppercase tracking-wider">Browser TTS fallback</dt>
+                <dd>{voiceRuntime.browserTtsFallback ? "active" : "inactive"}</dd>
+                {avatarRuntime.diagnostics && Object.entries(avatarRuntime.diagnostics).map(([key, value]) => (
+                  <div key={key} className="contents"><dt>{key.replace(/_/g, " ")}</dt><dd>{value == null ? "unmeasured" : String(value)}</dd></div>
+                ))}
                 {health && (
                   <>
                     <dt className="uppercase tracking-wider">voice server</dt>
@@ -199,8 +211,7 @@ export default function LiveRoom() {
                     </dd>
                     <dt className="uppercase tracking-wider">avatar server</dt>
                     <dd>
-                      {health.services?.avatar?.health} · key: {health.services?.avatar?.liveavatar_api_key_present ? "yes" : "no"} ·
-                      avatar ID configured: {health.services?.avatar?.liveavatar_avatar_id_present ? "yes" : "no"}
+                      {health.services?.avatar?.health} · compute configured: {health.services?.avatar?.compute_configured ? "yes" : "no"}
                       {health.services?.avatar?.reason ? ` · ${health.services.avatar.reason}` : ""}
                     </dd>
                     <dt className="uppercase tracking-wider">aurora server</dt>

@@ -1,3 +1,4 @@
+import { setVoiceDiagnostics } from "./voice/voiceDiagnostics";
 import { createBrowserSpeechAdapter } from "./speech/browserSpeech";
 import { createMockSpeechAdapter } from "./speech/mockSpeech";
 import { createMockAuroraAdapter } from "./aurora/mockAurora";
@@ -48,5 +49,14 @@ export function getLemoAdapter(): LemoAdapter {
 
 export function getVoiceAdapter(): VoiceAdapter {
   const emergencyFallback = createBrowserTtsPlaceholderAdapter();
-  return COLA_VOICE_ENABLED ? createMinimaxColaVoiceAdapter(emergencyFallback) : emergencyFallback;
+  if (COLA_VOICE_ENABLED) return createMinimaxColaVoiceAdapter(emergencyFallback);
+  return { ...emergencyFallback,
+    async speak(req, handlers) {
+      setVoiceDiagnostics({ state: "fallback", browserTtsFallback: true, error: "minimax_disabled_by_config" });
+      try { await emergencyFallback.speak(req, handlers); }
+      finally { setVoiceDiagnostics({ browserTtsFallback: false }); }
+    },
+    cancel() { emergencyFallback.cancel(); setVoiceDiagnostics({ browserTtsFallback: false }); },
+    flush() { emergencyFallback.flush(); setVoiceDiagnostics({ browserTtsFallback: false }); },
+  };
 }
