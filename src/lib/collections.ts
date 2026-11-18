@@ -6,6 +6,33 @@ export interface Collection {
   filter: (p: ShopifyProduct) => boolean;
 }
 
+export function isCalendarProduct(p: ShopifyProduct): boolean {
+  const type = p.node.productType?.toLowerCase().trim();
+  if (type === "calendar") return true;
+
+  const title = p.node.title.toLowerCase();
+  const handle = p.node.handle.toLowerCase();
+  const tags = (p.node.tags ?? []).map((t) => t.toLowerCase());
+
+  return (
+    title.includes("calendar") ||
+    handle.includes("calendar") ||
+    tags.some((t) => t === "calendar" || t.includes("calendar"))
+  );
+}
+
+export function sortCalendarsFeaturedFirst(products: ShopifyProduct[]): ShopifyProduct[] {
+  const yearFrom = (p: ShopifyProduct) => {
+    const m = p.node.title.match(/20\d{2}/) || p.node.handle.match(/20\d{2}/);
+    return m ? Number(m[0]) : 0;
+  };
+  return [...products].sort((a, b) => {
+    const yearDiff = yearFrom(b) - yearFrom(a);
+    if (yearDiff !== 0) return yearDiff;
+    return a.node.title.localeCompare(b.node.title);
+  });
+}
+
 export const collections: Collection[] = [
   {
     id: "all",

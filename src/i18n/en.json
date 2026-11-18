@@ -91,7 +91,9 @@
   "store": {
     "shop": "Shop",
     "pageTitle": "Store",
-    "noProducts": "No products found in this collection."
+    "noProducts": "No products found in this collection.",
+    "featuredKicker": "Featured",
+    "calendarsTitle": "Calendars"
   },
   "press": {
     "media": "Media",

@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { ProductCard } from "@/components/store/ProductCard";
 import { fetchProducts } from "@/lib/shopify";
-import { collections, isCoffeeProduct } from "@/lib/collections";
+import { collections, isCoffeeProduct, isCalendarProduct, sortCalendarsFeaturedFirst } from "@/lib/collections";
 import { useSEO, SITE_URL } from "@/hooks/useSEO";
 import { buildBreadcrumb } from "@/components/seo/JsonLd";
 import { useTranslation } from "react-i18next";
@@ -31,12 +31,16 @@ const StorePage = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  const filteredProducts = publishableOnly(products, isPublishableProduct, "store/products")
-    .filter((p) => !isCoffeeProduct(p))
-    .filter((p) => {
-      const col = collections.find((c) => c.id === activeCollection);
-      return col ? col.filter(p) : true;
-    });
+  const visibleProducts = publishableOnly(products, isPublishableProduct, "store/products").filter(
+    (p) => !isCoffeeProduct(p),
+  );
+
+  const calendarProducts = sortCalendarsFeaturedFirst(visibleProducts.filter(isCalendarProduct));
+
+  const filteredProducts = visibleProducts.filter((p) => {
+    const col = collections.find((c) => c.id === activeCollection);
+    return col ? col.filter(p) : true;
+  });
 
   return (
     <PageLayout>
@@ -49,6 +53,23 @@ const StorePage = () => {
           <h1 className="text-display-lg font-display font-bold text-foreground mb-4">{t("store.pageTitle")}</h1>
         </div>
       </section>
+
+      {/* Featured calendars */}
+      {!isLoading && calendarProducts.length > 0 && (
+        <section id="calendars" className="border-b border-border/40">
+          <div className="editorial py-16 md:py-20">
+            <p className="label text-primary mb-3">{t("store.featuredKicker")}</p>
+            <h2 className="font-display text-display-md font-semibold text-foreground mb-10 md:mb-14">
+              {t("store.calendarsTitle")}
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-12">
+              {calendarProducts.map((product) => (
+                <ProductCard key={product.node.id} product={product} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Collection filters */}
       <section className="border-b border-border/40">

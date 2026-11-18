@@ -91,7 +91,9 @@
   "store": {
     "shop": "選購",
     "pageTitle": "商店",
-    "noProducts": "此系列暫無商品。"
+    "noProducts": "此系列暫無商品。",
+    "featuredKicker": "精選",
+    "calendarsTitle": "年曆"
   },
   "press": {
     "media": "媒體",
